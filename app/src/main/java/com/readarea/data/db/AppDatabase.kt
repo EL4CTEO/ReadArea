@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room3.Database
 import androidx.room3.Room
 import androidx.room3.RoomDatabase
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.sqlite.driver.AndroidSQLiteDriver
 import kotlinx.coroutines.Dispatchers
 
 @Database(
@@ -21,7 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "readarea.db")
-                .setDriver(BundledSQLiteDriver())
+                .setDriver(AndroidSQLiteDriver())
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .fallbackToDestructiveMigration(true)
                 .build()

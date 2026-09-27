@@ -131,6 +131,7 @@ class HtmlConverter(
         var noIndent = p?.noIndent ?: false
         var kind: BlockKind? = null
         var level = 0
+        var prefix: String? = null
         var link = p?.link
         when (name) {
             "b", "strong", "th", "dt" -> style = style or RunStyle.BOLD
@@ -155,10 +156,10 @@ class HtmlConverter(
                 kind = BlockKind.LIST_ITEM
                 val list = stack.lastOrNull { it.tag == "ul" || it.tag == "ol" }
                 level = stack.count { it.tag == "ul" || it.tag == "ol" }.coerceAtLeast(1)
-                if (list != null) {
+                prefix = if (list != null) {
                     list.counter++
-                    pendingPrefix = if (list.ordered) "${list.counter}. " else if (level % 2 == 0) "◦ " else "• "
-                } else pendingPrefix = "• "
+                    if (list.ordered) "${list.counter}. " else if (level % 2 == 0) "◦ " else "• "
+                } else "• "
             }
             "figcaption", "caption" -> kind = BlockKind.CAPTION
             "a" -> {
@@ -203,6 +204,7 @@ class HtmlConverter(
         if (css["font-variant"] == "small-caps") scale *= 0.9f
 
         if (isBlock) flushBlock()
+        if (prefix != null) pendingPrefix = prefix
         val frame = Frame(name, isBlock, style, scale, link, align, hidden, upper, noIndent, kind, level, ordered = name == "ol")
         if (name == "ol") frame.counter = (attrs["start"]?.toIntOrNull() ?: 1) - 1
         if (selfClosing) {

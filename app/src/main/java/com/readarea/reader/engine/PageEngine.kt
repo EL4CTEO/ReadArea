@@ -5,7 +5,6 @@ import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.RectF
 import android.graphics.Shader
 import android.text.TextPaint
 import android.text.TextUtils
@@ -66,8 +65,6 @@ class Decorations {
     @Volatile var search: HighlightRange? = null
     @Volatile var speaking: HighlightRange? = null
     @Volatile var clock: String = ""
-    @Volatile var battery: Int = -1
-    @Volatile var charging: Boolean = false
     @Volatile var bookTitle: String = ""
     @Volatile var bookmarkedPages: Set<PagePos> = emptySet()
 }
@@ -155,7 +152,6 @@ abstract class PageEngine {
 object PageChrome {
     private val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val rect = RectF()
     private var textureBitmap: Bitmap? = null
     private var textureKey = 0
     private val texturePaint = Paint(Paint.FILTER_BITMAP_FLAG)
@@ -247,23 +243,6 @@ object PageChrome {
         val pct = "${(progress * 100).toInt().coerceIn(0, 100)}%"
         canvas.drawText(pct, right, baseY, textPaint)
         right -= textPaint.measureText(pct) + 10 * d
-        if (s.settings.showBattery && deco.battery >= 0) {
-            val bw = 18 * d
-            val bh = 8.5f * d
-            val top = baseY - bh - 0.5f * d
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = 1f * d
-            paint.color = theme.secondary
-            rect.set(right - bw, top, right - 2 * d, top + bh)
-            canvas.drawRoundRect(rect, 2 * d, 2 * d, paint)
-            paint.style = Paint.Style.FILL
-            canvas.drawRect(right - 2 * d, top + bh * 0.3f, right - 0.5f * d, top + bh * 0.7f, paint)
-            val fill = (bw - 5 * d) * (deco.battery / 100f)
-            paint.color = if (deco.battery <= 15 && !deco.charging) 0xFFE0564A.toInt() else theme.secondary
-            rect.set(right - bw + 1.5f * d, top + 1.5f * d, right - bw + 1.5f * d + fill, top + bh - 1.5f * d)
-            canvas.drawRect(rect, paint)
-            right -= bw + 8 * d
-        }
         if (s.settings.showClock && deco.clock.isNotEmpty()) {
             textPaint.textAlign = if (s.columns > 1) Paint.Align.RIGHT else Paint.Align.CENTER
             canvas.drawText(deco.clock, if (s.columns > 1) right else s.width / 2f, baseY, textPaint)

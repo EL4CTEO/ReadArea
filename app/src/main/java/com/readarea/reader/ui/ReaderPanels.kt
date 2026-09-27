@@ -566,7 +566,6 @@ private fun PagingPanel(vm: ReaderViewModel, s: ReaderSettings, ui: ReaderUi) {
         SwitchRow("Page info at bottom", null, s.showFooter) { v -> vm.updateSettings { it.copy(showFooter = v) } }
         if (s.showFooter) {
             SwitchRow("Clock", null, s.showClock) { v -> vm.updateSettings { it.copy(showClock = v) } }
-            SwitchRow("Battery", null, s.showBattery) { v -> vm.updateSettings { it.copy(showBattery = v) } }
             SwitchRow("Progress line", null, s.showProgressLine) { v -> vm.updateSettings { it.copy(showProgressLine = v) } }
         }
         SectionTitle("Orientation")

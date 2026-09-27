@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.net.Uri
-import android.os.BatteryManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -30,7 +29,7 @@ import kotlinx.coroutines.launch
 import java.util.Date
 
 class ReaderActivity : ComponentActivity() {
-    private val vm: ReaderViewModel by viewModels()
+    internal val vm: ReaderViewModel by viewModels()
     private val handler = Handler(Looper.getMainLooper())
     private val releaseScreen = Runnable { window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     private var timeoutMin = 5
@@ -38,10 +37,6 @@ class ReaderActivity : ComponentActivity() {
 
     private val tickReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) = updateClock()
-    }
-
-    private val batteryReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) = updateBattery(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -74,7 +69,10 @@ class ReaderActivity : ComponentActivity() {
     private fun handleIntent(intent: Intent, fresh: Boolean) {
         val id = intent.getLongExtra(EXTRA_BOOK_ID, -1L)
         if (id > 0) {
-            vm.open(id)
+            val chapter = intent.getIntExtra(EXTRA_CHAPTER, -1)
+            val offset = intent.getIntExtra(EXTRA_OFFSET, 0)
+            vm.open(id, if (chapter >= 0 && fresh) chapter to offset else null)
+            if (fresh) intent.removeExtra(EXTRA_CHAPTER)
             return
         }
         val data: Uri? = intent.data
@@ -151,8 +149,6 @@ class ReaderActivity : ComponentActivity() {
         super.onResume()
         vm.onSessionStart()
         ContextCompat.registerReceiver(this, tickReceiver, IntentFilter(Intent.ACTION_TIME_TICK), ContextCompat.RECEIVER_NOT_EXPORTED)
-        val sticky = ContextCompat.registerReceiver(this, batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED), ContextCompat.RECEIVER_NOT_EXPORTED)
-        sticky?.let { updateBattery(it) }
         updateClock()
         lastAwake = 0L
         keepAwake()
@@ -162,7 +158,6 @@ class ReaderActivity : ComponentActivity() {
         super.onPause()
         vm.onSessionEnd()
         runCatching { unregisterReceiver(tickReceiver) }
-        runCatching { unregisterReceiver(batteryReceiver) }
         handler.removeCallbacksAndMessages(null)
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
@@ -170,19 +165,6 @@ class ReaderActivity : ComponentActivity() {
     private fun updateClock() {
         vm.deco.clock = DateFormat.getTimeFormat(this).format(Date())
         vm.refreshChrome()
-    }
-
-    private fun updateBattery(intent: Intent) {
-        val level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
-        val scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
-        val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-        val pct = if (level >= 0 && scale > 0) level * 100 / scale else -1
-        val charging = status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-        if (pct != vm.deco.battery || charging != vm.deco.charging) {
-            vm.deco.battery = pct
-            vm.deco.charging = charging
-            vm.refreshChrome()
-        }
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
@@ -204,8 +186,13 @@ class ReaderActivity : ComponentActivity() {
 
     companion object {
         const val EXTRA_BOOK_ID = "book_id"
+        const val EXTRA_CHAPTER = "chapter"
+        const val EXTRA_OFFSET = "offset"
         const val DIM_THRESHOLD = 0.15f
 
         fun intent(context: Context, bookId: Long): Intent = Intent(context, ReaderActivity::class.java).putExtra(EXTRA_BOOK_ID, bookId)
+
+        fun intent(context: Context, bookId: Long, chapter: Int, offset: Int): Intent =
+            intent(context, bookId).putExtra(EXTRA_CHAPTER, chapter).putExtra(EXTRA_OFFSET, offset)
     }
 }

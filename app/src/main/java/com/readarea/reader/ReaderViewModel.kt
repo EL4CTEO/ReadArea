@@ -157,8 +157,11 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
 
     val scrollMode: Boolean get() = settings.value.pageAnim == "scroll"
 
-    fun open(id: Long) {
-        if (bookId == id && engine != null) return
+    fun open(id: Long, at: Pair<Int, Int>? = null) {
+        if (bookId == id && engine != null) {
+            at?.let { goTo(it.first, it.second) }
+            return
+        }
         bookId = id
         viewModelScope.launch {
             val b = repo.get(id)
@@ -187,7 +190,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
             result.onSuccess { e ->
                 engine = e
                 if (e is FixedEngine) e.onPageRendered = { _commands.tryEmit(ViewCommand.RefreshCurrent) }
-                pendingAnchor = b.chapter.coerceIn(0, e.chapterCount - 1) to b.offset
+                pendingAnchor = at?.let { it.first.coerceIn(0, e.chapterCount - 1) to it.second } ?: (b.chapter.coerceIn(0, e.chapterCount - 1) to b.offset)
                 val toc = (e as? TextEngine)?.book?.toc.orEmpty()
                 _ui.update { it.copy(toc = toc, chapterCount = e.chapterCount, fixed = e.fixed, ttsAvailable = e is TextEngine) }
                 launch { db.notes().bookmarks(id).collect { list -> onBookmarks(list) } }
@@ -736,7 +739,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
 
     fun refreshChrome() {
         val s = settings.value
-        if (s.showFooter && (s.showClock || s.showBattery) && !scrollMode) _commands.tryEmit(ViewCommand.RefreshCurrent)
+        if (s.showFooter && s.showClock && !scrollMode) _commands.tryEmit(ViewCommand.RefreshCurrent)
     }
 
     fun keyFlip(forward: Boolean) {

@@ -42,7 +42,6 @@ data class ReaderSettings(
     val showHeader: Boolean = true,
     val showFooter: Boolean = true,
     val showClock: Boolean = true,
-    val showBattery: Boolean = true,
     val showProgressLine: Boolean = true,
     val brightnessSystem: Boolean = true,
     val brightness: Float = 0.5f,

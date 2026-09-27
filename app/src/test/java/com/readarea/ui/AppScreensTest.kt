@@ -1,0 +1,169 @@
+package com.readarea.ui
+
+import android.graphics.Bitmap
+import android.net.Uri
+import android.os.Looper
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.junit4.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
+import com.readarea.MainActivity
+import com.readarea.ReadAreaApp
+import com.readarea.core.format.TestBooks
+import com.readarea.data.db.BookEntity
+import com.readarea.data.db.BookStatus
+import com.readarea.data.db.ReadingSessionEntity
+import com.readarea.reader.ReaderActivity
+import kotlinx.coroutines.runBlocking
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows.shadowOf
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+import java.io.File
+import java.time.LocalDate
+
+@OptIn(ExperimentalTestApi::class)
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [35], qualifiers = "w393dp-h851dp-xxhdpi")
+class AppScreensTest {
+    @get:Rule
+    val compose = createEmptyComposeRule()
+    private val out = File("build/screens").apply { mkdirs() }
+    private var firstId = 0L
+
+    private val seed = listOf(
+        Triple("The Lighthouse Keeper", "Mara Quill", 0.42f),
+        Triple("Salt and Starlight", "Jonah Reyes", 0.0f),
+        Triple("A Brief History of Tea", "Imogen Hart", 1f),
+        Triple("Northern Rivers", "Tomas Lind", 0.12f),
+        Triple("The Clockmaker's Daughter", "Elena Moss", 0.0f),
+        Triple("Paper Gardens", "Yuki Tanaka", 0.77f),
+        Triple("Midnight Library Notes", "Owen Price", 0.0f),
+        Triple("Coastlines", "Ada Writer", 0.0f),
+    )
+
+    @Before
+    fun setUp() {
+        val app = ApplicationProvider.getApplicationContext<ReadAreaApp>()
+        runBlocking {
+            seed.forEachIndexed { i, (title, author, progress) ->
+                val f = File(app.filesDir, "book$i.epub")
+                f.writeBytes(TestBooks.epub(chapters = 4, paragraphs = 12, withCover = false, title = title, author = author))
+                val now = System.currentTimeMillis()
+                val id = app.database.books().insert(
+                    BookEntity(
+                        uri = Uri.fromFile(f).toString(), fileName = f.name, format = if (i == 3) "PDF" else "EPUB", size = f.length(), title = title, author = author,
+                        addedAt = now - i * 3_600_000L, lastOpenedAt = if (progress > 0f) now - i * 60_000L else 0L, progress = progress,
+                        status = when {
+                            progress >= 1f -> BookStatus.FINISHED
+                            progress > 0f -> BookStatus.READING
+                            i == 4 -> BookStatus.WANT
+                            else -> BookStatus.NEW
+                        },
+                        favorite = i == 1, metaLoaded = true, readingMs = (progress * 4 * 3_600_000).toLong(),
+                    ),
+                )
+                if (i == 0) firstId = id
+            }
+            val today = LocalDate.now().toEpochDay()
+            for (d in 0 until 40) {
+                if (d % 5 == 3) continue
+                app.database.stats().insert(ReadingSessionEntity(bookId = firstId, start = System.currentTimeMillis() - d * 86_400_000L, durationMs = ((d * 7) % 50 + 8) * 60_000L, pages = 20, day = today - d))
+            }
+        }
+    }
+
+    private fun settle(ms: Long = 1500) {
+        val end = System.currentTimeMillis() + ms
+        while (System.currentTimeMillis() < end) {
+            shadowOf(Looper.getMainLooper()).idle()
+            Thread.sleep(50)
+        }
+        compose.waitForIdle()
+    }
+
+    private fun shot(name: String) {
+        val img = compose.onRoot().captureToImage().asAndroidBitmap()
+        File(out, name).outputStream().use { img.compress(Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
+    private fun waitText(text: String) {
+        compose.waitUntil(15_000) {
+            shadowOf(Looper.getMainLooper()).idle()
+            compose.onAllNodesWithText(text).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    @Test
+    fun mainScreens() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitText("Continue reading")
+            settle()
+            shot("app_home.png")
+            compose.onAllNodesWithText("Library")[0].performClick()
+            waitText("8 books")
+            settle()
+            shot("app_library.png")
+            compose.onAllNodesWithText("Stats")[0].performClick()
+            waitText("Last 7 days")
+            settle()
+            shot("app_stats.png")
+            compose.onAllNodesWithText("Shelves")[0].performClick()
+            waitText("Make your first shelf")
+            settle()
+            shot("app_shelves.png")
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "w841dp-h701dp-xhdpi")
+    fun foldableHome() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitText("Continue reading")
+            settle()
+            shot("app_home_unfolded.png")
+        }
+    }
+
+    @Test
+    fun readerMenus() {
+        val ctx = ApplicationProvider.getApplicationContext<ReadAreaApp>()
+        ActivityScenario.launch<ReaderActivity>(ReaderActivity.intent(ctx, firstId)).use { sc ->
+            var ready = false
+            val end = System.currentTimeMillis() + 20_000
+            while (!ready && System.currentTimeMillis() < end) {
+                shadowOf(Looper.getMainLooper()).idle()
+                sc.onActivity { ready = it.vm.ui.value.laidOut }
+                Thread.sleep(50)
+            }
+            settle(800)
+            shot("reader_page.png")
+            compose.onRoot().performTouchInput { click(center) }
+            settle(800)
+            shot("reader_menu.png")
+            compose.onAllNodesWithText("Text")[0].performClick()
+            settle(1000)
+            shot("reader_typography.png")
+            sc.onActivity { it.vm.closePanel() }
+            settle(600)
+            sc.onActivity { it.vm.openPanel(com.readarea.reader.Panel.PAGING) }
+            settle(1000)
+            shot("reader_paging.png")
+            sc.onActivity { it.vm.openPanel(com.readarea.reader.Panel.CONTENTS) }
+            settle(1000)
+            shot("reader_contents.png")
+        }
+    }
+}
