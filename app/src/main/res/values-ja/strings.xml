@@ -79,6 +79,7 @@
     <string name="error_missing_file">ファイルが見つかりません。移動または削除された可能性があります。</string>
     <string name="error_not_in_library">この本はもうライブラリにありません。</string>
     <string name="error_title">この本を開けませんでした</string>
+    <string name="error_too_large">このファイルは大きすぎて開けません。</string>
     <string name="error_unsupported">このファイルはまだ対応していない形式のバリエーションを使用しています。</string>
     <string name="export">エクスポート</string>
     <string name="export_all">すべてエクスポート</string>

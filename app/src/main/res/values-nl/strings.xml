@@ -79,6 +79,7 @@
     <string name="error_missing_file">Het bestand is niet gevonden. Het is mogelijk verplaatst of verwijderd.</string>
     <string name="error_not_in_library">Dit boek staat niet meer in je bibliotheek.</string>
     <string name="error_title">Kan dit boek niet openen</string>
+    <string name="error_too_large">Dit bestand is te groot om te openen.</string>
     <string name="error_unsupported">Dit bestand gebruikt een variant van het formaat die nog niet wordt ondersteund.</string>
     <string name="export">Exporteren</string>
     <string name="export_all">Alles exporteren</string>

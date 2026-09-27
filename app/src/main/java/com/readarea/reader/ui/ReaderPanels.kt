@@ -396,9 +396,10 @@ private fun TypographyPanel(vm: ReaderViewModel, s: ReaderSettings, ui: ReaderUi
         scope.launch {
             val path = withContext(Dispatchers.IO) {
                 runCatching {
-                    val name = uri.lastPathSegment?.substringAfterLast('/')?.substringAfterLast(':')?.replace(Regex("[^A-Za-z0-9._ -]"), "_") ?: "font.ttf"
+                    val name = com.readarea.data.SafeFiles.fileName(uri.lastPathSegment?.substringAfterLast(':')?.replace(Regex("[^A-Za-z0-9._ -]"), "_"), "font.ttf")
                     val dir = File(context.filesDir, "fonts").apply { mkdirs() }
                     val out = File(dir, if (name.contains('.')) name else "$name.ttf")
+                    check(com.readarea.data.SafeFiles.inside(dir, out))
                     context.contentResolver.openInputStream(uri)?.use { i -> out.outputStream().use { i.copyTo(it) } }
                     Typeface.createFromFile(out)
                     "file:${out.absolutePath}"

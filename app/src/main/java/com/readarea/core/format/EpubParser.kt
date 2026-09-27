@@ -178,8 +178,7 @@ class EpubParser(private val zip: ZipAccess) {
 
     companion object {
         private val WS = Regex("\\s+")
-        private val TAGS = Regex("<[^>]+>")
 
-        fun stripTags(s: String): String = Entities.decode(s.replace(TAGS, " ")).replace(WS, " ").trim()
+        fun stripTags(s: String): String = Entities.decode(CoverImages.stripTags(s)).replace(WS, " ").trim()
     }
 }

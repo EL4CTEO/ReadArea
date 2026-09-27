@@ -79,6 +79,7 @@
     <string name="error_missing_file">File tidak ditemukan. Mungkin sudah dipindahkan atau dihapus.</string>
     <string name="error_not_in_library">Buku ini sudah tidak ada di pustaka Anda.</string>
     <string name="error_title">Tidak dapat membuka buku ini</string>
+    <string name="error_too_large">File ini terlalu besar untuk dibuka.</string>
     <string name="error_unsupported">File ini menggunakan varian format yang belum didukung.</string>
     <string name="export">Ekspor</string>
     <string name="export_all">Ekspor semua</string>

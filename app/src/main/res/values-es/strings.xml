@@ -79,6 +79,7 @@
     <string name="error_missing_file">No se encuentra el archivo. Puede que se haya movido o eliminado.</string>
     <string name="error_not_in_library">Este libro ya no está en tu biblioteca.</string>
     <string name="error_title">No se pudo abrir este libro</string>
+    <string name="error_too_large">Este archivo es demasiado grande para abrirlo.</string>
     <string name="error_unsupported">Este archivo usa una variante del formato que aún no es compatible.</string>
     <string name="export">Exportar</string>
     <string name="export_all">Exportar todo</string>

@@ -179,6 +179,22 @@ class LibraryBehaviourTest {
     }
 
     @Test
+    fun sharingABookFoundOnTheDeviceWorks() {
+        library { sc ->
+            var ok = false
+            sc.onActivity { ok = com.readarea.ui.library.shareBookFile(it, book("harbour")!!) }
+            assertTrue("sharing must not fail", ok)
+            val chooser = startedReader(sc)
+            assertNotNull("share sheet opens", chooser)
+            val send = chooser!!.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)!!
+            val stream = send.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)!!
+            assertEquals("content", stream.scheme)
+            assertTrue(send.flags and Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
+            assertEquals(harbour.length().toInt(), app.contentResolver.openInputStream(stream)!!.use { it.readBytes() }.size)
+        }
+    }
+
+    @Test
     fun selectionMarksFavoritesAndStatus() {
         library { _ ->
             longPress("The Harbour Light")
@@ -246,7 +262,7 @@ class LibraryBehaviourTest {
 
     @Test
     fun openWithReadAreaAddsTheBookAndOpensIt() {
-        val f = File(app.cacheDir, "shared/Tide Tables.epub").apply { parentFile!!.mkdirs(); writeBytes(QaBooks.realisticEpub("Tide Tables", 2)) }
+        val f = File(Environment.getExternalStorageDirectory(), "Download/Tide Tables.epub").apply { parentFile!!.mkdirs(); writeBytes(QaBooks.realisticEpub("Tide Tables", 2)) }
         val intent = Intent(Intent.ACTION_VIEW, Uri.fromFile(f), app, ReaderActivity::class.java)
         ActivityScenario.launch<ReaderActivity>(intent).use { sc ->
             waitUntil("opened", 20_000) { var ok = false; sc.onActivity { ok = it.vm.ui.value.laidOut && it.vm.ui.value.error == null }; ok }

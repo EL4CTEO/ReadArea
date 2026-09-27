@@ -1,6 +1,8 @@
 package com.readarea.core.format
 
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.Charset
@@ -113,7 +115,7 @@ class FileZipAccess(file: File) : ZipAccess {
     init {
         val names = ArrayList<String>()
         val e = zip.entries()
-        while (e.hasMoreElements()) {
+        while (e.hasMoreElements() && names.size < Limits.ENTRIES) {
             val entry = e.nextElement()
             if (!entry.isDirectory) names.add(entry.name)
         }
@@ -125,7 +127,7 @@ class FileZipAccess(file: File) : ZipAccess {
         val name = if (zip.getEntry(path) != null) path else index[path.lowercase()] ?: index[PathUtil.decode(path).lowercase()] ?: return null
         return synchronized(zip) {
             val entry = zip.getEntry(name) ?: return null
-            zip.getInputStream(entry).use { it.readBytes() }
+            zip.getInputStream(entry).use { it.readCapped(Limits.ENTRY) }
         }
     }
 
@@ -141,15 +143,26 @@ class MemoryZipAccess(input: java.io.InputStream, keep: (String, Long) -> Boolea
 
     init {
         val names = ArrayList<String>()
+        var total = 0L
         java.util.zip.ZipInputStream(input.buffered()).use { zin ->
-            while (true) {
+            while (names.size < Limits.ENTRIES) {
                 val e = zin.nextEntry ?: break
                 if (e.isDirectory) continue
                 names.add(e.name)
                 if (keep(e.name, e.size)) {
-                    val bytes = zin.readBytes()
-                    if (bytes.size <= MAX_ENTRY) {
-                        data[e.name] = bytes
+                    val out = ByteArrayOutputStream()
+                    val buf = ByteArray(64 * 1024)
+                    var size = 0L
+                    while (true) {
+                        val n = zin.read(buf)
+                        if (n < 0) break
+                        size += n
+                        total += n
+                        if (total > Limits.ARCHIVE) throw BookParseException(ParseError.TOO_LARGE, "Archive expands beyond the limit")
+                        if (size <= MAX_ENTRY) out.write(buf, 0, n)
+                    }
+                    if (size <= MAX_ENTRY) {
+                        data[e.name] = out.toByteArray()
                         index[e.name.lowercase()] = e.name
                     }
                 }
@@ -167,4 +180,25 @@ class MemoryZipAccess(input: java.io.InputStream, keep: (String, Long) -> Boolea
 
 class MapResources(private val map: Map<String, () -> ByteArray?>) : ResourceProvider {
     override fun read(path: String): ByteArray? = (map[path] ?: map[path.removePrefix("#")])?.invoke()
+}
+
+object Limits {
+    const val ENTRY = 32 * 1024 * 1024
+    const val FILE = 128 * 1024 * 1024
+    const val ARCHIVE = 1024L * 1024 * 1024
+    const val ENTRIES = 100_000
+}
+
+fun InputStream.readCapped(max: Int): ByteArray {
+    val out = ByteArrayOutputStream()
+    val buf = ByteArray(64 * 1024)
+    var total = 0L
+    while (true) {
+        val n = read(buf)
+        if (n < 0) break
+        total += n
+        if (total > max) throw BookParseException(ParseError.TOO_LARGE, "Content is larger than $max bytes")
+        out.write(buf, 0, n)
+    }
+    return out.toByteArray()
 }

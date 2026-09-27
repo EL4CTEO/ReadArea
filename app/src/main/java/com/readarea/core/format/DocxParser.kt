@@ -24,10 +24,10 @@ class DocxParser(private val zip: ZipAccess, private val fallbackTitle: String) 
 
     private fun findCover(xml: String?, rels: Map<String, String>): String? {
         if (xml != null) {
-            val m = CoverImages.DOCX_EMBED.find(xml)
+            val m = CoverImages.firstTagAttr(xml, "a:blip", "r:embed")
             if (m != null) {
-                val textBefore = CoverImages.DOCX_TEXT.findAll(xml.substring(0, m.range.first)).sumOf { it.groupValues[1].trim().length }
-                val target = rels[m.groupValues[1]]
+                val textBefore = CoverImages.docxTextBefore(xml, m.start)
+                val target = rels[m.value]
                 if (textBefore < 150 && target != null && CoverImages.isRaster(target)) return target
             }
         }

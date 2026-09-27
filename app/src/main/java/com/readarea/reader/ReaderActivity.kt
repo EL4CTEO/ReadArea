@@ -21,6 +21,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
 import com.readarea.app
 import com.readarea.data.ReaderSettings
+import com.readarea.data.SafeFiles
 import com.readarea.reader.ui.ReaderScreen
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
@@ -69,7 +70,7 @@ class ReaderActivity : ComponentActivity() {
                 vm = vm,
                 onBack = { leaveReader() },
                 applyWindow = { s, preview, menu -> applyWindow(s, preview, menu) },
-                openExternal = { uri -> runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri)) } },
+                openExternal = { uri -> if (SafeFiles.isOpenableLink(uri)) runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE)) } },
             )
         }
     }
@@ -101,6 +102,10 @@ class ReaderActivity : ComponentActivity() {
             return
         }
         val data: Uri? = intent.data
+        if (data != null && SafeFiles.isPrivate(this, data)) {
+            finish()
+            return
+        }
         if (data != null && fresh) {
             lifecycleScope.launch {
                 val newId = app.library.openExternal(data)

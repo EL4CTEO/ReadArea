@@ -11,13 +11,13 @@ class MarkdownParser(private val source: String, private val fallbackTitle: Stri
     }
 
     companion object {
-        private val HEADING = Regex("^(#{1,6})\\s+(.*?)\\s*#*\\s*$")
+        private val HEADING = Regex("^(#{1,6})\\s+(.*)$")
         private val HR = Regex("^\\s{0,3}([-*_])(\\s*\\1){2,}\\s*$")
         private val UL = Regex("^(\\s*)[-*+]\\s+(.*)$")
         private val OL = Regex("^(\\s*)\\d+[.)]\\s+(.*)$")
-        private val IMAGE = Regex("!\\[([^\\]]*)]\\(([^)\\s]+)(?:\\s+\"[^\"]*\")?\\)")
-        private val LINK = Regex("\\[([^\\]]+)]\\(([^)\\s]+)(?:\\s+\"[^\"]*\")?\\)")
-        private val AUTOLINK = Regex("<(https?://[^>]+)>")
+        private val IMAGE = Regex("!\\[([^\\]\\n]{0,500}+)]\\(([^)\\s]{1,2000}+)(?:\\s++\"[^\"\\n]{0,500}+\")?\\)")
+        private val LINK = Regex("\\[([^\\]\\n]{1,500}+)]\\(([^)\\s]{1,2000}+)(?:\\s++\"[^\"\\n]{0,500}+\")?\\)")
+        private val AUTOLINK = Regex("<(https?://[^>\\s]{1,2000}+)>")
         private val CODE = Regex("`([^`]+)`")
         private val BOLD = Regex("(\\*\\*|__)(?=\\S)(.+?)(?<=\\S)\\1")
         private val ITALIC = Regex("(\\*|_)(?=\\S)(.+?)(?<=\\S)\\1")
@@ -101,7 +101,9 @@ class MarkdownParser(private val source: String, private val fallbackTitle: Stri
                     flushPara()
                     closeLists()
                     val level = m.groupValues[1].length
-                    out.append("<h$level>").append(inline(m.groupValues[2])).append("</h$level>\n")
+                    val raw = m.groupValues[2].trimEnd()
+                    val text = raw.trimEnd('#').let { if (it.isEmpty() || it.last().isWhitespace()) it.trimEnd() else raw }
+                    out.append("<h$level>").append(inline(text)).append("</h$level>\n")
                     i++
                     return@let
                 } ?: run {
@@ -154,21 +156,29 @@ class MarkdownParser(private val source: String, private val fallbackTitle: Stri
 
         private fun inline(s: String): String {
             val codes = ArrayList<String>()
+            val tags = ArrayList<String>()
+            fun hold(html: String): String {
+                tags.add(html)
+                return "\u0003${tags.size - 1}\u0003"
+            }
             var t = CODE.replace(s) { m ->
                 codes.add(m.groupValues[1])
                 "\u0001${codes.size - 1}\u0001"
             }
+            t = AUTOLINK.replace(t) { m -> esc(m.groupValues[1]).let { u -> hold("<a href=\"${attr(u)}\">$u</a>") } }
             t = esc(t)
-            t = IMAGE.replace(t) { m -> "<img src=\"${m.groupValues[2]}\" alt=\"${m.groupValues[1]}\"/>" }
-            t = LINK.replace(t) { m -> "<a href=\"${m.groupValues[2]}\">${m.groupValues[1]}</a>" }
-            t = AUTOLINK.replace(t) { m -> "<a href=\"${m.groupValues[1]}\">${m.groupValues[1]}</a>" }
+            t = IMAGE.replace(t) { m -> hold("<img src=\"${attr(m.groupValues[2])}\" alt=\"${attr(m.groupValues[1])}\"/>") }
+            t = LINK.replace(t) { m -> hold("<a href=\"${attr(m.groupValues[2])}\">") + m.groupValues[1] + "</a>" }
             t = t.replace("&lt;br&gt;", "<br/>").replace("&lt;br/&gt;", "<br/>")
             t = BOLD.replace(t) { m -> "<b>${m.groupValues[2]}</b>" }
             t = ITALIC.replace(t) { m -> "<i>${m.groupValues[2]}</i>" }
             t = STRIKE.replace(t) { m -> "<s>${m.groupValues[1]}</s>" }
+            t = Regex("\u0003(\\d+)\u0003").replace(t) { m -> tags[m.groupValues[1].toInt()] }
             return Regex("\u0001(\\d+)\u0001").replace(t) { m -> "<code>${esc(codes[m.groupValues[1].toInt()])}</code>" }
         }
 
         private fun esc(s: String): String = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+        private fun attr(s: String): String = s.replace("\"", "&quot;")
     }
 }

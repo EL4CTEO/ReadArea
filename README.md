@@ -70,7 +70,12 @@ Needs Android 8.0 or newer.
 
 ## Privacy
 
-ReadArea has no internet access at all. There are no ads, no tracking and no accounts. It only reads files: it sees your whole storage if you use **Find my books**, or just the folders you choose otherwise, and you can turn that off in Settings. Removing a book from the library never deletes the file unless you ask. Everything you read, highlight or write stays on your phone.
+ReadArea has no internet access at all. There are no ads, no tracking and no accounts.
+
+- It only reads files: your whole storage if you use **Find my books**, or just the folders you choose. You can turn that off in Settings.
+- Removing a book from the library never deletes the file unless you tick the box to do so.
+- Your library, progress and notes stay on your phone. They are only included in Android's backup when that backup is end-to-end encrypted with your screen lock, and when you move to a new phone with a cable or Quick Share.
+- Links inside books only open web pages and email, and always ask first.
 
 ## Questions
 

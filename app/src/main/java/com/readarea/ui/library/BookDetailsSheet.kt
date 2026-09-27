@@ -1,5 +1,6 @@
 package com.readarea.ui.library
 
+import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -58,7 +59,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,6 +81,7 @@ import java.text.DateFormat
 import java.util.Date
 import androidx.compose.ui.res.stringResource
 import com.readarea.R
+import com.readarea.data.db.BookEntity
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -89,7 +90,6 @@ fun BookDetailsSheet(vm: LibraryViewModel, actions: AppActions, id: Long, onDism
     val shelves by vm.collections.collectAsStateWithLifecycle()
     val inShelves by remember(id) { vm.collectionsFor(id) }.collectAsStateWithLifecycle(emptyList())
     val context = LocalContext.current
-    val resources = LocalResources.current
     var shelfDialog by remember { mutableStateOf(false) }
     var removeDialog by remember { mutableStateOf(false) }
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = false)
@@ -138,12 +138,7 @@ fun BookDetailsSheet(vm: LibraryViewModel, actions: AppActions, id: Long, onDism
                 IconButton(onClick = { vm.setFavorite(listOf(b.id), !b.favorite) }) {
                     Icon(if (b.favorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, stringResource(R.string.favorite), tint = if (b.favorite) Color(0xFFE5484D) else MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                IconButton(onClick = {
-                    val uri = b.uri.toUri()
-                    val shareUri = if (uri.scheme == "file") FileProvider.getUriForFile(context, "${context.packageName}.files", File(uri.path!!)) else uri
-                    val intent = Intent(Intent.ACTION_SEND).setType(context.contentResolver.getType(shareUri) ?: "application/octet-stream").putExtra(Intent.EXTRA_STREAM, shareUri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                    runCatching { context.startActivity(Intent.createChooser(intent, resources.getString(R.string.share_book))) }
-                }) { Icon(Icons.Rounded.Share, stringResource(R.string.share_file)) }
+                IconButton(onClick = { shareBookFile(context, b) }) { Icon(Icons.Rounded.Share, stringResource(R.string.share_file)) }
             }
             if (b.progress > 0f) {
                 Spacer(Modifier.height(12.dp))
@@ -253,3 +248,10 @@ private fun InfoRow(label: String, value: String) {
         Text(value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
     }
 }
+
+fun shareBookFile(context: Context, b: BookEntity): Boolean = runCatching {
+    val uri = b.uri.toUri()
+    val shareUri = if (uri.scheme == "file") FileProvider.getUriForFile(context, "${context.packageName}.files", File(uri.path!!)) else uri
+    val intent = Intent(Intent.ACTION_SEND).setType(context.contentResolver.getType(shareUri) ?: "application/octet-stream").putExtra(Intent.EXTRA_STREAM, shareUri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    context.startActivity(Intent.createChooser(intent, context.getString(R.string.share_book)))
+}.isSuccess

@@ -7,6 +7,7 @@ import android.graphics.Path
 import android.graphics.PointF
 import android.graphics.RectF
 import android.os.Bundle
+import androidx.core.net.toUri
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import androidx.lifecycle.AndroidViewModel
@@ -183,6 +184,8 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         e is BookParseException && e.reason == ParseError.DRM -> ctx.getString(R.string.error_drm)
         e is BookParseException && e.reason == ParseError.UNSUPPORTED -> ctx.getString(R.string.error_unsupported)
         e is BookParseException && e.reason == ParseError.EMPTY -> ctx.getString(R.string.error_empty)
+        e is BookParseException && e.reason == ParseError.TOO_LARGE -> ctx.getString(R.string.error_too_large)
+        e is OutOfMemoryError -> ctx.getString(R.string.error_too_large)
         e is BookParseException -> ctx.getString(R.string.error_invalid)
         e is java.io.FileNotFoundException || e is SecurityException -> ctx.getString(R.string.error_missing_file)
         else -> ctx.getString(R.string.error_generic)
@@ -725,10 +728,12 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private val schemePrefix = Regex("^[A-Za-z][A-Za-z0-9+.-]*:")
+
     private fun openLink(href: String) {
         val e = engine as? TextEngine ?: return
-        if (href.contains("://") || href.startsWith("mailto:")) {
-            _ui.update { it.copy(message = "link:$href") }
+        if (schemePrefix.containsMatchIn(href.trim())) {
+            if (com.readarea.data.SafeFiles.isOpenableLink(href.trim().toUri())) _ui.update { it.copy(message = "link:${href.trim()}") }
             return
         }
         val target = e.resolveLink(href, pos.chapter) ?: return

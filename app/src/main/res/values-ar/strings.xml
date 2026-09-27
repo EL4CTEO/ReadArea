@@ -79,6 +79,7 @@
     <string name="error_missing_file">تعذّر العثور على الملف. ربما نُقل أو حُذف.</string>
     <string name="error_not_in_library">لم يعد هذا الكتاب في مكتبتك.</string>
     <string name="error_title">تعذّر فتح هذا الكتاب</string>
+    <string name="error_too_large">هذا الملف أكبر من أن يُفتح.</string>
     <string name="error_unsupported">يستخدم هذا الملف نوعًا من الصيغة غير مدعوم بعد.</string>
     <string name="export">تصدير</string>
     <string name="export_all">تصدير الكل</string>

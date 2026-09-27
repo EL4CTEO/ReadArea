@@ -79,6 +79,7 @@
     <string name="error_missing_file">Файл не знайдено. Можливо, його переміщено або видалено.</string>
     <string name="error_not_in_library">Цієї книжки більше немає в бібліотеці.</string>
     <string name="error_title">Не вдалося відкрити книжку</string>
+    <string name="error_too_large">Цей файл завеликий, щоб його відкрити.</string>
     <string name="error_unsupported">Цей файл використовує варіант формату, який поки не підтримується.</string>
     <string name="export">Експорт</string>
     <string name="export_all">Експортувати все</string>

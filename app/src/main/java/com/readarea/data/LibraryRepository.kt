@@ -234,6 +234,7 @@ class LibraryRepository(
     }
 
     suspend fun openExternal(uri: Uri): Long? = withContext(Dispatchers.IO) {
+        if (SafeFiles.isPrivate(context, uri)) return@withContext null
         val persisted = runCatching {
             context.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
             true
@@ -244,7 +245,8 @@ class LibraryRepository(
     }
 
     private suspend fun addSingle(uri: Uri, copy: Boolean): Long? {
-        val (name, size) = queryName(uri)
+        val (rawName, size) = queryName(uri)
+        val name = SafeFiles.fileName(rawName)
         val mime = runCatching { context.contentResolver.getType(uri) }.getOrNull()
         val format = BookFormat.fromFileName(name) ?: BookFormat.fromMime(mime) ?: return null
         val fileName = if (BookFormat.fromFileName(name) == null) "$name.${format.extensions.first()}" else name
@@ -252,6 +254,7 @@ class LibraryRepository(
         if (copy) {
             val dir = File(context.filesDir, "imported").apply { mkdirs() }
             val out = uniqueFile(dir, fileName)
+            if (!SafeFiles.inside(dir, out)) return null
             val existing = dir.listFiles()?.firstOrNull { it.name == fileName && it.length() == size && size > 0 }
             if (existing != null) {
                 target = Uri.fromFile(existing)

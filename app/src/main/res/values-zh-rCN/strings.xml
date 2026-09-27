@@ -79,6 +79,7 @@
     <string name="error_missing_file">找不到文件，可能已被移动或删除。</string>
     <string name="error_not_in_library">这本书已不在你的书库中。</string>
     <string name="error_title">无法打开这本书</string>
+    <string name="error_too_large">此文件太大，无法打开。</string>
     <string name="error_unsupported">此文件使用了尚不支持的格式变体。</string>
     <string name="export">导出</string>
     <string name="export_all">全部导出</string>

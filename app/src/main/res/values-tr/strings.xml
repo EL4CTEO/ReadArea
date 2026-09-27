@@ -79,6 +79,7 @@
     <string name="error_missing_file">Dosya bulunamadı. Taşınmış veya silinmiş olabilir.</string>
     <string name="error_not_in_library">Bu kitap artık kitaplığınızda değil.</string>
     <string name="error_title">Bu kitap açılamadı</string>
+    <string name="error_too_large">Bu dosya açılamayacak kadar büyük.</string>
     <string name="error_unsupported">Bu dosya, biçimin henüz desteklenmeyen bir türünü kullanıyor.</string>
     <string name="export">Dışa aktar</string>
     <string name="export_all">Tümünü dışa aktar</string>
