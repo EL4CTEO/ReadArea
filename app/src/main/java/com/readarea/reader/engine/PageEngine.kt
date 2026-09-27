@@ -26,6 +26,7 @@ class PageSetup(
     val hingeGap: Float = 0f,
     val scrollMode: Boolean = false,
     val rtl: Boolean = false,
+    val vertical: Boolean = false,
 ) {
     val marginH: Float = settings.marginH * density
     val marginV: Float = settings.marginV * density
@@ -54,7 +55,7 @@ class PageSetup(
         val a = settings
         val b = o.settings
         return width == o.width && height == o.height && topInset == o.topInset && bottomInset == o.bottomInset &&
-            columns == o.columns && hingeGap == o.hingeGap && scrollMode == o.scrollMode && rtl == o.rtl &&
+            columns == o.columns && hingeGap == o.hingeGap && scrollMode == o.scrollMode && rtl == o.rtl && vertical == o.vertical &&
             a.fontFamily == b.fontFamily && a.fontSize == b.fontSize && a.fontWeight == b.fontWeight && a.lineSpacing == b.lineSpacing &&
             a.paragraphSpacing == b.paragraphSpacing && a.indent == b.indent && a.marginH == b.marginH && a.marginV == b.marginV &&
             a.justify == b.justify && a.hyphenation == b.hyphenation && a.letterSpacing == b.letterSpacing &&
@@ -263,7 +264,8 @@ object PageChrome {
             canvas.drawRect(x0, y, x1, y + 1.2f * d, paint)
             paint.color = theme.accent
             paint.alpha = 190
-            canvas.drawRect(x0, y, x0 + (x1 - x0) * progress.coerceIn(0f, 1f), y + 1.2f * d, paint)
+            val filled = (x1 - x0) * progress.coerceIn(0f, 1f)
+            if (s.rtl) canvas.drawRect(x1 - filled, y, x1, y + 1.2f * d, paint) else canvas.drawRect(x0, y, x0 + filled, y + 1.2f * d, paint)
             paint.alpha = 255
         }
     }

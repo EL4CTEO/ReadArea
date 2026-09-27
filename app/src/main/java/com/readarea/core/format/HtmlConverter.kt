@@ -27,6 +27,10 @@ class HtmlConverter(
         private set
     var firstHeading: String? = null
         private set
+    var vertical = false
+        private set
+    var horizontalDeclared = false
+        private set
 
     private val stack = ArrayList<Frame>()
     private val runs = ArrayList<Run>()
@@ -48,6 +52,13 @@ class HtmlConverter(
     private var inHead = false
     private var inTitle = false
     private val titleText = StringBuilder()
+    private val blockRuby = ArrayList<Ruby>()
+    private var rubyDepth = 0
+    private var rubyBase = -1
+    private var rtDepth = 0
+    private var rtBaseEnd = 0
+    private val rtText = StringBuilder()
+    private var htmlAttrs: Triple<String?, String?, String?>? = null
 
     fun convert(html: String): List<Block> {
         HtmlTokenizer(html).parse(this)
@@ -59,6 +70,8 @@ class HtmlConverter(
 
     override fun startTag(name: String, attrs: Attributes, selfClosing: Boolean) {
         when (name) {
+            "html" -> htmlAttrs = Triple(attrs["class"], attrs["id"], attrs["style"])
+            "body" -> htmlAttrs?.let { (c, i, st) -> writingMode(stylesheet.compute("html", c, i, st), "html") }
             "head" -> { inHead = true; return }
             "title" -> if (inHead || blocks.isEmpty() && !blockOpen) {
                 inTitle = !selfClosing
@@ -111,6 +124,10 @@ class HtmlConverter(
             }
         }
         if (name in VOID) return
+        if (name == "rp") {
+            stack.add(Frame(name, false, 0, 1f, null, null, true, false, false, null, 0))
+            return
+        }
 
         if (name == "p" || name == "li" || name == "dt" || name == "dd") {
             val idx = stack.indexOfLast { it.tag == name }
@@ -118,6 +135,7 @@ class HtmlConverter(
             if (idx >= 0 && idx > stopIdx) popTo(idx)
         }
 
+        val cls = attrs["class"]?.lowercase() ?: ""
         val p = top()
         val isBlock = when (display) {
             "block", "list-item", "table", "table-row", "flex", "grid" -> true
@@ -167,7 +185,6 @@ class HtmlConverter(
                 if (!href.isNullOrBlank()) link = resolveLink(href)
             }
         }
-        val cls = attrs["class"]?.lowercase() ?: ""
         if (isBlock && (cls.contains("poem") || cls.contains("stanza") || cls.contains("verse"))) kind = BlockKind.VERSE
         if (isBlock && kind == null && (cls.contains("caption") || cls.contains("figcaption"))) kind = BlockKind.CAPTION
 
@@ -189,6 +206,9 @@ class HtmlConverter(
             if (v == "sub") style = style or RunStyle.SUB
         }
         css["font-family"]?.let { f -> if (f.contains("monospace") || f.contains("courier")) style = style or RunStyle.MONO }
+        val emphasis = css["text-emphasis-style"] ?: css["-epub-text-emphasis-style"] ?: css["-webkit-text-emphasis-style"] ?: css["text-emphasis"] ?: css["-webkit-text-emphasis"]
+        if (emphasis != null && emphasis != "none" || cls.contains("sesame") || cls.contains("boten") || cls.contains("bouten")) style = style or RunStyle.EMPHASIS
+        if (name == "html" || name == "body" || isBlock) writingMode(css, name)
         if (kind != BlockKind.HEADING) Stylesheet.fontScale(css["font-size"])?.let { scale = (scale * it).coerceIn(0.6f, 2.2f) }
         css["text-align"]?.let { a ->
             align = when (a) {
@@ -211,6 +231,16 @@ class HtmlConverter(
         if (selfClosing) {
             if (isBlock) flushBlock()
             return
+        }
+        if (name == "ruby") {
+            rubyDepth++
+            rubyBase = -1
+        } else if ((name == "rt" || name == "rtc") && rubyDepth > 0) {
+            if (rtDepth == 0) {
+                rtBaseEnd = if (blockOpen) blockLen else 0
+                rtText.setLength(0)
+            }
+            rtDepth++
         }
         stack.add(frame)
     }
@@ -235,6 +265,14 @@ class HtmlConverter(
         while (stack.size > idx) {
             val f = stack.removeAt(stack.size - 1)
             if (f.isBlock) hadBlock = true
+            if ((f.tag == "rt" || f.tag == "rtc") && rtDepth > 0) {
+                rtDepth--
+                if (rtDepth == 0) finishRuby()
+            } else if (f.tag == "ruby" && rubyDepth > 0) {
+                rubyDepth--
+                rtDepth = 0
+                rubyBase = -1
+            }
         }
         if (hadBlock) flushBlock()
     }
@@ -247,6 +285,10 @@ class HtmlConverter(
         if (inHead) return
         val f = top()
         if (f?.hidden == true) return
+        if (rtDepth > 0) {
+            rtText.append(text)
+            return
+        }
         val pre = stack.any { it.tag == "pre" }
         val content = if (f?.upper == true) text.uppercase() else text
         for (ch in content) {
@@ -276,8 +318,23 @@ class HtmlConverter(
         if (tag == "style") stylesheet.add(content)
     }
 
+    private fun writingMode(css: Map<String, String>, name: String) {
+        val wm = css["writing-mode"] ?: css["-epub-writing-mode"] ?: css["-webkit-writing-mode"] ?: return
+        if (wm.startsWith("vertical") || wm.startsWith("tb")) vertical = true
+        else if (wm.startsWith("horizontal") && (name == "html" || name == "body")) horizontalDeclared = true
+    }
+
+    private fun finishRuby() {
+        val t = rtText.toString().replace(WS, " ").trim()
+        val start = rubyBase
+        if (start >= 0 && rtBaseEnd > start && t.isNotEmpty() && blockOpen) blockRuby.add(Ruby(start, rtBaseEnd, t))
+        rtText.setLength(0)
+        rubyBase = -1
+    }
+
     private fun appendChar(ch: Char, f: Frame?) {
         if (!blockOpen) openBlock(f)
+        if (rubyDepth > 0 && rubyBase < 0 && rtDepth == 0 && ch != ' ') rubyBase = blockLen
         val style = f?.style ?: 0
         val link = f?.link
         val scale = f?.scale ?: 1f
@@ -308,6 +365,7 @@ class HtmlConverter(
         blockAlign = f?.align
         blockNoIndent = f?.noIndent ?: false
         blockHasBreak = false
+        blockRuby.clear()
         blockAnchors.clear()
         blockAnchors.addAll(pendingAnchors)
         pendingAnchors.clear()
@@ -371,6 +429,7 @@ class HtmlConverter(
                 level = blockLevel,
                 anchors = anchors,
                 noIndent = blockNoIndent || blockHasBreak || blockKind != BlockKind.PARAGRAPH,
+                ruby = blockRuby.filter { it.end <= len }.toList(),
             )
             if (blockKind == BlockKind.HEADING && firstHeading == null) firstHeading = block.text.replace('\n', ' ').trim()
             addBlock(block)
@@ -379,6 +438,8 @@ class HtmlConverter(
         }
         runs.clear()
         runText.setLength(0)
+        blockRuby.clear()
+        if (rubyDepth > 0) rubyBase = -1
         blockOpen = false
         blockLen = 0
         lastWasSpace = true

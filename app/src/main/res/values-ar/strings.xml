@@ -320,6 +320,7 @@
     <string name="tool_listen">استماع</string>
     <string name="tool_paging">التقليب</string>
     <string name="tool_text">النص</string>
+    <string name="top_aligned">محاذاة إلى الأعلى</string>
     <string name="total_time">إجمالي الوقت</string>
     <string name="tts_unavailable">تحويل النص إلى كلام غير متاح على هذا الجهاز.</string>
     <string name="turn_every">التقليب كل</string>
@@ -338,6 +339,10 @@
     <string name="weight">السُمك</string>
     <string name="welcome_body">أضف مجلدًا يحتوي على كتبك وسيحافظ ReadArea على مزامنته. يدعم EPUB وPDF وMOBI وFB2 وDOCX وTXT وMarkdown وRTF وODT وHTML والقصص المصورة.</string>
     <string name="welcome_title">مرحبًا بك في ReadArea</string>
+    <string name="writing_horizontal">أفقي</string>
+    <string name="writing_mode">اتجاه الكتابة</string>
+    <string name="writing_mode_hint">يعرض الوضع العمودي النص في أعمدة تُقرأ من اليمين إلى اليسار، مع الفوريغانا بجانب الحروف — كما في الكتب اليابانية والصينية المطبوعة.</string>
+    <string name="writing_vertical">عمودي</string>
     <string name="you_finished">أنهيت %s.</string>
     <string name="your_thoughts">أفكارك…</string>
     <string name="zones_forward">التالي غالبًا</string>

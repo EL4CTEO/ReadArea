@@ -134,7 +134,7 @@ fun PanelHost(vm: ReaderViewModel, ui: ReaderUi, s: ReaderSettings, theme: Readi
         Column(mod.fillMaxWidth()) {
             when (ui.panel) {
                 Panel.CONTENTS -> ContentsPanel(vm, ui)
-                Panel.TYPOGRAPHY -> TypographyPanel(vm, s)
+                Panel.TYPOGRAPHY -> TypographyPanel(vm, s, ui)
                 Panel.THEME -> ThemePanel(vm, s, theme)
                 Panel.LIGHT -> LightPanel(vm, s)
                 Panel.PAGING -> PagingPanel(vm, s, ui)
@@ -387,7 +387,7 @@ private fun <T> Segmented(options: List<Pair<T, String>>, selected: T, onSelect:
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TypographyPanel(vm: ReaderViewModel, s: ReaderSettings) {
+private fun TypographyPanel(vm: ReaderViewModel, s: ReaderSettings, ui: ReaderUi) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val appSettings by context.app.settings.app.collectAsStateWithLifecycle(com.readarea.data.AppSettings())
@@ -453,8 +453,13 @@ private fun TypographyPanel(vm: ReaderViewModel, s: ReaderSettings) {
         LabeledSlider(stringResource(R.string.letter_spacing), s.letterSpacing, -0.05f..0.15f, 19, { "%.2f".format(it) }) { v -> vm.updateSettings { it.copy(letterSpacing = (v * 100).toInt() / 100f) } }
         LabeledSlider(stringResource(R.string.side_margins), s.marginH.toFloat(), 4f..64f, 14, { "${it.toInt()}" }) { v -> vm.updateSettings { it.copy(marginH = v.toInt()) } }
         LabeledSlider(stringResource(R.string.vertical_margins), s.marginV.toFloat(), 4f..64f, 14, { "${it.toInt()}" }) { v -> vm.updateSettings { it.copy(marginV = v.toInt()) } }
+        if (ui.bookCjk || s.writingMode != "auto") {
+            SectionTitle(stringResource(R.string.writing_mode))
+            Segmented(listOf("auto" to stringResource(R.string.auto), "horizontal" to stringResource(R.string.writing_horizontal), "vertical" to stringResource(R.string.writing_vertical)), s.writingMode) { v -> vm.updateSettings { it.copy(writingMode = v) } }
+            Text(stringResource(R.string.writing_mode_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+        }
         SectionTitle(stringResource(R.string.layout))
-        Segmented(listOf(true to stringResource(R.string.justified), false to stringResource(R.string.left_aligned)), s.justify) { v -> vm.updateSettings { it.copy(justify = v) } }
+        Segmented(listOf(true to stringResource(R.string.justified), false to stringResource(if (ui.vertical) R.string.top_aligned else R.string.left_aligned)), s.justify) { v -> vm.updateSettings { it.copy(justify = v) } }
         Spacer(Modifier.height(8.dp))
         SwitchRow(stringResource(R.string.hyphenation), stringResource(R.string.hyphenation_hint), s.hyphenation) { v -> vm.updateSettings { it.copy(hyphenation = v) } }
         SwitchRow(stringResource(R.string.publisher_styles), stringResource(R.string.publisher_styles_hint), s.publisherStyles) { v -> vm.updateSettings { it.copy(publisherStyles = v) } }
@@ -561,15 +566,16 @@ private fun LightPanel(vm: ReaderViewModel, s: ReaderSettings) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PagingPanel(vm: ReaderViewModel, s: ReaderSettings, ui: ReaderUi) {
+    val scroll = s.pageAnim == "scroll" && !ui.vertical
     PanelBody {
         SectionTitle(stringResource(R.string.page_turn))
         SwitchRow(stringResource(R.string.realistic_curl), stringResource(R.string.realistic_curl_hint), s.pageAnim == "curl") { v -> vm.updateSettings { it.copy(pageAnim = if (v) "curl" else "slide") } }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            listOf("curl" to stringResource(R.string.anim_curl), "slide" to stringResource(R.string.anim_slide), "cover" to stringResource(R.string.anim_cover), "fade" to stringResource(R.string.anim_fade), "none" to stringResource(R.string.anim_instant), "scroll" to stringResource(R.string.anim_scroll)).forEach { (k, l) ->
+            listOf("curl" to stringResource(R.string.anim_curl), "slide" to stringResource(R.string.anim_slide), "cover" to stringResource(R.string.anim_cover), "fade" to stringResource(R.string.anim_fade), "none" to stringResource(R.string.anim_instant), "scroll" to stringResource(R.string.anim_scroll)).filter { it.first != "scroll" || !ui.vertical }.forEach { (k, l) ->
                 FilterChip(selected = s.pageAnim == k, onClick = { vm.updateSettings { it.copy(pageAnim = k) } }, label = { Text(l) })
             }
         }
-        if (s.pageAnim != "none" && s.pageAnim != "scroll") {
+        if (s.pageAnim != "none" && !scroll) {
             LabeledSlider(stringResource(R.string.animation_speed), s.animSpeed, 0.5f..2f, 5, { "%.2g×".format(it) }) { v -> vm.updateSettings { it.copy(animSpeed = v) } }
         }
         SectionTitle(stringResource(R.string.page_direction))
@@ -588,14 +594,14 @@ private fun PagingPanel(vm: ReaderViewModel, s: ReaderSettings, ui: ReaderUi) {
         }
         Spacer(Modifier.height(8.dp))
         SwitchRow(stringResource(R.string.volume_keys), null, s.volumeKeys) { v -> vm.updateSettings { it.copy(volumeKeys = v) } }
-        if (s.pageAnim != "scroll") {
+        if (!scroll) {
             SectionTitle(stringResource(R.string.two_page_spread))
             Segmented(listOf("auto" to stringResource(R.string.auto), "on" to stringResource(R.string.always), "off" to stringResource(R.string.off)), s.spread) { v -> vm.updateSettings { it.copy(spread = v) } }
             Text(stringResource(R.string.two_page_spread_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
         }
         SectionTitle(stringResource(R.string.auto_page_turn))
         val secondsFormat = stringResource(R.string.seconds_short)
-        LabeledSlider(stringResource(if (s.pageAnim == "scroll") R.string.scroll_every else R.string.turn_every), s.autoTurnSeconds.toFloat(), 5f..120f, 22, { secondsFormat.format(it.toInt()) }) { v -> vm.updateSettings { it.copy(autoTurnSeconds = v.toInt()) } }
+        LabeledSlider(stringResource(if (scroll) R.string.scroll_every else R.string.turn_every), s.autoTurnSeconds.toFloat(), 5f..120f, 22, { secondsFormat.format(it.toInt()) }) { v -> vm.updateSettings { it.copy(autoTurnSeconds = v.toInt()) } }
         FilledTonalButton(onClick = { vm.closePanel(); vm.toggleAutoTurn() }) {
             Icon(Icons.Rounded.Timer, null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))

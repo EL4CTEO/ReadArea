@@ -320,6 +320,7 @@
     <string name="tool_listen">Anhören</string>
     <string name="tool_paging">Blättern</string>
     <string name="tool_text">Text</string>
+    <string name="top_aligned">Oben ausgerichtet</string>
     <string name="total_time">Gesamtzeit</string>
     <string name="tts_unavailable">Sprachausgabe ist auf diesem Gerät nicht verfügbar.</string>
     <string name="turn_every">Umblättern alle</string>
@@ -338,6 +339,10 @@
     <string name="weight">Stärke</string>
     <string name="welcome_body">Füge einen Ordner mit deinen Büchern hinzu und ReadArea hält ihn synchron. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML und Comics werden unterstützt.</string>
     <string name="welcome_title">Willkommen bei ReadArea</string>
+    <string name="writing_horizontal">Horizontal</string>
+    <string name="writing_mode">Schreibrichtung</string>
+    <string name="writing_mode_hint">Vertikal setzt den Text in Spalten, die von rechts nach links gelesen werden, mit Furigana neben den Zeichen – wie in gedruckten japanischen und chinesischen Büchern.</string>
+    <string name="writing_vertical">Vertikal</string>
     <string name="you_finished">Du hast %s beendet.</string>
     <string name="your_thoughts">Deine Gedanken…</string>
     <string name="zones_forward">Meist vorwärts</string>

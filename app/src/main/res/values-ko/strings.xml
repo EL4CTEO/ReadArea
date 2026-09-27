@@ -320,6 +320,7 @@
     <string name="tool_listen">듣기</string>
     <string name="tool_paging">넘김</string>
     <string name="tool_text">글자</string>
+    <string name="top_aligned">위쪽 정렬</string>
     <string name="total_time">총 시간</string>
     <string name="tts_unavailable">이 기기에서는 음성 읽기를 사용할 수 없습니다.</string>
     <string name="turn_every">넘김 간격</string>
@@ -338,6 +339,10 @@
     <string name="weight">굵기</string>
     <string name="welcome_body">책이 들어 있는 폴더를 추가하면 ReadArea가 자동으로 동기화합니다. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML, 만화를 지원합니다.</string>
     <string name="welcome_title">ReadArea에 오신 것을 환영합니다</string>
+    <string name="writing_horizontal">가로쓰기</string>
+    <string name="writing_mode">글자 방향</string>
+    <string name="writing_mode_hint">세로쓰기는 오른쪽에서 왼쪽으로 읽는 세로 줄에 글자를 배치하고, 후리가나를 글자 옆에 표시합니다. 인쇄된 일본어·중국어 책과 같습니다.</string>
+    <string name="writing_vertical">세로쓰기</string>
     <string name="you_finished">%s을(를) 다 읽었습니다.</string>
     <string name="your_thoughts">생각을 적어 보세요…</string>
     <string name="zones_forward">주로 다음</string>

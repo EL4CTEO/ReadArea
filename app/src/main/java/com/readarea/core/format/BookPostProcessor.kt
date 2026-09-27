@@ -30,6 +30,7 @@ object BookPostProcessor {
             }
         }
         var meta = book.meta
+        if (meta.language == null) TextDirection.guessCjkLanguage(sample(result))?.let { meta = meta.copy(language = it) }
         if (!meta.rtl) {
             val rtl = if (meta.language != null) TextDirection.isRtlLanguage(meta.language) else TextDirection.looksRtl(sample(result))
             if (rtl) meta = meta.copy(rtl = true)
@@ -85,7 +86,9 @@ object BookPostProcessor {
                         val sp = text.lastIndexOf(' ', end)
                         if (sp > start) end = sp + 1
                     }
-                    cur.add(b.copy(runs = listOf(b.runs[0].copy(text = text.substring(start, end))), anchors = if (start == 0) b.anchors else emptyList()))
+                    val s0 = start
+                    val e0 = end
+                    cur.add(b.copy(runs = listOf(b.runs[0].copy(text = text.substring(start, end))), anchors = if (start == 0) b.anchors else emptyList(), ruby = b.ruby.filter { it.start >= s0 && it.end <= e0 }.map { it.copy(start = it.start - s0, end = it.end - s0) }))
                     out.add(Chapter(chapter.title, if (out.isEmpty()) chapter.href else "${chapter.href}~${out.size}", cur))
                     cur = ArrayList()
                     start = end

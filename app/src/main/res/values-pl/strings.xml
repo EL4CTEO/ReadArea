@@ -320,6 +320,7 @@
     <string name="tool_listen">Słuchaj</string>
     <string name="tool_paging">Strony</string>
     <string name="tool_text">Tekst</string>
+    <string name="top_aligned">Do góry</string>
     <string name="total_time">Łączny czas</string>
     <string name="tts_unavailable">Zamiana tekstu na mowę nie jest dostępna na tym urządzeniu.</string>
     <string name="turn_every">Przewracaj co</string>
@@ -338,6 +339,10 @@
     <string name="weight">Grubość</string>
     <string name="welcome_body">Dodaj folder z książkami, a ReadArea będzie go synchronizować. Obsługiwane są EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML i komiksy.</string>
     <string name="welcome_title">Witaj w ReadArea</string>
+    <string name="writing_horizontal">Poziomo</string>
+    <string name="writing_mode">Kierunek pisma</string>
+    <string name="writing_mode_hint">Tryb pionowy układa tekst w kolumny czytane od prawej do lewej, z furiganą obok znaków — jak w drukowanych książkach japońskich i chińskich.</string>
+    <string name="writing_vertical">Pionowo</string>
     <string name="you_finished">Skończyłeś(-aś) „%s”.</string>
     <string name="your_thoughts">Twoje przemyślenia…</string>
     <string name="zones_forward">Głównie dalej</string>

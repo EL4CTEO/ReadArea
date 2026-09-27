@@ -320,6 +320,7 @@
     <string name="tool_listen">听书</string>
     <string name="tool_paging">翻页</string>
     <string name="tool_text">文字</string>
+    <string name="top_aligned">顶端对齐</string>
     <string name="total_time">总时长</string>
     <string name="tts_unavailable">此设备不支持文字转语音。</string>
     <string name="turn_every">每隔多久翻页</string>
@@ -338,6 +339,10 @@
     <string name="weight">粗细</string>
     <string name="welcome_body">添加存放图书的文件夹，ReadArea 会自动保持同步。支持 EPUB、PDF、MOBI、FB2、DOCX、TXT、Markdown、RTF、ODT、HTML 和漫画。</string>
     <string name="welcome_title">欢迎使用 ReadArea</string>
+    <string name="writing_horizontal">横排</string>
+    <string name="writing_mode">文字方向</string>
+    <string name="writing_mode_hint">竖排会将正文排成从右向左阅读的竖行，注音显示在文字旁边——与印刷版的日文和中文书籍一样。</string>
+    <string name="writing_vertical">竖排</string>
     <string name="you_finished">你读完了《%s》。</string>
     <string name="your_thoughts">写下你的想法…</string>
     <string name="zones_forward">主要向后翻</string>

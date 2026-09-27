@@ -48,6 +48,7 @@ data class ReaderSettings(
     val warmth: Float = 0f,
     val spread: String = "auto",
     val pageDirection: String = "auto",
+    val writingMode: String = "auto",
     val brightnessGesture: Boolean = true,
     val orientation: String = "auto",
     val ttsRate: Float = 1f,

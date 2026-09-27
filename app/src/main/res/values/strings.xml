@@ -322,6 +322,7 @@
     <string name="tool_listen">Listen</string>
     <string name="tool_paging">Paging</string>
     <string name="tool_text">Text</string>
+    <string name="top_aligned">Top aligned</string>
     <string name="total_time">Total time</string>
     <string name="tts_unavailable">Text-to-speech isn\'t available on this device.</string>
     <string name="turn_every">Turn every</string>
@@ -340,6 +341,10 @@
     <string name="weight">Weight</string>
     <string name="welcome_body">Add a folder with your books and ReadArea will keep it in sync. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML and comics are supported.</string>
     <string name="welcome_title">Welcome to ReadArea</string>
+    <string name="writing_horizontal">Horizontal</string>
+    <string name="writing_mode">Writing direction</string>
+    <string name="writing_mode_hint">Vertical sets the text in columns read from right to left, with furigana beside the characters — like printed Japanese and Chinese books.</string>
+    <string name="writing_vertical">Vertical</string>
     <string name="you_finished">You finished %s.</string>
     <string name="your_thoughts">Your thoughts…</string>
     <string name="zones_forward">Mostly next</string>

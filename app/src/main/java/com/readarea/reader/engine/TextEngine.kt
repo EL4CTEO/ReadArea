@@ -34,13 +34,13 @@ import java.text.BreakIterator
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicReferenceArray
 
-class ChapterPages(val text: Spanned, val layout: StaticLayout, val starts: IntArray) {
-    val pageCount: Int get() = starts.size
-    fun startOffset(page: Int): Int = layout.getLineStart(starts[page.coerceIn(0, starts.size - 1)])
-    fun endOffset(page: Int): Int = if (page + 1 < starts.size) layout.getLineStart(starts[page + 1]) else text.length
+class ChapterPages(val text: Spanned, val layout: StaticLayout, val starts: IntArray) : PagedText {
+    override val pageCount: Int get() = starts.size
+    override fun startOffset(page: Int): Int = layout.getLineStart(starts[page.coerceIn(0, starts.size - 1)])
+    override fun endOffset(page: Int): Int = if (page + 1 < starts.size) layout.getLineStart(starts[page + 1]) else text.length
     fun top(page: Int): Int = layout.getLineTop(starts[page.coerceIn(0, starts.size - 1)])
     fun bottom(page: Int): Int = if (page + 1 < starts.size) layout.getLineTop(starts[page + 1]) else layout.height
-    fun pageOf(offset: Int): Int {
+    override fun pageOf(offset: Int): Int {
         val line = layout.getLineForOffset(offset.coerceIn(0, text.length))
         var lo = 0
         var hi = starts.size - 1
@@ -66,7 +66,7 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
     private val total = prefix[chapterCount].coerceAtLeast(1)
     private val locale: Locale = book.meta.language?.let { runCatching { Locale.forLanguageTag(it) }.getOrNull() }?.takeIf { it.language.isNotEmpty() } ?: Locale.getDefault()
 
-    private class Gen(val setup: PageSetup, val paint: TextPaint, val arr: AtomicReferenceArray<ChapterPages?>)
+    private class Gen(val setup: PageSetup, val paint: TextPaint, val arr: AtomicReferenceArray<PagedText?>)
 
     @Volatile private var gen: Gen? = null
     private val hlPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -106,22 +106,35 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
 
     override fun isReady(chapter: Int): Boolean = gen?.arr?.get(chapter) != null
 
-    fun pages(chapter: Int): ChapterPages? = gen?.arr?.takeIf { chapter in 0 until chapterCount }?.get(chapter)
+    private fun paged(chapter: Int): PagedText? = gen?.arr?.takeIf { chapter in 0 until chapterCount }?.get(chapter)
+
+    fun pages(chapter: Int): ChapterPages? = paged(chapter) as? ChapterPages
+
+    fun vpages(chapter: Int): VerticalPages? = paged(chapter) as? VerticalPages
 
     override fun ensure(chapter: Int) {
         val g = gen ?: return
         if (chapter !in 0 until chapterCount || g.arr.get(chapter) != null) return
-        val cp = build(g, chapter)
+        val cp = if (g.setup.vertical) buildVertical(g, chapter) else build(g, chapter)
         if (gen === g) g.arr.compareAndSet(chapter, null, cp)
     }
 
-    override fun pageCount(chapter: Int): Int = pages(chapter)?.pageCount ?: 0
+    private fun buildVertical(g: Gen, chapter: Int): VerticalPages {
+        val s = g.setup
+        val st = s.settings
+        return VerticalBuilder(
+            s.contentWidth.toFloat(), s.contentHeight.toFloat(), s.fontPx, s.density, st.lineSpacing, st.letterSpacing,
+            st.paragraphSpacing, st.indent, st.justify, st.publisherStyles, g.paint.typeface ?: Typeface.DEFAULT, images,
+        ).build(book.chapters[chapter].blocks)
+    }
 
-    override fun pageOf(chapter: Int, offset: Int): Int = pages(chapter)?.pageOf(offset) ?: 0
+    override fun pageCount(chapter: Int): Int = paged(chapter)?.pageCount ?: 0
 
-    override fun offsetOf(pos: PagePos): Int = pages(pos.chapter)?.startOffset(pos.page) ?: 0
+    override fun pageOf(chapter: Int, offset: Int): Int = paged(chapter)?.pageOf(offset) ?: 0
 
-    override fun endOffsetOf(pos: PagePos): Int = pages(pos.chapter)?.endOffset(pos.page) ?: 0
+    override fun offsetOf(pos: PagePos): Int = paged(pos.chapter)?.startOffset(pos.page) ?: 0
+
+    override fun endOffsetOf(pos: PagePos): Int = paged(pos.chapter)?.endOffset(pos.page) ?: 0
 
     override fun progress(chapter: Int, offset: Int): Float {
         if (chapter !in 0 until chapterCount) return 0f
@@ -228,6 +241,25 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
                 if (st.publisherStyles && r.scale != 1f && b.kind != BlockKind.HEADING) sb.setSpan(RelativeSizeSpan(r.scale.coerceIn(0.7f, 1.6f)), rs, re, flags)
                 r.link?.let { sb.setSpan(LinkSpan(it, colors), rs, re, flags) }
             }
+            val bodyEnd = sb.length
+            for (rb in b.ruby) {
+                var a = start + rb.start
+                var z = (start + rb.end).coerceAtMost(bodyEnd)
+                while (z > a && sb[z - 1].isWhitespace()) z--
+                while (a < z && sb[a].isWhitespace()) a++
+                if (z > a && (a until z).none { sb[it] == '\n' } && sb.getSpans(a, z, RubySpan::class.java).isEmpty()) sb.setSpan(RubySpan(rb.text), a, z, flags)
+            }
+            if (b.runs.any { it.style and RunStyle.EMPHASIS != 0 }) {
+                var k = start
+                for (r in b.runs) {
+                    if (r.style and RunStyle.EMPHASIS != 0) {
+                        for (q in k until k + r.text.length) {
+                            if (!sb[q].isWhitespace() && !Character.isSurrogate(sb[q]) && sb.getSpans(q, q + 1, RubySpan::class.java).isEmpty()) sb.setSpan(RubySpan("・"), q, q + 1, flags)
+                        }
+                    }
+                    k += r.text.length
+                }
+            }
             sb.append('\n')
             val end = sb.length
             val align = b.align
@@ -274,7 +306,9 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
                 }
                 else -> {
                     val centered = align == Align.CENTER || align == Align.END
-                    if (!b.noIndent && indentPx > 0 && !centered) sb.setSpan(LeadingMarginSpan.Standard(indentPx, 0), start, end, flags)
+                    val lead = b.runs.firstOrNull()?.text?.firstOrNull()
+                    val cjkOpen = lead != null && (lead == '\u3000' || Vertical.opening(lead))
+                    if (!b.noIndent && indentPx > 0 && !centered && !cjkOpen) sb.setSpan(LeadingMarginSpan.Standard(indentPx, 0), start, end, flags)
                     if (paraAfter > 0) sb.setSpan(ParagraphSpacingSpan(0, paraAfter), start, end, flags)
                 }
             }
@@ -327,58 +361,77 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
         val th = theme ?: return
         PageChrome.drawBackground(canvas, th, s.width, s.height)
         PageChrome.drawSpine(canvas, s)
-        val cp = pages(pos.chapter) ?: return
+        val pt = paged(pos.chapter) ?: return
         for (col in 0 until s.columns) {
             val page = pos.page + col
-            if (page >= cp.pageCount) break
+            if (page >= pt.pageCount) break
             val left = s.columnLeft(col)
-            val top = cp.top(page)
-            val bottom = cp.bottom(page)
-            canvas.save()
-            canvas.translate(left, s.contentTop - top)
-            canvas.clipRect(-s.marginH, top.toFloat(), s.contentWidth + s.marginH, bottom.toFloat())
-            drawHighlights(canvas, cp, pos.chapter, cp.startOffset(page), cp.endOffset(page), deco, th)
-            cp.layout.draw(canvas)
-            canvas.restore()
+            when (pt) {
+                is ChapterPages -> {
+                    val top = pt.top(page)
+                    val bottom = pt.bottom(page)
+                    canvas.save()
+                    canvas.translate(left, s.contentTop - top)
+                    canvas.clipRect(-s.marginH, top.toFloat(), s.contentWidth + s.marginH, bottom.toFloat())
+                    drawHighlights(canvas, pos.chapter, pt.startOffset(page), pt.endOffset(page), deco, th) { a, b, out -> pt.layout.getSelectionPath(a, b, out) }
+                    pt.layout.draw(canvas)
+                    canvas.restore()
+                }
+                is VerticalPages -> {
+                    drawHighlights(canvas, pos.chapter, pt.startOffset(page), pt.endOffset(page), deco, th) { a, b, out -> pt.path(page, a, b, left, s.contentTop, out) }
+                    pt.draw(canvas, page, left, s.contentTop, colors, images)
+                }
+            }
             val gp = globalPage(PagePos(pos.chapter, page))
-            val label = if (gp != null) "$gp / ${totalPages()}" else "${page + 1} / ${cp.pageCount}"
+            val label = if (gp != null) "$gp / ${totalPages()}" else "${page + 1} / ${pt.pageCount}"
             val header = if (s.columns > 1 && col == 0) deco.bookTitle else chapterTitle(pos.chapter).ifBlank { deco.bookTitle }
-            PageChrome.drawChrome(canvas, s, th, header, label, progress(pos.chapter, cp.startOffset(page)), deco, PagePos(pos.chapter, page) in deco.bookmarkedPages, col)
+            PageChrome.drawChrome(canvas, s, th, header, label, progress(pos.chapter, pt.startOffset(page)), deco, PagePos(pos.chapter, page) in deco.bookmarkedPages, col)
         }
     }
 
     override fun scrollHeight(pos: PagePos): Float {
-        val cp = pages(pos.chapter) ?: return 0f
-        return (cp.bottom(pos.page) - cp.top(pos.page)).toFloat()
+        val pt = paged(pos.chapter) ?: return 0f
+        return when (pt) {
+            is ChapterPages -> (pt.bottom(pos.page) - pt.top(pos.page)).toFloat()
+            else -> currentSetup?.contentHeight?.toFloat() ?: 0f
+        }
     }
 
     override fun drawScrollSlice(canvas: Canvas, pos: PagePos, deco: Decorations) {
         val s = currentSetup ?: return
         val th = theme ?: return
-        val cp = pages(pos.chapter) ?: return
-        val top = cp.top(pos.page)
-        val bottom = cp.bottom(pos.page)
-        canvas.save()
-        canvas.translate(s.contentLeft, -top.toFloat())
-        canvas.clipRect(-s.marginH, top.toFloat(), s.contentWidth + s.marginH, bottom.toFloat())
-        drawHighlights(canvas, cp, pos.chapter, cp.startOffset(pos.page), cp.endOffset(pos.page), deco, th)
-        cp.layout.draw(canvas)
-        canvas.restore()
+        when (val pt = paged(pos.chapter)) {
+            is ChapterPages -> {
+                val top = pt.top(pos.page)
+                val bottom = pt.bottom(pos.page)
+                canvas.save()
+                canvas.translate(s.contentLeft, -top.toFloat())
+                canvas.clipRect(-s.marginH, top.toFloat(), s.contentWidth + s.marginH, bottom.toFloat())
+                drawHighlights(canvas, pos.chapter, pt.startOffset(pos.page), pt.endOffset(pos.page), deco, th) { a, b, out -> pt.layout.getSelectionPath(a, b, out) }
+                pt.layout.draw(canvas)
+                canvas.restore()
+            }
+            is VerticalPages -> {
+                drawHighlights(canvas, pos.chapter, pt.startOffset(pos.page), pt.endOffset(pos.page), deco, th) { a, b, out -> pt.path(pos.page, a, b, s.contentLeft, 0f, out) }
+                pt.draw(canvas, pos.page, s.contentLeft, 0f, colors, images)
+            }
+            else -> {}
+        }
     }
 
-    private fun drawHighlights(canvas: Canvas, cp: ChapterPages, chapter: Int, start: Int, end: Int, deco: Decorations, th: ReadingTheme) {
+    private inline fun drawHighlights(canvas: Canvas, chapter: Int, start: Int, end: Int, deco: Decorations, th: ReadingTheme, shape: (Int, Int, Path) -> Unit) {
         val alpha = if (th.dark) 0x55 else 0x70
         for (h in deco.highlights) {
             if (h.chapter != chapter || h.end <= start || h.start >= end) continue
-            fill(canvas, cp, maxOf(h.start, start), minOf(h.end, end), (h.color and 0x00FFFFFF) or (alpha shl 24))
+            fill(canvas, maxOf(h.start, start), minOf(h.end, end), (h.color and 0x00FFFFFF) or (alpha shl 24), shape)
         }
-        deco.search?.let { h -> if (h.chapter == chapter && h.end > start && h.start < end) fill(canvas, cp, maxOf(h.start, start), minOf(h.end, end), (th.accent and 0x00FFFFFF) or (0x66 shl 24)) }
-        deco.speaking?.let { h -> if (h.chapter == chapter && h.end > start && h.start < end) fill(canvas, cp, maxOf(h.start, start), minOf(h.end, end), (th.accent and 0x00FFFFFF) or (0x33 shl 24)) }
+        deco.search?.let { h -> if (h.chapter == chapter && h.end > start && h.start < end) fill(canvas, maxOf(h.start, start), minOf(h.end, end), (th.accent and 0x00FFFFFF) or (0x66 shl 24), shape) }
+        deco.speaking?.let { h -> if (h.chapter == chapter && h.end > start && h.start < end) fill(canvas, maxOf(h.start, start), minOf(h.end, end), (th.accent and 0x00FFFFFF) or (0x33 shl 24), shape) }
     }
 
-    private fun fill(canvas: Canvas, cp: ChapterPages, s: Int, e: Int, color: Int) {
+    private inline fun fill(canvas: Canvas, s: Int, e: Int, color: Int, shape: (Int, Int, Path) -> Unit) {
         path.reset()
-        cp.layout.getSelectionPath(s, e, path)
+        shape(s, e, path)
         hlPaint.color = color
         hlPaint.style = Paint.Style.FILL
         canvas.drawPath(path, hlPaint)
@@ -386,17 +439,19 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
 
     private fun column(pos: PagePos, x: Float): Pair<Int, Float>? {
         val s = currentSetup ?: return null
-        val cp = pages(pos.chapter) ?: return null
+        val pt = paged(pos.chapter) ?: return null
         val col = s.columnAt(x)
         val page = pos.page + col
-        if (page >= cp.pageCount) return null
+        if (page >= pt.pageCount) return null
         return page to s.columnLeft(col)
     }
 
     fun offsetAt(pos: PagePos, x: Float, y: Float): Int? {
         val s = currentSetup ?: return null
-        val cp = pages(pos.chapter) ?: return null
+        val pt = paged(pos.chapter) ?: return null
         val (page, left) = column(pos, x) ?: return null
+        if (pt is VerticalPages) return pt.offsetAt(page, x - left, y - s.contentTop)
+        val cp = pt as ChapterPages
         val top = cp.top(page)
         val ly = (y - s.contentTop + top).toInt().coerceIn(top, (cp.bottom(page) - 1).coerceAtLeast(top))
         val line = cp.layout.getLineForVertical(ly)
@@ -404,7 +459,9 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
     }
 
     fun wordAt(pos: PagePos, x: Float, y: Float): IntRange? {
-        val off = offsetAt(pos, x, y) ?: return null
+        val s = currentSetup ?: return null
+        val vp = vpages(pos.chapter)
+        val off = if (vp != null) column(pos, x)?.let { (page, left) -> vp.offsetAt(page, x - left, y - s.contentTop, floor = true) } ?: return null else offsetAt(pos, x, y) ?: return null
         val text = plainText(pos.chapter)
         if (text.isEmpty()) return null
         val o = off.coerceIn(0, text.length - 1)
@@ -423,8 +480,10 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
 
     fun linkAt(pos: PagePos, x: Float, y: Float): String? {
         val s = currentSetup ?: return null
-        val cp = pages(pos.chapter) ?: return null
+        val pt = paged(pos.chapter) ?: return null
         val (page, left) = column(pos, x) ?: return null
+        if (pt is VerticalPages) return pt.linkAt(page, x - left, y - s.contentTop, 6 * s.density)
+        val cp = pt as ChapterPages
         val top = cp.top(page)
         val ly = (y - s.contentTop + top).toInt()
         if (ly < top || ly >= cp.bottom(page)) return null
@@ -440,18 +499,23 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
 
     fun selectionPath(pos: PagePos, start: Int, end: Int, out: Path): Boolean {
         val s = currentSetup ?: return false
-        val cp = pages(pos.chapter) ?: return false
+        val pt = paged(pos.chapter) ?: return false
         out.reset()
         var any = false
         for (col in 0 until s.columns) {
             val page = pos.page + col
-            if (page >= cp.pageCount) break
-            val a = maxOf(start, cp.startOffset(page))
-            val b = minOf(end, cp.endOffset(page))
+            if (page >= pt.pageCount) break
+            val a = maxOf(start, pt.startOffset(page))
+            val b = minOf(end, pt.endOffset(page))
             if (b <= a) continue
             path.reset()
-            cp.layout.getSelectionPath(a, b, path)
-            path.offset(s.columnLeft(col), s.contentTop - cp.top(page))
+            when (pt) {
+                is ChapterPages -> {
+                    pt.layout.getSelectionPath(a, b, path)
+                    path.offset(s.columnLeft(col), s.contentTop - pt.top(page))
+                }
+                is VerticalPages -> pt.path(page, a, b, s.columnLeft(col), s.contentTop, path)
+            }
             out.addPath(path)
             any = true
         }
@@ -460,19 +524,21 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
 
     private fun pageColumnFor(pos: PagePos, offset: Int): Pair<Int, Float>? {
         val s = currentSetup ?: return null
-        val cp = pages(pos.chapter) ?: return null
+        val pt = paged(pos.chapter) ?: return null
         for (col in 0 until s.columns) {
             val page = pos.page + col
-            if (page >= cp.pageCount) break
-            if (offset >= cp.startOffset(page) && offset <= cp.endOffset(page)) return page to s.columnLeft(col)
+            if (page >= pt.pageCount) break
+            if (offset >= pt.startOffset(page) && offset <= pt.endOffset(page)) return page to s.columnLeft(col)
         }
         return null
     }
 
     fun handlePoint(pos: PagePos, offset: Int, isEnd: Boolean): PointF? {
         val s = currentSetup ?: return null
-        val cp = pages(pos.chapter) ?: return null
+        val pt = paged(pos.chapter) ?: return null
         val (page, left) = pageColumnFor(pos, offset) ?: return null
+        if (pt is VerticalPages) return pt.handle(page, offset, isEnd)?.apply { offset(left, s.contentTop) }
+        val cp = pt as ChapterPages
         var line = cp.layout.getLineForOffset(offset)
         if (isEnd && offset > 0 && line > 0 && cp.layout.getLineStart(line) == offset) line--
         val x = if (isEnd && cp.layout.getLineEnd(line) <= offset) cp.layout.getLineRight(line) else cp.layout.getPrimaryHorizontal(offset)
@@ -482,8 +548,10 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
 
     fun lineBounds(pos: PagePos, offset: Int): RectF? {
         val s = currentSetup ?: return null
-        val cp = pages(pos.chapter) ?: return null
+        val pt = paged(pos.chapter) ?: return null
         val (page, left) = pageColumnFor(pos, offset) ?: return null
+        if (pt is VerticalPages) return pt.bounds(page, offset)?.apply { offset(left, s.contentTop) }
+        val cp = pt as ChapterPages
         val line = cp.layout.getLineForOffset(offset)
         val dy = s.contentTop - cp.top(page)
         return RectF(cp.layout.getLineLeft(line) + left, cp.layout.getLineTop(line) + dy, cp.layout.getLineRight(line) + left, cp.layout.getLineBottom(line) + dy)

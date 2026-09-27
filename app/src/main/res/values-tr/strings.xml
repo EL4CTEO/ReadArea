@@ -320,6 +320,7 @@
     <string name="tool_listen">Dinle</string>
     <string name="tool_paging">Sayfalama</string>
     <string name="tool_text">Metin</string>
+    <string name="top_aligned">Üste hizalı</string>
     <string name="total_time">Toplam süre</string>
     <string name="tts_unavailable">Bu cihazda metin okuma kullanılamıyor.</string>
     <string name="turn_every">Çevirme aralığı</string>
@@ -338,6 +339,10 @@
     <string name="weight">Kalınlık</string>
     <string name="welcome_body">Kitaplarınızın bulunduğu bir klasör ekleyin, ReadArea onu güncel tutsun. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML ve çizgi romanlar desteklenir.</string>
     <string name="welcome_title">ReadArea’ya hoş geldiniz</string>
+    <string name="writing_horizontal">Yatay</string>
+    <string name="writing_mode">Yazı yönü</string>
+    <string name="writing_mode_hint">Dikey mod metni sağdan sola okunan sütunlara dizer, furigana karakterlerin yanında yer alır — basılı Japonca ve Çince kitaplardaki gibi.</string>
+    <string name="writing_vertical">Dikey</string>
     <string name="you_finished">%s kitabını bitirdiniz.</string>
     <string name="your_thoughts">Düşünceleriniz…</string>
     <string name="zones_forward">Çoğunlukla ileri</string>

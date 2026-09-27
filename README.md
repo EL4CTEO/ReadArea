@@ -13,10 +13,16 @@ A fast, private e-book reader for Android with a real page-curl animation, caref
 <img src="docs/screenshots/night.jpg" width="200"/>
 <img src="docs/screenshots/spread_curl.jpg" width="412"/>
 </p>
+<p>
+<img src="docs/screenshots/vertical.jpg" width="200"/>
+<img src="docs/screenshots/vertical_spread.jpg" width="412"/>
+<img src="docs/screenshots/home_ja.jpg" width="200"/>
+<img src="docs/screenshots/home_ar.jpg" width="200"/>
+</p>
 
 ## Features
 
-**Formats** — EPUB 2/3 (CSS, images, footnotes, NCX & nav TOC), PDF, MOBI (PalmDOC), FB2 / FB2.ZIP, TXT (encoding + chapter detection), HTML, Markdown, DOCX, ODT, RTF, CBZ comics.
+**Formats** — EPUB 2/3 (CSS, images, footnotes, ruby, NCX & nav TOC), PDF, MOBI (PalmDOC), FB2 / FB2.ZIP, TXT (encoding + chapter detection, including Shift_JIS, EUC-JP, GBK, Big5 and EUC-KR, and Aozora Bunko ruby and headings), HTML, Markdown, DOCX, ODT, RTF, CBZ comics.
 
 **Reading**
 - Realistic page curl that follows your finger (corner, top-corner and flat folds, fling or cancel), with a see-through back side. Can be switched off in favour of Slide, Cover, Fade, Instant or continuous Scroll.
@@ -28,6 +34,7 @@ A fast, private e-book reader for Android with a real page-curl animation, caref
 - Read aloud (TTS) that highlights the current sentence and turns pages; auto page turn / auto-scroll.
 - Tap zones, volume-key paging, fullscreen, orientation lock, chapter header and page/clock/progress footer.
 - PDF: pinch-zoom with sharp re-rendering in scroll mode, auto-crop margins, recolor to reading theme.
+- Vertical Japanese and Chinese text (縦書き): columns read right to left, furigana beside the kanji, vertical punctuation and brackets, sideways Latin words, upright two-digit numbers (縦中横), sesame emphasis dots and kinsoku line breaking with hanging punctuation. Detected from the EPUB's `writing-mode` or picked in the reader, with selection, highlights, search and read-aloud working as usual. Furigana also shows above the text in horizontal mode.
 - Right-to-left books (Arabic, Hebrew, Persian, manga): detected from the book's language, page-progression direction or text, with mirrored curl, spreads, tap zones and keys; switchable per reader.
 
 **Library** — "Look inside" excerpt and cover (with first-image fallback) in book details, add folders (Storage Access Framework, no broad storage permission) or single files, "Open with" from other apps, embedded or generated covers, grid/list, search, filters, sorting, multi-select, shelves, authors/series/format browsing, book details with rating and status.

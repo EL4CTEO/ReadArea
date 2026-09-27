@@ -50,6 +50,7 @@ object RunStyle {
     const val BIG = 256
     const val UPPER = 512
     const val MARK = 1024
+    const val EMPHASIS = 2048
 }
 
 data class Run(val text: String, val style: Int = 0, val link: String? = null, val scale: Float = 1f)
@@ -60,6 +61,8 @@ enum class BlockKind { PARAGRAPH, HEADING, QUOTE, PRE, LIST_ITEM, VERSE, IMAGE, 
 
 data class Anchor(val id: String, val offset: Int)
 
+data class Ruby(val start: Int, val end: Int, val text: String)
+
 data class Block(
     val kind: BlockKind,
     val runs: List<Run> = emptyList(),
@@ -69,6 +72,7 @@ data class Block(
     val anchors: List<Anchor> = emptyList(),
     val noIndent: Boolean = false,
     val scale: Float = 1f,
+    val ruby: List<Ruby> = emptyList(),
 ) {
     val text: String get() = runs.joinToString("") { it.text }
     val length: Int get() = runs.sumOf { it.text.length }
@@ -90,6 +94,7 @@ data class BookMeta(
     val publisher: String? = null,
     val coverRef: String? = null,
     val rtl: Boolean = false,
+    val vertical: Boolean = false,
 )
 
 object TextDirection {
@@ -110,6 +115,34 @@ object TextDirection {
             }
         }
         return rtl > 40 && rtl > ltr * 2
+    }
+
+    fun isCjkLanguage(tag: String?): Boolean {
+        val lang = tag?.trim()?.lowercase()?.substringBefore('-')?.substringBefore('_') ?: return false
+        return lang == "ja" || lang == "zh" || lang == "ko" || lang == "yue" || lang == "cmn"
+    }
+
+    fun guessCjkLanguage(sample: CharSequence): String? {
+        var kana = 0
+        var han = 0
+        var hangul = 0
+        var letters = 0
+        for (ch in sample) {
+            val c = ch.code
+            when {
+                c in 0x3040..0x30FF || c in 0x31F0..0x31FF || c in 0xFF66..0xFF9F -> kana++
+                c in 0x4E00..0x9FFF || c in 0x3400..0x4DBF || c in 0xF900..0xFAFF -> han++
+                c in 0xAC00..0xD7AF || c in 0x1100..0x11FF || c in 0x3130..0x318F -> hangul++
+                ch.isLetter() -> letters++
+            }
+        }
+        val cjk = kana + han + hangul
+        if (cjk < 30 || cjk < letters) return null
+        return when {
+            hangul > kana && hangul > han / 2 -> "ko"
+            kana * 10 > han -> "ja"
+            else -> "zh"
+        }
     }
 }
 

@@ -320,6 +320,7 @@
     <string name="tool_listen">सुनें</string>
     <string name="tool_paging">पेज पलटना</string>
     <string name="tool_text">टेक्स्ट</string>
+    <string name="top_aligned">ऊपर संरेखित</string>
     <string name="total_time">कुल समय</string>
     <string name="tts_unavailable">इस डिवाइस पर टेक्स्ट-टू-स्पीच उपलब्ध नहीं है।</string>
     <string name="turn_every">हर इतनी देर में पलटें</string>
@@ -338,6 +339,10 @@
     <string name="weight">मोटाई</string>
     <string name="welcome_body">अपनी किताबों वाला फ़ोल्डर जोड़ें और ReadArea उसे सिंक रखेगा। EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML और कॉमिक्स समर्थित हैं।</string>
     <string name="welcome_title">ReadArea में आपका स्वागत है</string>
+    <string name="writing_horizontal">क्षैतिज</string>
+    <string name="writing_mode">लेखन दिशा</string>
+    <string name="writing_mode_hint">ऊर्ध्वाधर मोड टेक्स्ट को दाएँ से बाएँ पढ़े जाने वाले कॉलमों में रखता है, अक्षरों के बगल में फ़ुरिगाना के साथ — जैसे छपी जापानी और चीनी किताबों में।</string>
+    <string name="writing_vertical">ऊर्ध्वाधर</string>
     <string name="you_finished">आपने %s पूरी कर ली।</string>
     <string name="your_thoughts">आपके विचार…</string>
     <string name="zones_forward">ज़्यादातर अगला</string>

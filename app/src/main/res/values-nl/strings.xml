@@ -320,6 +320,7 @@
     <string name="tool_listen">Luisteren</string>
     <string name="tool_paging">Bladeren</string>
     <string name="tool_text">Tekst</string>
+    <string name="top_aligned">Bovenaan uitgelijnd</string>
     <string name="total_time">Totale tijd</string>
     <string name="tts_unavailable">Tekst-naar-spraak is niet beschikbaar op dit apparaat.</string>
     <string name="turn_every">Omslaan elke</string>
@@ -338,6 +339,10 @@
     <string name="weight">Dikte</string>
     <string name="welcome_body">Voeg een map met je boeken toe en ReadArea houdt die automatisch bij. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML en strips worden ondersteund.</string>
     <string name="welcome_title">Welkom bij ReadArea</string>
+    <string name="writing_horizontal">Horizontaal</string>
+    <string name="writing_mode">Schrijfrichting</string>
+    <string name="writing_mode_hint">Verticaal zet de tekst in kolommen die van rechts naar links worden gelezen, met furigana naast de tekens — zoals in gedrukte Japanse en Chinese boeken.</string>
+    <string name="writing_vertical">Verticaal</string>
     <string name="you_finished">Je hebt %s uitgelezen.</string>
     <string name="your_thoughts">Je gedachten…</string>
     <string name="zones_forward">Vooral volgende</string>

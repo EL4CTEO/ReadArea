@@ -26,7 +26,51 @@ object TextDecoder {
             if (cs != null) return String(bytes, cs)
         }
         strictUtf8(bytes)?.let { return it }
+        guessCjk(bytes)?.let { return String(bytes, it) }
         return String(bytes, guessLegacy(bytes))
+    }
+
+    private val CJK_CANDIDATES = listOf(
+        "windows-31j" to "のにはをたがでてとしれさあいうかくこもなるやまりすっんよ。、「」ー",
+        "EUC-JP" to "のにはをたがでてとしれさあいうかくこもなるやまりすっんよ。、「」ー",
+        "GB18030" to "的一是不了在人有我他这个们中来上大为和国地到以说时要就出会可也你对生能而子那得于着下自之年过发后作里，。",
+        "Big5" to "的一是不了在人有我他這個們中來上大為和國地到以說時要就出會可也你對生能而子那得於著下自之年過發後作裡，。",
+        "x-windows-949" to "이다는의에가을고하지한서로기도들으리사수것그나있게어요습니",
+        "EUC-KR" to "이다는의에가을고하지한서로기도들으리사수것그나있게어요습니",
+        "Shift_JIS" to "のにはをたがでてとしれさあいうかくこもなるやまりすっんよ。、「」ー",
+    )
+
+    private fun guessCjk(bytes: ByteArray): Charset? {
+        val sample = if (bytes.size > 65536) bytes.copyOf(65536) else bytes
+        var high = 0
+        for (b in sample) if (b < 0) high++
+        if (high < 40 || high * 10 < sample.size) return null
+        var best: Charset? = null
+        var bestHits = 0
+        for ((name, common) in CJK_CANDIDATES) {
+            val cs = runCatching { Charset.forName(name) }.getOrNull() ?: continue
+            val text = runCatching {
+                cs.newDecoder().onMalformedInput(CodingErrorAction.REPLACE).onUnmappableCharacter(CodingErrorAction.REPLACE).decode(ByteBuffer.wrap(sample)).toString()
+            }.getOrNull() ?: continue
+            var bad = 0
+            var hits = 0
+            var wide = 0
+            for (ch in text) {
+                when {
+                    ch == '\uFFFD' -> bad++
+                    ch.code >= 0x2E80 -> {
+                        wide++
+                        if (common.indexOf(ch) >= 0) hits++
+                    }
+                }
+            }
+            if (wide == 0 || bad * 50 > wide || hits * 100 < wide * 8) continue
+            if (hits > bestHits) {
+                bestHits = hits
+                best = cs
+            }
+        }
+        return if (bestHits >= 10) best else null
     }
 
     private fun strictUtf8(bytes: ByteArray): String? {

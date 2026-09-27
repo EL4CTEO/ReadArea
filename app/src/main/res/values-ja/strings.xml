@@ -320,6 +320,7 @@
     <string name="tool_listen">読み上げ</string>
     <string name="tool_paging">ページ</string>
     <string name="tool_text">文字</string>
+    <string name="top_aligned">天揃え</string>
     <string name="total_time">合計時間</string>
     <string name="tts_unavailable">この端末では読み上げを利用できません。</string>
     <string name="turn_every">めくる間隔</string>
@@ -338,6 +339,10 @@
     <string name="weight">太さ</string>
     <string name="welcome_body">本の入ったフォルダを追加すると、ReadAreaが自動で同期します。EPUB、PDF、MOBI、FB2、DOCX、TXT、Markdown、RTF、ODT、HTML、コミックに対応しています。</string>
     <string name="welcome_title">ReadAreaへようこそ</string>
+    <string name="writing_horizontal">横書き</string>
+    <string name="writing_mode">文字の向き</string>
+    <string name="writing_mode_hint">縦書きでは、右から左へ読む縦の行に本文を組み、ルビを文字の横に表示します。紙の本と同じ組版です。</string>
+    <string name="writing_vertical">縦書き</string>
     <string name="you_finished">「%s」を読み終えました。</string>
     <string name="your_thoughts">思ったことを書きましょう…</string>
     <string name="zones_forward">主に次へ</string>

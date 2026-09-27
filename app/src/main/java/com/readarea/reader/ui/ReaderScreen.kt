@@ -169,7 +169,7 @@ fun ReaderScreen(
             "off" -> 1
             "on" -> if (size.width >= 480.dp) 2 else 1
             else -> if (wide || verticalHinge != null) 2 else 1
-        }.let { if (s.pageAnim == "scroll") 1 else it }
+        }.let { if (s.pageAnim == "scroll" && !ui.vertical) 1 else it }
         val hingeGap = verticalHinge?.let { if (it.isOccluding || it.isSeparating) it.bounds.width else 0f } ?: 0f
 
         Box(Modifier.fillMaxSize().background(Color(theme.background))) {
@@ -205,7 +205,7 @@ fun ReaderScreen(
                 SpeechBar(vm, ui, s)
             }
             AnimatedVisibility(ui.autoTurn && !ui.menu, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.BottomCenter)) {
-                AutoTurnChip(vm, s)
+                AutoTurnChip(vm, s, ui)
             }
             AnimatedVisibility(ui.jumpBack != null && !ui.menu, enter = scaleIn() + fadeIn(), exit = scaleOut() + fadeOut(), modifier = Modifier.align(Alignment.BottomStart)) {
                 Surface(
@@ -257,7 +257,7 @@ private class ViewHolder {
 
 @Composable
 private fun PageSurface(vm: ReaderViewModel, ui: ReaderUi, s: ReaderSettings, theme: ReadingTheme, columns: Int, hingeGap: Float, fullscreen: Boolean, modifier: Modifier) {
-    val scroll = s.pageAnim == "scroll"
+    val scroll = s.pageAnim == "scroll" && !ui.vertical
     val density = LocalDensity.current
     val insets = if (fullscreen) WindowInsets.displayCutout else WindowInsets.systemBarsIgnoringVisibility
     val top = insets.getTop(density)
@@ -477,7 +477,7 @@ private fun SpeechBar(vm: ReaderViewModel, ui: ReaderUi, s: ReaderSettings) {
 }
 
 @Composable
-private fun AutoTurnChip(vm: ReaderViewModel, s: ReaderSettings) {
+private fun AutoTurnChip(vm: ReaderViewModel, s: ReaderSettings, ui: ReaderUi) {
     Surface(
         onClick = vm::stopAutoTurn,
         shape = RoundedCornerShape(50),
@@ -488,7 +488,7 @@ private fun AutoTurnChip(vm: ReaderViewModel, s: ReaderSettings) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Timer, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(8.dp))
-            Text(if (s.pageAnim == "scroll") stringResource(R.string.auto_scrolling) else stringResource(R.string.auto_turning, s.autoTurnSeconds), style = MaterialTheme.typography.labelLarge)
+            Text(if (s.pageAnim == "scroll" && !ui.vertical) stringResource(R.string.auto_scrolling) else stringResource(R.string.auto_turning, s.autoTurnSeconds), style = MaterialTheme.typography.labelLarge)
         }
     }
 }

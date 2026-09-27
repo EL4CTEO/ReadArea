@@ -320,6 +320,7 @@
     <string name="tool_listen">Слушать</string>
     <string name="tool_paging">Листание</string>
     <string name="tool_text">Текст</string>
+    <string name="top_aligned">По верхнему краю</string>
     <string name="total_time">Общее время</string>
     <string name="tts_unavailable">Синтез речи недоступен на этом устройстве.</string>
     <string name="turn_every">Листать каждые</string>
@@ -338,6 +339,10 @@
     <string name="weight">Насыщенность</string>
     <string name="welcome_body">Добавьте папку с книгами, и ReadArea будет следить за её содержимым. Поддерживаются EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML и комиксы.</string>
     <string name="welcome_title">Добро пожаловать в ReadArea</string>
+    <string name="writing_horizontal">Горизонтально</string>
+    <string name="writing_mode">Направление письма</string>
+    <string name="writing_mode_hint">Вертикальный режим располагает текст столбцами, которые читаются справа налево, с фуриганой рядом с иероглифами — как в печатных японских и китайских книгах.</string>
+    <string name="writing_vertical">Вертикально</string>
     <string name="you_finished">Вы дочитали «%s».</string>
     <string name="your_thoughts">Ваши мысли…</string>
     <string name="zones_forward">В основном вперёд</string>

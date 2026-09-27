@@ -42,6 +42,7 @@ class EpubParser(private val zip: ZipAccess) {
         }
 
         val coverRef = findCover(metas, manifest, opf, opfPath)
+        val writingMode = metas.firstOrNull { it["name"] == "primary-writing-mode" }?.get("content")?.lowercase()
         val meta = BookMeta(
             title = title ?: "",
             author = authors.joinToString(", "),
@@ -52,6 +53,7 @@ class EpubParser(private val zip: ZipAccess) {
             publisher = publisher,
             coverRef = coverRef,
             rtl = opf.find("spine")?.get("page-progression-direction")?.equals("rtl", true) ?: TextDirection.isRtlLanguage(language),
+            vertical = writingMode?.startsWith("vertical") == true,
         )
         if (metadataOnly) return ParsedBook(meta, emptyList(), emptyList(), zip)
 
@@ -67,11 +69,14 @@ class EpubParser(private val zip: ZipAccess) {
 
         val chapterIndex = HashMap<String, Int>()
         val chapters = ArrayList<Chapter>()
+        var verticalVotes = 0
+        var horizontalVotes = 0
         spineItems.forEachIndexed { i, item ->
             chapterIndex[item.href] = i
             val html = zip.read(item.href)?.let { TextDecoder.decode(it) } ?: ""
             val converter = HtmlConverter(item.href, Stylesheet(), loadCss)
             val blocks = converter.convert(html)
+            if (converter.vertical) verticalVotes++ else if (converter.horizontalDeclared) horizontalVotes++
             val tocTitle = tocRaw.firstOrNull { it.first.substringBefore('#') == item.href }?.second
             val chapterTitle = tocTitle ?: converter.firstHeading ?: converter.docTitle?.takeIf { it != meta.title } ?: ""
             chapters.add(Chapter(chapterTitle, item.href, blocks))
@@ -82,6 +87,7 @@ class EpubParser(private val zip: ZipAccess) {
             TocItem(t, idx, href.substringAfter('#', "").ifEmpty { null }, depth)
         }
         var finalMeta = if (meta.title.isEmpty()) meta.copy(title = chapters.firstOrNull { it.title.isNotEmpty() }?.title ?: "") else meta
+        if (writingMode == null && verticalVotes > horizontalVotes) finalMeta = finalMeta.copy(vertical = true)
         if (finalMeta.coverRef == null) {
             chapters.take(3).firstNotNullOfOrNull { c -> c.blocks.firstOrNull { it.kind == BlockKind.IMAGE }?.image }?.let { finalMeta = finalMeta.copy(coverRef = it) }
         }

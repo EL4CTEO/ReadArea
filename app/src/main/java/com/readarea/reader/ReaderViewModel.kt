@@ -18,6 +18,7 @@ import com.readarea.core.ReflowableBook
 import com.readarea.core.format.BookFormat
 import com.readarea.core.format.BookParseException
 import com.readarea.core.format.ParseError
+import com.readarea.core.format.TextDirection
 import com.readarea.core.format.TocItem
 import com.readarea.data.ReaderSettings
 import com.readarea.data.db.BookEntity
@@ -103,6 +104,9 @@ data class ReaderUi(
     val ttsAvailable: Boolean = true,
     val rtl: Boolean = false,
     val bookRtl: Boolean = false,
+    val vertical: Boolean = false,
+    val bookVertical: Boolean = false,
+    val bookCjk: Boolean = false,
 )
 
 sealed interface ViewCommand {
@@ -160,7 +164,18 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     private var ttsIndex = 0
     private var ttsQueued = 0
 
-    val scrollMode: Boolean get() = settings.value.pageAnim == "scroll"
+    val scrollMode: Boolean get() = isScroll(settings.value)
+
+    private fun isScroll(s: ReaderSettings): Boolean = s.pageAnim == "scroll" && !verticalFor(s)
+
+    private fun verticalFor(s: ReaderSettings): Boolean {
+        if (engine !is TextEngine) return false
+        return when (s.writingMode) {
+            "vertical" -> true
+            "horizontal" -> false
+            else -> _ui.value.bookVertical
+        }
+    }
 
     private fun errorText(e: Throwable): String = when {
         e is BookParseException && e.reason == ParseError.DRM -> ctx.getString(R.string.error_drm)
@@ -174,7 +189,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     private fun rtlFor(s: ReaderSettings): Boolean = when (s.pageDirection) {
         "rtl" -> true
         "ltr" -> false
-        else -> _ui.value.bookRtl
+        else -> _ui.value.bookRtl || verticalFor(s)
     }
 
     fun open(id: Long, at: Pair<Int, Int>? = null) {
@@ -212,9 +227,12 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
                 if (e is FixedEngine) e.onPageRendered = { _commands.tryEmit(ViewCommand.RefreshCurrent) }
                 pendingAnchor = at?.let { it.first.coerceIn(0, e.chapterCount - 1) to it.second } ?: (b.chapter.coerceIn(0, e.chapterCount - 1) to b.offset)
                 val toc = (e as? TextEngine)?.book?.toc.orEmpty()
-                val bookRtl = (e as? TextEngine)?.book?.meta?.rtl ?: false
-                _ui.update { it.copy(toc = toc, chapterCount = e.chapterCount, fixed = e.fixed, ttsAvailable = e is TextEngine, bookRtl = bookRtl) }
-                _ui.update { it.copy(rtl = rtlFor(settings.value)) }
+                val meta = (e as? TextEngine)?.book?.meta
+                val bookRtl = meta?.rtl ?: false
+                val bookVertical = meta?.vertical ?: false
+                val bookCjk = meta != null && (TextDirection.isCjkLanguage(meta.language) || bookVertical)
+                _ui.update { it.copy(toc = toc, chapterCount = e.chapterCount, fixed = e.fixed, ttsAvailable = e is TextEngine, bookRtl = bookRtl, bookVertical = bookVertical, bookCjk = bookCjk) }
+                _ui.update { it.copy(rtl = rtlFor(settings.value), vertical = verticalFor(settings.value)) }
                 launch { db.notes().bookmarks(id).collect { list -> onBookmarks(list) } }
                 launch { db.notes().highlights(id).collect { list -> onHighlights(list) } }
                 launch { settings.collect { s -> onSettings(s) } }
@@ -246,10 +264,10 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
             prev.lineSpacing != s.lineSpacing, prev.paragraphSpacing != s.paragraphSpacing, prev.indent != s.indent,
             prev.marginH != s.marginH, prev.marginV != s.marginV, prev.justify != s.justify, prev.hyphenation != s.hyphenation,
             prev.letterSpacing != s.letterSpacing, prev.publisherStyles != s.publisherStyles, prev.showHeader != s.showHeader,
-            prev.showFooter != s.showFooter, prev.pdfCrop != s.pdfCrop, (prev.pageAnim == "scroll") != (s.pageAnim == "scroll"),
-            prev.pageDirection != s.pageDirection,
+            prev.showFooter != s.showFooter, prev.pdfCrop != s.pdfCrop, isScroll(prev) != isScroll(s),
+            prev.pageDirection != s.pageDirection, verticalFor(prev) != verticalFor(s),
         ).any { it }
-        _ui.update { it.copy(rtl = rtlFor(s)) }
+        _ui.update { it.copy(rtl = rtlFor(s), vertical = verticalFor(s)) }
         if (setupChanged) {
             relayout()
         } else {
@@ -268,8 +286,8 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun buildSetup(v: Viewport, s: ReaderSettings): PageSetup {
-        val scroll = s.pageAnim == "scroll"
-        return PageSetup(v.width, v.height, v.density, v.fontScale, s, if (scroll) 0 else v.top, if (scroll) 0 else v.bottom, if (scroll) 1 else v.columns, v.hinge, scroll, rtlFor(s))
+        val scroll = isScroll(s)
+        return PageSetup(v.width, v.height, v.density, v.fontScale, s, if (scroll) 0 else v.top, if (scroll) 0 else v.bottom, if (scroll) 1 else v.columns, v.hinge, scroll, rtlFor(s), verticalFor(s))
     }
 
     private fun anchor(): Pair<Int, Int> {

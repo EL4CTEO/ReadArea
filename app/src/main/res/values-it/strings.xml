@@ -320,6 +320,7 @@
     <string name="tool_listen">Ascolta</string>
     <string name="tool_paging">Pagine</string>
     <string name="tool_text">Testo</string>
+    <string name="top_aligned">Allineato in alto</string>
     <string name="total_time">Tempo totale</string>
     <string name="tts_unavailable">La sintesi vocale non è disponibile su questo dispositivo.</string>
     <string name="turn_every">Gira ogni</string>
@@ -338,6 +339,10 @@
     <string name="weight">Spessore</string>
     <string name="welcome_body">Aggiungi una cartella con i tuoi libri e ReadArea la terrà sincronizzata. Supporta EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML e fumetti.</string>
     <string name="welcome_title">Benvenuto in ReadArea</string>
+    <string name="writing_horizontal">Orizzontale</string>
+    <string name="writing_mode">Direzione di scrittura</string>
+    <string name="writing_mode_hint">La modalità verticale dispone il testo in colonne lette da destra a sinistra, con i furigana accanto ai caratteri, come nei libri giapponesi e cinesi stampati.</string>
+    <string name="writing_vertical">Verticale</string>
     <string name="you_finished">Hai finito %s.</string>
     <string name="your_thoughts">I tuoi pensieri…</string>
     <string name="zones_forward">Quasi tutto avanti</string>

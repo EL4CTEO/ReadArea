@@ -149,3 +149,51 @@ class RuleSpan(private val width: Int, private val height: Int, private val colo
         paint.style = style
     }
 }
+
+class RubySpan(private val ruby: String) : ReplacementSpan() {
+    private val rubyPaint = TextPaint(Paint.ANTI_ALIAS_FLAG)
+
+    private fun prepare(paint: Paint) {
+        rubyPaint.set(paint)
+        rubyPaint.textSize = paint.textSize * 0.5f
+        rubyPaint.letterSpacing = 0f
+    }
+
+    override fun getSize(paint: Paint, text: CharSequence?, start: Int, end: Int, fm: Paint.FontMetricsInt?): Int {
+        val base = if (text == null) 0f else paint.measureText(text, start, end)
+        prepare(paint)
+        val rw = rubyPaint.measureText(ruby)
+        if (fm != null) {
+            paint.getFontMetricsInt(fm)
+            val extra = (paint.textSize * 0.55f).toInt()
+            fm.ascent -= extra
+            fm.top -= extra
+        }
+        return kotlin.math.ceil(maxOf(base, rw)).toInt()
+    }
+
+    override fun draw(canvas: Canvas, text: CharSequence?, start: Int, end: Int, x: Float, top: Int, y: Int, bottom: Int, paint: Paint) {
+        if (text == null) return
+        val base = paint.measureText(text, start, end)
+        prepare(paint)
+        val rw = rubyPaint.measureText(ruby)
+        val total = maxOf(base, rw)
+        canvas.drawText(text, start, end, x + (total - base) / 2f, y.toFloat(), paint)
+        val ry = y + paint.fontMetrics.ascent * 0.9f - rubyPaint.fontMetrics.descent * 0.4f
+        val n = ruby.codePointCount(0, ruby.length)
+        if (rw < base && n > 1) {
+            val step = base / n
+            var k = 0
+            var idx = 0
+            while (k < ruby.length) {
+                val len = Character.charCount(ruby.codePointAt(k))
+                val w = rubyPaint.measureText(ruby, k, k + len)
+                canvas.drawText(ruby, k, k + len, x + (total - base) / 2f + step * idx + (step - w) / 2f, ry, rubyPaint)
+                k += len
+                idx++
+            }
+        } else {
+            canvas.drawText(ruby, x + (total - rw) / 2f, ry, rubyPaint)
+        }
+    }
+}

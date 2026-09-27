@@ -320,6 +320,7 @@
     <string name="tool_listen">Écouter</string>
     <string name="tool_paging">Pages</string>
     <string name="tool_text">Texte</string>
+    <string name="top_aligned">Aligné en haut</string>
     <string name="total_time">Temps total</string>
     <string name="tts_unavailable">La synthèse vocale n\'est pas disponible sur cet appareil.</string>
     <string name="turn_every">Tourner toutes les</string>
@@ -338,6 +339,10 @@
     <string name="weight">Graisse</string>
     <string name="welcome_body">Ajoutez un dossier contenant vos livres et ReadArea le gardera synchronisé. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML et BD sont pris en charge.</string>
     <string name="welcome_title">Bienvenue dans ReadArea</string>
+    <string name="writing_horizontal">Horizontal</string>
+    <string name="writing_mode">Sens d\'écriture</string>
+    <string name="writing_mode_hint">Le mode vertical dispose le texte en colonnes lues de droite à gauche, avec les furigana à côté des caractères, comme dans les livres japonais et chinois imprimés.</string>
+    <string name="writing_vertical">Vertical</string>
     <string name="you_finished">Vous avez terminé %s.</string>
     <string name="your_thoughts">Vos réflexions…</string>
     <string name="zones_forward">Surtout suivant</string>

@@ -320,6 +320,7 @@
     <string name="tool_listen">Dengarkan</string>
     <string name="tool_paging">Halaman</string>
     <string name="tool_text">Teks</string>
+    <string name="top_aligned">Rata atas</string>
     <string name="total_time">Total waktu</string>
     <string name="tts_unavailable">Text-to-speech tidak tersedia di perangkat ini.</string>
     <string name="turn_every">Balik setiap</string>
@@ -338,6 +339,10 @@
     <string name="weight">Ketebalan</string>
     <string name="welcome_body">Tambahkan folder berisi buku Anda dan ReadArea akan terus menyinkronkannya. Mendukung EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML, dan komik.</string>
     <string name="welcome_title">Selamat datang di ReadArea</string>
+    <string name="writing_horizontal">Horizontal</string>
+    <string name="writing_mode">Arah tulisan</string>
+    <string name="writing_mode_hint">Mode vertikal menata teks dalam kolom yang dibaca dari kanan ke kiri, dengan furigana di samping karakter — seperti buku cetak Jepang dan Tiongkok.</string>
+    <string name="writing_vertical">Vertikal</string>
     <string name="you_finished">Anda telah menyelesaikan %s.</string>
     <string name="your_thoughts">Pendapat Anda…</string>
     <string name="zones_forward">Sebagian besar maju</string>
