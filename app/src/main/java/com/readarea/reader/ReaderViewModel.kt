@@ -7,6 +7,7 @@ import android.graphics.Path
 import android.graphics.PointF
 import android.graphics.RectF
 import android.os.Bundle
+import androidx.core.net.toUri
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import androidx.lifecycle.AndroidViewModel
@@ -141,7 +142,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     private var bookId = 0L
     private var book: BookEntity? = null
     private var viewport: Viewport? = null
-    private var systemDark = false
+    private var systemDark = (application.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
     private var laidOutSettings: ReaderSettings? = null
     private val layoutDispatcher = Dispatchers.Default.limitedParallelism(1)
     private var layoutJob: Job? = null
@@ -150,6 +151,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     private var searchJob: Job? = null
     @Volatile private var layoutBusy = true
     private var pendingAnchor: Pair<Int, Int>? = null
+    private var readingAnchor: Pair<Int, Int>? = null
     private var scrollFraction = 0f
     private var sessionStart = 0L
     private var pagesTurned = 0
@@ -182,6 +184,8 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         e is BookParseException && e.reason == ParseError.DRM -> ctx.getString(R.string.error_drm)
         e is BookParseException && e.reason == ParseError.UNSUPPORTED -> ctx.getString(R.string.error_unsupported)
         e is BookParseException && e.reason == ParseError.EMPTY -> ctx.getString(R.string.error_empty)
+        e is BookParseException && e.reason == ParseError.TOO_LARGE -> ctx.getString(R.string.error_too_large)
+        e is OutOfMemoryError -> ctx.getString(R.string.error_too_large)
         e is BookParseException -> ctx.getString(R.string.error_invalid)
         e is java.io.FileNotFoundException || e is SecurityException -> ctx.getString(R.string.error_missing_file)
         else -> ctx.getString(R.string.error_generic)
@@ -293,6 +297,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun anchor(): Pair<Int, Int> {
         pendingAnchor?.let { return it }
+        readingAnchor?.let { return it }
         val e = engine ?: return 0 to 0
         if (!e.isReady(pos.chapter)) return pos.chapter to 0
         val start = e.offsetOf(pos)
@@ -327,6 +332,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
             withContext(Dispatchers.Main) {
                 laidOutSettings = s
                 pendingAnchor = null
+                readingAnchor = a
                 pos = PagePos(a.first, page)
                 scrollFraction = fraction
                 layoutBusy = false
@@ -415,6 +421,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun onPageChanged() {
         val e = engine ?: return
+        readingAnchor = null
         pagesTurned++
         refreshUi()
         e.prefetch(pos)
@@ -721,10 +728,12 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    private val schemePrefix = Regex("^[A-Za-z][A-Za-z0-9+.-]*:")
+
     private fun openLink(href: String) {
         val e = engine as? TextEngine ?: return
-        if (href.contains("://") || href.startsWith("mailto:")) {
-            _ui.update { it.copy(message = "link:$href") }
+        if (schemePrefix.containsMatchIn(href.trim())) {
+            if (com.readarea.data.SafeFiles.isOpenableLink(href.trim().toUri())) _ui.update { it.copy(message = "link:${href.trim()}") }
             return
         }
         val target = e.resolveLink(href, pos.chapter) ?: return
@@ -779,11 +788,6 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
 
     fun dismissEnd() {
         _ui.update { it.copy(endReached = false) }
-    }
-
-    fun refreshChrome() {
-        val s = settings.value
-        if (s.showFooter && s.showClock && !scrollMode) _commands.tryEmit(ViewCommand.RefreshCurrent)
     }
 
     fun keyFlip(forward: Boolean) {
@@ -1067,6 +1071,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
 
         override fun onPosition(pos: PagePos, fraction: Float) {
             val changed = pos != this@ReaderViewModel.pos
+            if (changed || kotlin.math.abs(fraction - scrollFraction) > 0.001f) readingAnchor = null
             this@ReaderViewModel.pos = pos
             scrollFraction = fraction
             if (changed) onPageChanged() else scheduleSave()

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <files-path name="imported" path="imported/" />
+    <root-path name="storage" path="storage/" />
+    <external-path name="shared" path="." />
 </paths>

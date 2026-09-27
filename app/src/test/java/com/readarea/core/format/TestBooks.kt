@@ -2,6 +2,7 @@ package com.readarea.core.format
 
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.nio.ByteBuffer
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
@@ -134,4 +135,50 @@ object TestBooks {
     }
 
     val PNG_1x1: ByteArray = java.util.Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==")
+
+    fun mobi(title: String, author: String, html: String): ByteArray {
+        val text = html.toByteArray(Charsets.UTF_8)
+        val exthRecords = ByteArrayOutputStream()
+        val authorBytes = author.toByteArray()
+        exthRecords.write(ByteBuffer.allocate(8).putInt(100).putInt(authorBytes.size + 8).array())
+        exthRecords.write(authorBytes)
+        val exthBody = exthRecords.toByteArray()
+        val exth = ByteBuffer.allocate(12 + exthBody.size).put("EXTH".toByteArray()).putInt(12 + exthBody.size).putInt(1).put(exthBody).array()
+        val mobiHeaderLen = 0xE8
+        val titleBytes = title.toByteArray()
+        val r0 = ByteBuffer.allocate(16 + mobiHeaderLen + exth.size + titleBytes.size + 4)
+        r0.putShort(0, 1)
+        r0.putInt(4, text.size)
+        r0.putShort(8, 1)
+        r0.putShort(10, 4096)
+        r0.putShort(12, 0)
+        r0.position(16)
+        r0.put("MOBI".toByteArray())
+        r0.putInt(20, mobiHeaderLen)
+        r0.putInt(24, 2)
+        r0.putInt(28, 65001)
+        val nameOff = 16 + mobiHeaderLen + exth.size
+        r0.putInt(84, nameOff)
+        r0.putInt(88, titleBytes.size)
+        r0.putInt(108, -1)
+        r0.putInt(128, 0x40)
+        r0.putShort(0xF2, 0)
+        r0.position(16 + mobiHeaderLen)
+        r0.put(exth)
+        r0.put(titleBytes)
+        val record0 = r0.array()
+        val headerSize = 78 + 2 * 8 + 2
+        val out = ByteBuffer.allocate(headerSize + record0.size + text.size)
+        val name = "Mobi_Title".toByteArray()
+        out.put(name)
+        out.position(60)
+        out.put("BOOKMOBI".toByteArray())
+        out.putShort(76, 2)
+        out.putInt(78, headerSize)
+        out.putInt(86, headerSize + record0.size)
+        out.position(headerSize)
+        out.put(record0)
+        out.put(text)
+        return out.array()
+    }
 }

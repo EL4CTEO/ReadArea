@@ -46,10 +46,10 @@
     <string name="chapter_title_top">Chapter title at top</string>
     <string name="clear">Clear</string>
     <string name="clear_selection">Clear selection</string>
-    <string name="clock">Clock</string>
     <string name="close">Close</string>
     <string name="close_search">Close search</string>
     <string name="contents_notes">Contents &amp; notes</string>
+    <string name="continue_label">Continue</string>
     <string name="continue_percent">Continue · %d%%</string>
     <string name="continue_reading">Continue reading</string>
     <string name="copy">Copy</string>
@@ -67,6 +67,8 @@
     <string name="delete_shelf_body">The books stay in your library.</string>
     <string name="delete_shelf_title">Delete “%s”?</string>
     <string name="details">Details</string>
+    <string name="device_scan">Find books automatically</string>
+    <string name="device_scan_hint">Search this device and SD card for books</string>
     <string name="dim">Dim</string>
     <string name="dim_hint">Slide to the far left to dim below your screen\'s minimum — great for reading in bed.</string>
     <string name="duration_hours_minutes">%1$dh %2$dm</string>
@@ -79,6 +81,7 @@
     <string name="error_missing_file">The file can\'t be found. It may have been moved or deleted.</string>
     <string name="error_not_in_library">This book is no longer in your library.</string>
     <string name="error_title">Couldn\'t open this book</string>
+    <string name="error_too_large">This file is too large to open.</string>
     <string name="error_unsupported">This file uses a variant of the format that isn\'t supported yet.</string>
     <string name="export">Export</string>
     <string name="export_all">Export all</string>
@@ -88,6 +91,9 @@
     <string name="filter_all">All</string>
     <string name="filter_favorites">Favorites</string>
     <string name="find">Find</string>
+    <string name="find_books">Find my books</string>
+    <string name="find_books_body">ReadArea can search your phone and SD card for books and keep your library up to date by itself. Android will ask you to allow access to all files. ReadArea only reads your books: nothing is uploaded, and the app has no internet access.</string>
+    <string name="find_books_title">Find all your books?</string>
     <string name="finished_this_year">Finished this year</string>
     <string name="first_line_indent">First-line indent</string>
     <string name="follow_system_dark">Follow system dark mode</string>
@@ -119,6 +125,11 @@
     <string name="greeting_night">Late-night reading</string>
     <string name="hero_empty_body">Your current book will appear here so you can jump right back in.</string>
     <string name="hero_empty_title">Pick something to read</string>
+    <string name="highlight_blue">Blue highlight</string>
+    <string name="highlight_green">Green highlight</string>
+    <string name="highlight_orange">Orange highlight</string>
+    <string name="highlight_pink">Pink highlight</string>
+    <string name="highlight_yellow">Yellow highlight</string>
     <string name="home_also_reading">Also reading</string>
     <string name="home_recently_added">Recently added</string>
     <string name="hyphenation">Hyphenation</string>
@@ -145,10 +156,10 @@
     <string name="left_aligned">Left aligned</string>
     <string name="left_to_right">Left → right</string>
     <string name="letter_spacing">Letter spacing</string>
-    <string name="library_empty_body">Add a folder and ReadArea will find every book inside it, including subfolders.</string>
+    <string name="library_empty_body">Let ReadArea find your books, or add a folder. Subfolders are included too.</string>
     <string name="library_empty_title">Your library is empty</string>
     <string name="library_folders">Library folders</string>
-    <string name="library_folders_body">ReadArea watches these folders and adds new books automatically. Only the folders you pick are accessible — no broad storage permission needed.</string>
+    <string name="library_folders_body">ReadArea keeps your library in sync and adds new books automatically.</string>
     <string name="line_spacing">Line spacing</string>
     <string name="look_inside">Look inside</string>
     <string name="look_up">Look up</string>
@@ -180,6 +191,7 @@
     <string name="no_highlights_short">Long-press a word, drag the handles and pick a color.</string>
     <string name="no_matches_body">Try a different search or filter.</string>
     <string name="no_matches_title">Nothing matches</string>
+    <string name="not_now">Not now</string>
     <string name="note">Note</string>
     <string name="notes_subject">Notes · %s</string>
     <string name="off">Off</string>
@@ -236,6 +248,8 @@
     <string name="remove_from_shelf">Remove from shelf</string>
     <string name="rename">Rename</string>
     <string name="rename_shelf">Rename shelf</string>
+    <string name="reopen_last">Reopen the last book</string>
+    <string name="reopen_last_hint">When you come back to ReadArea, continue on the page where you left off</string>
     <string name="rescan">Rescan</string>
     <string name="rescan_folders">Rescan folders</string>
     <string name="reset">Reset</string>
@@ -314,6 +328,7 @@
     <string name="theme_sepia">Sepia</string>
     <string name="theme_sky">Sky</string>
     <string name="theme_system">System</string>
+    <string name="this_device">This device</string>
     <string name="time_left">%s left</string>
     <string name="time_spent">%s spent</string>
     <string name="today">Today</string>
@@ -339,7 +354,7 @@
     <string name="wallpaper_colors_hint">Material You dynamic color</string>
     <string name="warm_light">Warm light</string>
     <string name="weight">Weight</string>
-    <string name="welcome_body">Add a folder with your books and ReadArea will keep it in sync. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML and comics are supported.</string>
+    <string name="welcome_body">ReadArea can find every book on your device by itself, or you can choose folders. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML and comics are supported.</string>
     <string name="welcome_title">Welcome to ReadArea</string>
     <string name="writing_horizontal">Horizontal</string>
     <string name="writing_mode">Writing direction</string>

@@ -95,7 +95,7 @@ class LoaderTest {
         val s = ReaderSettings(theme = "night")
         engine.configure(PageSetup(1080, 2340, 2.75f, 1f, s, 80, 60), ReadingThemes.resolve(s))
         val bmp = Bitmap.createBitmap(1080, 2340, Bitmap.Config.ARGB_8888)
-        engine.drawPage(Canvas(bmp), PagePos(0, 1), Decorations().apply { clock = "10:00" })
+        engine.drawPage(Canvas(bmp), PagePos(0, 1), Decorations())
         val center = bmp.getPixel(540, 770)
         assertTrue(Color.red(center) > 150 && Color.green(center) < 90)
         File("build/screens").mkdirs()

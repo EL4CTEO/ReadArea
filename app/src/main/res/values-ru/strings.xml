@@ -44,10 +44,10 @@
     <string name="chapter_title_top">Название главы сверху</string>
     <string name="clear">Очистить</string>
     <string name="clear_selection">Снять выделение</string>
-    <string name="clock">Часы</string>
     <string name="close">Закрыть</string>
     <string name="close_search">Закрыть поиск</string>
     <string name="contents_notes">Содержание и заметки</string>
+    <string name="continue_label">Продолжить</string>
     <string name="continue_percent">Продолжить · %d%%</string>
     <string name="continue_reading">Продолжить чтение</string>
     <string name="copy">Копировать</string>
@@ -65,6 +65,8 @@
     <string name="delete_shelf_body">Книги останутся в библиотеке.</string>
     <string name="delete_shelf_title">Удалить «%s»?</string>
     <string name="details">Подробнее</string>
+    <string name="device_scan">Находить книги автоматически</string>
+    <string name="device_scan_hint">Искать книги на устройстве и SD-карте</string>
     <string name="dim">Затемнение</string>
     <string name="dim_hint">Сдвиньте до упора влево, чтобы сделать экран темнее минимума — удобно для чтения в постели.</string>
     <string name="duration_hours_minutes">%1$d ч %2$d мин</string>
@@ -77,6 +79,7 @@
     <string name="error_missing_file">Файл не найден. Возможно, он был перемещён или удалён.</string>
     <string name="error_not_in_library">Этой книги больше нет в библиотеке.</string>
     <string name="error_title">Не удалось открыть книгу</string>
+    <string name="error_too_large">Этот файл слишком большой, чтобы его открыть.</string>
     <string name="error_unsupported">Этот файл использует вариант формата, который пока не поддерживается.</string>
     <string name="export">Экспорт</string>
     <string name="export_all">Экспортировать всё</string>
@@ -86,6 +89,9 @@
     <string name="filter_all">Все</string>
     <string name="filter_favorites">Избранное</string>
     <string name="find">Искать</string>
+    <string name="find_books">Найти мои книги</string>
+    <string name="find_books_body">ReadArea может сам искать книги в памяти телефона и на SD-карте и поддерживать библиотеку в актуальном состоянии. Android попросит разрешить доступ ко всем файлам. ReadArea только читает ваши книги: ничего не отправляется, и у приложения нет доступа к интернету.</string>
+    <string name="find_books_title">Найти все ваши книги?</string>
     <string name="finished_this_year">Прочитано в этом году</string>
     <string name="first_line_indent">Абзацный отступ</string>
     <string name="follow_system_dark">Следовать тёмному режиму системы</string>
@@ -117,6 +123,11 @@
     <string name="greeting_night">Ночное чтение</string>
     <string name="hero_empty_body">Здесь появится текущая книга, чтобы вы могли сразу вернуться к чтению.</string>
     <string name="hero_empty_title">Выберите, что почитать</string>
+    <string name="highlight_blue">Синее выделение</string>
+    <string name="highlight_green">Зелёное выделение</string>
+    <string name="highlight_orange">Оранжевое выделение</string>
+    <string name="highlight_pink">Розовое выделение</string>
+    <string name="highlight_yellow">Жёлтое выделение</string>
     <string name="home_also_reading">Также читаю</string>
     <string name="home_recently_added">Недавно добавленные</string>
     <string name="hyphenation">Переносы</string>
@@ -143,10 +154,10 @@
     <string name="left_aligned">По левому краю</string>
     <string name="left_to_right">Слева → направо</string>
     <string name="letter_spacing">Межбуквенный интервал</string>
-    <string name="library_empty_body">Добавьте папку, и ReadArea найдёт в ней все книги, включая вложенные папки.</string>
+    <string name="library_empty_body">Позвольте ReadArea найти ваши книги или добавьте папку. Вложенные папки тоже учитываются.</string>
     <string name="library_empty_title">Библиотека пуста</string>
     <string name="library_folders">Папки библиотеки</string>
-    <string name="library_folders_body">ReadArea следит за этими папками и автоматически добавляет новые книги. Доступны только выбранные папки — широкий доступ к памяти не нужен.</string>
+    <string name="library_folders_body">ReadArea поддерживает библиотеку в актуальном состоянии и автоматически добавляет новые книги.</string>
     <string name="line_spacing">Межстрочный интервал</string>
     <string name="look_inside">Заглянуть внутрь</string>
     <string name="look_up">Найти</string>
@@ -178,6 +189,7 @@
     <string name="no_highlights_short">Нажмите и удерживайте слово, перетащите маркеры и выберите цвет.</string>
     <string name="no_matches_body">Попробуйте другой запрос или фильтр.</string>
     <string name="no_matches_title">Ничего не найдено</string>
+    <string name="not_now">Не сейчас</string>
     <string name="note">Заметка</string>
     <string name="notes_subject">Заметки · %s</string>
     <string name="off">Выкл.</string>
@@ -234,6 +246,8 @@
     <string name="remove_from_shelf">Убрать с полки</string>
     <string name="rename">Переименовать</string>
     <string name="rename_shelf">Переименовать полку</string>
+    <string name="reopen_last">Открывать последнюю книгу</string>
+    <string name="reopen_last_hint">При возвращении в ReadArea продолжайте с той страницы, где остановились</string>
     <string name="rescan">Пересканировать</string>
     <string name="rescan_folders">Пересканировать папки</string>
     <string name="reset">Сбросить</string>
@@ -312,6 +326,7 @@
     <string name="theme_sepia">Сепия</string>
     <string name="theme_sky">Небо</string>
     <string name="theme_system">Системная</string>
+    <string name="this_device">Это устройство</string>
     <string name="time_left">Осталось %s</string>
     <string name="time_spent">Потрачено %s</string>
     <string name="today">Сегодня</string>
@@ -337,7 +352,7 @@
     <string name="wallpaper_colors_hint">Динамические цвета Material You</string>
     <string name="warm_light">Тёплый свет</string>
     <string name="weight">Насыщенность</string>
-    <string name="welcome_body">Добавьте папку с книгами, и ReadArea будет следить за её содержимым. Поддерживаются EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML и комиксы.</string>
+    <string name="welcome_body">ReadArea может сам найти все книги на устройстве, или вы можете выбрать папки. Поддерживаются EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML и комиксы.</string>
     <string name="welcome_title">Добро пожаловать в ReadArea</string>
     <string name="writing_horizontal">Горизонтально</string>
     <string name="writing_mode">Направление письма</string>

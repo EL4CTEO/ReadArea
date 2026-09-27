@@ -26,10 +26,10 @@ class OdtParser(private val zip: ZipAccess, private val fallbackTitle: String) {
     private fun findCover(content: String?): String? {
         if (content != null) {
             val body = content.indexOf("<office:body").coerceAtLeast(0)
-            val m = CoverImages.ODT_IMAGE.find(content, body)
+            val m = CoverImages.firstTagAttr(content, "draw:image", "xlink:href", body)
             if (m != null) {
-                val href = PathUtil.normalize(PathUtil.decode(m.groupValues[1]))
-                if (CoverImages.textLength(content.substring(body, m.range.first)) < 150 && CoverImages.isRaster(href)) return href
+                val href = PathUtil.normalize(PathUtil.decode(m.value))
+                if (CoverImages.textLength(content.substring(body, m.start)) < 150 && CoverImages.isRaster(href)) return href
             }
         }
         return zip.entries.firstOrNull { it.equals("Thumbnails/thumbnail.png", true) }

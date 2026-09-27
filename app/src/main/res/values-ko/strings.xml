@@ -44,10 +44,10 @@
     <string name="chapter_title_top">상단에 장 제목</string>
     <string name="clear">지우기</string>
     <string name="clear_selection">선택 해제</string>
-    <string name="clock">시계</string>
     <string name="close">닫기</string>
     <string name="close_search">검색 닫기</string>
     <string name="contents_notes">목차 및 노트</string>
+    <string name="continue_label">계속</string>
     <string name="continue_percent">이어 읽기 · %d%%</string>
     <string name="continue_reading">이어 읽기</string>
     <string name="copy">복사</string>
@@ -65,6 +65,8 @@
     <string name="delete_shelf_body">책은 서재에 남아 있습니다.</string>
     <string name="delete_shelf_title">“%s”을(를) 삭제할까요?</string>
     <string name="details">세부정보</string>
+    <string name="device_scan">책 자동으로 찾기</string>
+    <string name="device_scan_hint">이 기기와 SD 카드에서 책 찾기</string>
     <string name="dim">어둡게</string>
     <string name="dim_hint">왼쪽 끝까지 밀면 화면 최소 밝기보다 더 어둡게 할 수 있어요. 잠자리 독서에 좋아요.</string>
     <string name="duration_hours_minutes">%1$d시간 %2$d분</string>
@@ -77,6 +79,7 @@
     <string name="error_missing_file">파일을 찾을 수 없습니다. 이동되었거나 삭제되었을 수 있습니다.</string>
     <string name="error_not_in_library">이 책은 더 이상 서재에 없습니다.</string>
     <string name="error_title">이 책을 열 수 없습니다</string>
+    <string name="error_too_large">이 파일은 너무 커서 열 수 없습니다.</string>
     <string name="error_unsupported">이 파일은 아직 지원되지 않는 형식 변형을 사용합니다.</string>
     <string name="export">내보내기</string>
     <string name="export_all">모두 내보내기</string>
@@ -86,6 +89,9 @@
     <string name="filter_all">전체</string>
     <string name="filter_favorites">즐겨찾기</string>
     <string name="find">찾기</string>
+    <string name="find_books">내 책 찾기</string>
+    <string name="find_books_body">ReadArea가 휴대폰과 SD 카드에서 책을 찾아 서재를 자동으로 최신 상태로 유지할 수 있습니다. Android에서 모든 파일에 대한 접근 권한을 허용해 달라고 요청합니다. ReadArea는 책을 읽기만 하며, 아무것도 업로드하지 않고 인터넷에도 연결하지 않습니다.</string>
+    <string name="find_books_title">모든 책을 찾을까요?</string>
     <string name="finished_this_year">올해 완독</string>
     <string name="first_line_indent">첫 줄 들여쓰기</string>
     <string name="follow_system_dark">시스템 다크 모드 따르기</string>
@@ -117,6 +123,11 @@
     <string name="greeting_night">늦은 밤 독서</string>
     <string name="hero_empty_body">지금 읽는 책이 여기에 표시되어 바로 이어서 읽을 수 있어요.</string>
     <string name="hero_empty_title">읽을 책을 골라 보세요</string>
+    <string name="highlight_blue">파란색 형광펜</string>
+    <string name="highlight_green">초록색 형광펜</string>
+    <string name="highlight_orange">주황색 형광펜</string>
+    <string name="highlight_pink">분홍색 형광펜</string>
+    <string name="highlight_yellow">노란색 형광펜</string>
     <string name="home_also_reading">함께 읽는 책</string>
     <string name="home_recently_added">최근 추가됨</string>
     <string name="hyphenation">하이픈 넣기</string>
@@ -143,10 +154,10 @@
     <string name="left_aligned">왼쪽 정렬</string>
     <string name="left_to_right">왼쪽 → 오른쪽</string>
     <string name="letter_spacing">자간</string>
-    <string name="library_empty_body">폴더를 추가하면 ReadArea가 하위 폴더까지 모든 책을 찾아 줍니다.</string>
+    <string name="library_empty_body">ReadArea가 책을 찾게 하거나 폴더를 추가하세요. 하위 폴더도 포함됩니다.</string>
     <string name="library_empty_title">서재가 비어 있습니다</string>
     <string name="library_folders">서재 폴더</string>
-    <string name="library_folders_body">ReadArea는 이 폴더들을 지켜보고 새 책을 자동으로 추가합니다. 선택한 폴더에만 접근하므로 넓은 저장소 권한이 필요 없습니다.</string>
+    <string name="library_folders_body">ReadArea가 서재를 동기화하고 새 책을 자동으로 추가합니다.</string>
     <string name="line_spacing">줄 간격</string>
     <string name="look_inside">미리 보기</string>
     <string name="look_up">찾아보기</string>
@@ -178,6 +189,7 @@
     <string name="no_highlights_short">단어를 길게 누르고 핸들을 드래그한 뒤 색을 고르세요.</string>
     <string name="no_matches_body">다른 검색어나 필터를 사용해 보세요.</string>
     <string name="no_matches_title">일치하는 항목 없음</string>
+    <string name="not_now">나중에</string>
     <string name="note">노트</string>
     <string name="notes_subject">노트 · %s</string>
     <string name="off">끄기</string>
@@ -234,6 +246,8 @@
     <string name="remove_from_shelf">책장에서 제거</string>
     <string name="rename">이름 바꾸기</string>
     <string name="rename_shelf">책장 이름 바꾸기</string>
+    <string name="reopen_last">마지막 책 다시 열기</string>
+    <string name="reopen_last_hint">ReadArea로 돌아오면 읽던 페이지부터 이어서 읽습니다</string>
     <string name="rescan">다시 검색</string>
     <string name="rescan_folders">폴더 다시 검색</string>
     <string name="reset">초기화</string>
@@ -312,6 +326,7 @@
     <string name="theme_sepia">세피아</string>
     <string name="theme_sky">하늘</string>
     <string name="theme_system">시스템</string>
+    <string name="this_device">이 기기</string>
     <string name="time_left">%s 남음</string>
     <string name="time_spent">%s 읽음</string>
     <string name="today">오늘</string>
@@ -337,7 +352,7 @@
     <string name="wallpaper_colors_hint">Material You 다이내믹 컬러</string>
     <string name="warm_light">따뜻한 빛</string>
     <string name="weight">굵기</string>
-    <string name="welcome_body">책이 들어 있는 폴더를 추가하면 ReadArea가 자동으로 동기화합니다. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML, 만화를 지원합니다.</string>
+    <string name="welcome_body">ReadArea가 기기의 모든 책을 자동으로 찾을 수 있으며, 폴더를 직접 선택할 수도 있습니다. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML, 만화를 지원합니다.</string>
     <string name="welcome_title">ReadArea에 오신 것을 환영합니다</string>
     <string name="writing_horizontal">가로쓰기</string>
     <string name="writing_mode">글자 방향</string>

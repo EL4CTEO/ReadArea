@@ -42,33 +42,35 @@ import java.io.File
 class VerticalTextTest {
     private val out = File("build/screens").apply { mkdirs() }
 
-    private val paragraphs = listOf(
-        "海辺の小さな町に、ひとりの<ruby>灯台守<rt>とうだいもり</rt></ruby>が住んでいた。毎朝、日が昇る前に長い<ruby>螺旋<rp>（</rp><rt>らせん</rt><rp>）</rp></ruby>階段をのぼり、ガラスの曇りをていねいに拭きとる。それが彼の三十年来の習慣だった。",
-        "「灯台守の朝は早いんだ。」と老人は笑った。「ちょっと早すぎるくらいさ。」",
-        "ある冬の夜、嵐がやってきた。波は<ruby>岸壁<rt>がんぺき</rt></ruby>を叩き、風は窓をゆらした。「今夜はきっと、誰かが光を必要としている」と、彼はつぶやいた。……そうだ、火を絶やしてはならない。",
-        "町の子どもたちは、灯台を<span class=\"em-sesame\">ひかりの塔</span>と呼んでいた。夏になると、彼らはおにぎりとコーヒーの水筒をもって丘をのぼり、遠くの船を数えて遊んだ。2024年の夏には、12隻もの船が見えたという。本当に!?",
-        "灯台のなかには古い本棚があり、<ruby>航海日誌<rt>こうかいにっし</rt></ruby>や詩集、そして一冊の English Dictionary が並んでいた。老人はときどきノートをひらき、――あの夏の日のことを書きとめた。",
-    )
+    companion object {
+        private val paragraphs = listOf(
+            "海辺の小さな町に、ひとりの<ruby>灯台守<rt>とうだいもり</rt></ruby>が住んでいた。毎朝、日が昇る前に長い<ruby>螺旋<rp>（</rp><rt>らせん</rt><rp>）</rp></ruby>階段をのぼり、ガラスの曇りをていねいに拭きとる。それが彼の三十年来の習慣だった。",
+            "「灯台守の朝は早いんだ。」と老人は笑った。「ちょっと早すぎるくらいさ。」",
+            "ある冬の夜、嵐がやってきた。波は<ruby>岸壁<rt>がんぺき</rt></ruby>を叩き、風は窓をゆらした。「今夜はきっと、誰かが光を必要としている」と、彼はつぶやいた。……そうだ、火を絶やしてはならない。",
+            "町の子どもたちは、灯台を<span class=\"em-sesame\">ひかりの塔</span>と呼んでいた。夏になると、彼らはおにぎりとコーヒーの水筒をもって丘をのぼり、遠くの船を数えて遊んだ。2024年の夏には、12隻もの船が見えたという。本当に!?",
+            "灯台のなかには古い本棚があり、<ruby>航海日誌<rt>こうかいにっし</rt></ruby>や詩集、そして一冊の English Dictionary が並んでいた。老人はときどきノートをひらき、――あの夏の日のことを書きとめた。",
+        )
 
-    private fun jaEpub(chapters: Int = 2, repeat: Int = 4): ByteArray {
-        val files = LinkedHashMap<String, ByteArray>()
-        files["mimetype"] = "application/epub+zip".toByteArray()
-        files["META-INF/container.xml"] = "<container><rootfiles><rootfile full-path=\"item/standard.opf\"/></rootfiles></container>".toByteArray()
-        val manifest = StringBuilder("<item id=\"css\" href=\"style/book.css\" media-type=\"text/css\"/>")
-        val spine = StringBuilder()
-        for (c in 1..chapters) {
-            manifest.append("<item id=\"p$c\" href=\"xhtml/p-$c.xhtml\" media-type=\"application/xhtml+xml\"/>")
-            spine.append("<itemref idref=\"p$c\"/>")
-            val body = StringBuilder("<h1>第${"一二三四"[c - 1]}章　ひかりの塔</h1>")
-            repeat(repeat) { r -> paragraphs.forEachIndexed { i, p -> body.append("<p>").append(if (r > 0 && i == 0) p.replace("海辺", "港") else p).append("</p>") } }
-            files["item/xhtml/p-$c.xhtml"] = """<?xml version="1.0" encoding="UTF-8"?>
+        fun jaEpub(chapters: Int = 2, repeat: Int = 4): ByteArray {
+            val files = LinkedHashMap<String, ByteArray>()
+            files["mimetype"] = "application/epub+zip".toByteArray()
+            files["META-INF/container.xml"] = "<container><rootfiles><rootfile full-path=\"item/standard.opf\"/></rootfiles></container>".toByteArray()
+            val manifest = StringBuilder("<item id=\"css\" href=\"style/book.css\" media-type=\"text/css\"/>")
+            val spine = StringBuilder()
+            for (c in 1..chapters) {
+                manifest.append("<item id=\"p$c\" href=\"xhtml/p-$c.xhtml\" media-type=\"application/xhtml+xml\"/>")
+                spine.append("<itemref idref=\"p$c\"/>")
+                val body = StringBuilder("<h1>第${"一二三四"[c - 1]}章　ひかりの塔</h1>")
+                repeat(repeat) { r -> paragraphs.forEachIndexed { i, p -> body.append("<p>").append(if (r > 0 && i == 0) p.replace("海辺", "港") else p).append("</p>") } }
+                files["item/xhtml/p-$c.xhtml"] = """<?xml version="1.0" encoding="UTF-8"?>
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="ja" class="vrtl"><head><title>第${c}章</title><link rel="stylesheet" type="text/css" href="../style/book.css"/></head>
 <body class="p-text">$body</body></html>""".toByteArray()
-        }
-        files["item/style/book.css"] = "html.vrtl { writing-mode: vertical-rl; -epub-writing-mode: vertical-rl; } .em-sesame { -epub-text-emphasis-style: sesame; text-emphasis-style: sesame; }".toByteArray()
-        files["item/standard.opf"] = """<package version="3.0"><metadata><dc:title>ひかりの塔</dc:title><dc:creator>海野 灯</dc:creator><dc:language>ja</dc:language></metadata>
+            }
+            files["item/style/book.css"] = "html.vrtl { writing-mode: vertical-rl; -epub-writing-mode: vertical-rl; } .em-sesame { -epub-text-emphasis-style: sesame; text-emphasis-style: sesame; }".toByteArray()
+            files["item/standard.opf"] = """<package version="3.0"><metadata><dc:title>ひかりの塔</dc:title><dc:creator>海野 灯</dc:creator><dc:language>ja</dc:language></metadata>
 <manifest>$manifest</manifest><spine page-progression-direction="rtl">$spine</spine></package>""".toByteArray()
-        return TestBooks.zip(files)
+            return TestBooks.zip(files)
+        }
     }
 
     private fun book(): ParsedBook = BookPostProcessor.process(EpubParser(FileZipAccess(TestBooks.tempFile(jaEpub(), "epub"))).parse(), false)
@@ -221,7 +223,6 @@ class VerticalTextTest {
     @Test
     fun rendersVerticalPages() {
         val deco = Decorations().apply {
-            clock = "21:45"
             bookTitle = "ひかりの塔"
         }
         val e = engine(ReaderSettings(theme = "paper"))
@@ -254,7 +255,7 @@ class VerticalTextTest {
         val e = engine()
         val ctx = ApplicationProvider.getApplicationContext<android.app.Application>()
         var pos = PagePos(0, 0)
-        val deco = Decorations().apply { bookTitle = "ひかりの塔"; clock = "9:30" }
+        val deco = Decorations().apply { bookTitle = "ひかりの塔" }
         val v = PageFlipView(ctx)
         v.mode = FlipMode.CURL
         v.rtl = true

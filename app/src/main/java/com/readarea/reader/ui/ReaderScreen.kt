@@ -71,6 +71,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
+import com.readarea.app
 import com.readarea.data.db.BookEntity
 import com.readarea.ui.components.BookCover
 import androidx.compose.material3.FilledTonalButton
@@ -111,6 +112,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -143,8 +148,14 @@ fun ReaderScreen(
 ) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val s by vm.settings.collectAsStateWithLifecycle()
-    val sysDark = isSystemInDarkTheme()
-    LaunchedEffect(sysDark) { vm.setSystemDark(sysDark) }
+    val appSettings by LocalContext.current.app.settings.app.collectAsStateWithLifecycle(null)
+    val phoneDark = isSystemInDarkTheme()
+    val sysDark = when (appSettings?.themeMode) {
+        "light" -> false
+        "dark" -> true
+        else -> phoneDark
+    }
+    LaunchedEffect(sysDark, appSettings != null) { if (appSettings != null) vm.setSystemDark(sysDark) }
     val theme = remember(s, sysDark) { ReadingThemes.resolve(s, sysDark) }
     val chromeOpen = ui.menu || ui.panel != Panel.NONE
     LaunchedEffect(s, ui.brightnessPreview, chromeOpen) { applyWindow(s, ui.brightnessPreview, chromeOpen) }
@@ -216,7 +227,7 @@ fun ReaderScreen(
                     shape = RoundedCornerShape(50),
                     color = MaterialTheme.colorScheme.secondaryContainer,
                     shadowElevation = 4.dp,
-                    modifier = Modifier.navigationBarsPadding().padding(16.dp),
+                    modifier = Modifier.navigationBarsPadding().padding(start = 16.dp, end = 16.dp, bottom = (s.marginV + 40).dp),
                 ) {
                     Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.AutoMirrored.Rounded.Undo, null, Modifier.size(18.dp))
@@ -230,7 +241,7 @@ fun ReaderScreen(
             ui.footnote?.let { FootnoteCard(it.text, onGo = vm::followFootnote, onClose = vm::dismissFootnote, modifier = Modifier.align(Alignment.BottomCenter)) }
             if (ui.endReached) EndOfBook(vm, ui, onBack, Modifier.align(Alignment.Center))
 
-            PanelHost(vm, ui, s, theme)
+            PanelHost(vm, ui, s, theme, sysDark)
 
             ui.message?.let { msg ->
                 if (msg.startsWith("link:")) {
@@ -496,6 +507,8 @@ private fun AutoTurnChip(vm: ReaderViewModel, s: ReaderSettings, ui: ReaderUi) {
     }
 }
 
+private val highlightNames = listOf(R.string.highlight_yellow, R.string.highlight_green, R.string.highlight_blue, R.string.highlight_pink, R.string.highlight_orange)
+
 @Composable
 private fun SelectionToolbar(vm: ReaderViewModel, sel: com.readarea.reader.SelectionUi, ui: ReaderUi) {
     val context = LocalContext.current
@@ -509,8 +522,10 @@ private fun SelectionToolbar(vm: ReaderViewModel, sel: com.readarea.reader.Selec
                 Column(Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 6.dp)) {
                         highlightPalette.forEachIndexed { i, c ->
+                            val label = stringResource(highlightNames.getOrElse(i) { R.string.highlight_yellow })
                             Box(
                                 Modifier.size(28.dp).clip(CircleShape).background(c)
+                                    .semantics { contentDescription = label; role = Role.Button }
                                     .then(if (sel.color == i) Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier)
                                     .clickable { vm.highlightSelection(i) },
                             )

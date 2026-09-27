@@ -44,10 +44,10 @@
     <string name="chapter_title_top">Kapiteltitel oben</string>
     <string name="clear">Löschen</string>
     <string name="clear_selection">Auswahl aufheben</string>
-    <string name="clock">Uhr</string>
     <string name="close">Schließen</string>
     <string name="close_search">Suche schließen</string>
     <string name="contents_notes">Inhalt und Notizen</string>
+    <string name="continue_label">Weiter</string>
     <string name="continue_percent">Weiterlesen · %d %%</string>
     <string name="continue_reading">Weiterlesen</string>
     <string name="copy">Kopieren</string>
@@ -65,6 +65,8 @@
     <string name="delete_shelf_body">Die Bücher bleiben in deiner Bibliothek.</string>
     <string name="delete_shelf_title">„%s“ löschen?</string>
     <string name="details">Details</string>
+    <string name="device_scan">Bücher automatisch finden</string>
+    <string name="device_scan_hint">Dieses Gerät und die SD-Karte nach Büchern durchsuchen</string>
     <string name="dim">Gedimmt</string>
     <string name="dim_hint">Ganz nach links schieben, um unter das Minimum deines Displays abzudunkeln – ideal zum Lesen im Bett.</string>
     <string name="duration_hours_minutes">%1$d Std. %2$d Min.</string>
@@ -77,6 +79,7 @@
     <string name="error_missing_file">Die Datei wurde nicht gefunden. Sie wurde vielleicht verschoben oder gelöscht.</string>
     <string name="error_not_in_library">Dieses Buch ist nicht mehr in deiner Bibliothek.</string>
     <string name="error_title">Buch konnte nicht geöffnet werden</string>
+    <string name="error_too_large">Diese Datei ist zu groß zum Öffnen.</string>
     <string name="error_unsupported">Diese Datei nutzt eine Formatvariante, die noch nicht unterstützt wird.</string>
     <string name="export">Exportieren</string>
     <string name="export_all">Alles exportieren</string>
@@ -86,6 +89,9 @@
     <string name="filter_all">Alle</string>
     <string name="filter_favorites">Favoriten</string>
     <string name="find">Suchen</string>
+    <string name="find_books">Meine Bücher finden</string>
+    <string name="find_books_body">ReadArea kann dein Handy und deine SD-Karte nach Büchern durchsuchen und deine Bibliothek selbstständig aktuell halten. Android bittet dich, den Zugriff auf alle Dateien zu erlauben. ReadArea liest nur deine Bücher: Es wird nichts hochgeladen, und die App hat keinen Internetzugang.</string>
+    <string name="find_books_title">Alle deine Bücher finden?</string>
     <string name="finished_this_year">Dieses Jahr beendet</string>
     <string name="first_line_indent">Einzug der ersten Zeile</string>
     <string name="follow_system_dark">Dunkelmodus des Systems folgen</string>
@@ -117,6 +123,11 @@
     <string name="greeting_night">Nächtliche Lektüre</string>
     <string name="hero_empty_body">Dein aktuelles Buch erscheint hier, damit du sofort weiterlesen kannst.</string>
     <string name="hero_empty_title">Wähle etwas zum Lesen</string>
+    <string name="highlight_blue">Blau markieren</string>
+    <string name="highlight_green">Grün markieren</string>
+    <string name="highlight_orange">Orange markieren</string>
+    <string name="highlight_pink">Rosa markieren</string>
+    <string name="highlight_yellow">Gelb markieren</string>
     <string name="home_also_reading">Liest du auch</string>
     <string name="home_recently_added">Kürzlich hinzugefügt</string>
     <string name="hyphenation">Silbentrennung</string>
@@ -143,10 +154,10 @@
     <string name="left_aligned">Linksbündig</string>
     <string name="left_to_right">Links → rechts</string>
     <string name="letter_spacing">Zeichenabstand</string>
-    <string name="library_empty_body">Füge einen Ordner hinzu und ReadArea findet alle Bücher darin, auch in Unterordnern.</string>
+    <string name="library_empty_body">Lass ReadArea deine Bücher finden oder füge einen Ordner hinzu. Unterordner werden mit einbezogen.</string>
     <string name="library_empty_title">Deine Bibliothek ist leer</string>
     <string name="library_folders">Bibliotheksordner</string>
-    <string name="library_folders_body">ReadArea überwacht diese Ordner und fügt neue Bücher automatisch hinzu. Nur die gewählten Ordner sind zugänglich – keine weitreichende Speicherberechtigung nötig.</string>
+    <string name="library_folders_body">ReadArea hält deine Bibliothek synchron und fügt neue Bücher automatisch hinzu.</string>
     <string name="line_spacing">Zeilenabstand</string>
     <string name="look_inside">Blick ins Buch</string>
     <string name="look_up">Nachschlagen</string>
@@ -178,6 +189,7 @@
     <string name="no_highlights_short">Wort lange drücken, Griffe ziehen und eine Farbe wählen.</string>
     <string name="no_matches_body">Versuche eine andere Suche oder einen anderen Filter.</string>
     <string name="no_matches_title">Keine Treffer</string>
+    <string name="not_now">Nicht jetzt</string>
     <string name="note">Notiz</string>
     <string name="notes_subject">Notizen · %s</string>
     <string name="off">Aus</string>
@@ -234,6 +246,8 @@
     <string name="remove_from_shelf">Aus Regal entfernen</string>
     <string name="rename">Umbenennen</string>
     <string name="rename_shelf">Regal umbenennen</string>
+    <string name="reopen_last">Letztes Buch wieder öffnen</string>
+    <string name="reopen_last_hint">Wenn du zu ReadArea zurückkehrst, geht es auf der Seite weiter, auf der du aufgehört hast</string>
     <string name="rescan">Neu scannen</string>
     <string name="rescan_folders">Ordner neu scannen</string>
     <string name="reset">Zurücksetzen</string>
@@ -312,6 +326,7 @@
     <string name="theme_sepia">Sepia</string>
     <string name="theme_sky">Himmel</string>
     <string name="theme_system">System</string>
+    <string name="this_device">Dieses Gerät</string>
     <string name="time_left">Noch %s</string>
     <string name="time_spent">%s gelesen</string>
     <string name="today">Heute</string>
@@ -337,7 +352,7 @@
     <string name="wallpaper_colors_hint">Dynamische Farben von Material You</string>
     <string name="warm_light">Warmes Licht</string>
     <string name="weight">Stärke</string>
-    <string name="welcome_body">Füge einen Ordner mit deinen Büchern hinzu und ReadArea hält ihn synchron. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML und Comics werden unterstützt.</string>
+    <string name="welcome_body">ReadArea kann alle Bücher auf deinem Gerät selbst finden, oder du wählst Ordner aus. Unterstützt werden EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML und Comics.</string>
     <string name="welcome_title">Willkommen bei ReadArea</string>
     <string name="writing_horizontal">Horizontal</string>
     <string name="writing_mode">Schreibrichtung</string>

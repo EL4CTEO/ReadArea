@@ -44,10 +44,10 @@
     <string name="chapter_title_top">عنوان الفصل في الأعلى</string>
     <string name="clear">مسح</string>
     <string name="clear_selection">إلغاء التحديد</string>
-    <string name="clock">الساعة</string>
     <string name="close">إغلاق</string>
     <string name="close_search">إغلاق البحث</string>
     <string name="contents_notes">المحتويات والملاحظات</string>
+    <string name="continue_label">متابعة</string>
     <string name="continue_percent">متابعة · %d%%</string>
     <string name="continue_reading">متابعة القراءة</string>
     <string name="copy">نسخ</string>
@@ -65,6 +65,8 @@
     <string name="delete_shelf_body">ستبقى الكتب في مكتبتك.</string>
     <string name="delete_shelf_title">حذف «%s»؟</string>
     <string name="details">التفاصيل</string>
+    <string name="device_scan">العثور على الكتب تلقائيًا</string>
+    <string name="device_scan_hint">البحث عن الكتب في هذا الجهاز وبطاقة SD</string>
     <string name="dim">تعتيم</string>
     <string name="dim_hint">اسحب إلى أقصى اليسار للتعتيم دون الحد الأدنى لشاشتك — مثالي للقراءة في السرير.</string>
     <string name="duration_hours_minutes">%1$d س %2$d د</string>
@@ -77,6 +79,7 @@
     <string name="error_missing_file">تعذّر العثور على الملف. ربما نُقل أو حُذف.</string>
     <string name="error_not_in_library">لم يعد هذا الكتاب في مكتبتك.</string>
     <string name="error_title">تعذّر فتح هذا الكتاب</string>
+    <string name="error_too_large">هذا الملف أكبر من أن يُفتح.</string>
     <string name="error_unsupported">يستخدم هذا الملف نوعًا من الصيغة غير مدعوم بعد.</string>
     <string name="export">تصدير</string>
     <string name="export_all">تصدير الكل</string>
@@ -86,6 +89,9 @@
     <string name="filter_all">الكل</string>
     <string name="filter_favorites">المفضلة</string>
     <string name="find">بحث</string>
+    <string name="find_books">ابحث عن كتبي</string>
+    <string name="find_books_body">يمكن لـ ReadArea البحث عن الكتب في هاتفك وبطاقة SD وإبقاء مكتبتك محدّثة تلقائيًا. سيطلب منك Android السماح بالوصول إلى جميع الملفات. لا يقرأ ReadArea سوى كتبك: لا يُرفع أي شيء، وليس للتطبيق اتصال بالإنترنت.</string>
+    <string name="find_books_title">هل تريد العثور على كل كتبك؟</string>
     <string name="finished_this_year">اكتمل هذا العام</string>
     <string name="first_line_indent">مسافة بادئة للسطر الأول</string>
     <string name="follow_system_dark">اتّباع الوضع الداكن للنظام</string>
@@ -117,6 +123,11 @@
     <string name="greeting_night">قراءة في آخر الليل</string>
     <string name="hero_empty_body">سيظهر كتابك الحالي هنا لتعود إليه مباشرة.</string>
     <string name="hero_empty_title">اختر شيئًا لتقرأه</string>
+    <string name="highlight_blue">تمييز أزرق</string>
+    <string name="highlight_green">تمييز أخضر</string>
+    <string name="highlight_orange">تمييز برتقالي</string>
+    <string name="highlight_pink">تمييز وردي</string>
+    <string name="highlight_yellow">تمييز أصفر</string>
     <string name="home_also_reading">تقرأ أيضًا</string>
     <string name="home_recently_added">أُضيف مؤخرًا</string>
     <string name="hyphenation">الواصلة</string>
@@ -143,10 +154,10 @@
     <string name="left_aligned">محاذاة إلى البداية</string>
     <string name="left_to_right">يسار ← يمين</string>
     <string name="letter_spacing">تباعد الأحرف</string>
-    <string name="library_empty_body">أضف مجلدًا وسيعثر ReadArea على كل كتاب بداخله، بما في ذلك المجلدات الفرعية.</string>
+    <string name="library_empty_body">دع ReadArea يعثر على كتبك، أو أضف مجلدًا. تُضمَّن المجلدات الفرعية أيضًا.</string>
     <string name="library_empty_title">مكتبتك فارغة</string>
     <string name="library_folders">مجلدات المكتبة</string>
-    <string name="library_folders_body">يراقب ReadArea هذه المجلدات ويضيف الكتب الجديدة تلقائيًا. يمكن الوصول فقط إلى المجلدات التي تختارها — لا حاجة إلى إذن تخزين واسع.</string>
+    <string name="library_folders_body">يحافظ ReadArea على مزامنة مكتبتك ويضيف الكتب الجديدة تلقائيًا.</string>
     <string name="line_spacing">تباعد الأسطر</string>
     <string name="look_inside">إلقاء نظرة</string>
     <string name="look_up">البحث عن المعنى</string>
@@ -178,6 +189,7 @@
     <string name="no_highlights_short">اضغط مطولًا على كلمة واسحب المقابض واختر لونًا.</string>
     <string name="no_matches_body">جرّب بحثًا أو عامل تصفية مختلفًا.</string>
     <string name="no_matches_title">لا توجد نتائج</string>
+    <string name="not_now">ليس الآن</string>
     <string name="note">ملاحظة</string>
     <string name="notes_subject">ملاحظات · %s</string>
     <string name="off">إيقاف</string>
@@ -234,6 +246,8 @@
     <string name="remove_from_shelf">إزالة من الرف</string>
     <string name="rename">إعادة تسمية</string>
     <string name="rename_shelf">إعادة تسمية الرف</string>
+    <string name="reopen_last">إعادة فتح آخر كتاب</string>
+    <string name="reopen_last_hint">عند العودة إلى ReadArea، تابع من الصفحة التي توقفت عندها</string>
     <string name="rescan">إعادة الفحص</string>
     <string name="rescan_folders">إعادة فحص المجلدات</string>
     <string name="reset">إعادة ضبط</string>
@@ -312,6 +326,7 @@
     <string name="theme_sepia">بنّي داكن</string>
     <string name="theme_sky">سماء</string>
     <string name="theme_system">النظام</string>
+    <string name="this_device">هذا الجهاز</string>
     <string name="time_left">متبقٍ %s</string>
     <string name="time_spent">الوقت المستغرق %s</string>
     <string name="today">اليوم</string>
@@ -337,7 +352,7 @@
     <string name="wallpaper_colors_hint">ألوان Material You الديناميكية</string>
     <string name="warm_light">ضوء دافئ</string>
     <string name="weight">السُمك</string>
-    <string name="welcome_body">أضف مجلدًا يحتوي على كتبك وسيحافظ ReadArea على مزامنته. يدعم EPUB وPDF وMOBI وFB2 وDOCX وTXT وMarkdown وRTF وODT وHTML والقصص المصورة.</string>
+    <string name="welcome_body">يمكن لـ ReadArea العثور بنفسه على كل الكتب في جهازك، أو يمكنك اختيار المجلدات. يدعم EPUB وPDF وMOBI وFB2 وDOCX وTXT وMarkdown وRTF وODT وHTML والقصص المصورة.</string>
     <string name="welcome_title">مرحبًا بك في ReadArea</string>
     <string name="writing_horizontal">أفقي</string>
     <string name="writing_mode">اتجاه الكتابة</string>

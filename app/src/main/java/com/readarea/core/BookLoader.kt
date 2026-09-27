@@ -13,6 +13,8 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import androidx.core.net.toUri
 import com.readarea.core.format.BookFormat
+import com.readarea.core.format.Limits
+import com.readarea.core.format.readCapped
 import com.readarea.core.format.BookMeta
 import com.readarea.core.format.BookParseException
 import com.readarea.core.format.ParseError
@@ -349,8 +351,8 @@ object BookLoader {
     }
 
     fun readBytes(context: Context, uri: Uri): ByteArray {
-        if (uri.scheme == "file") return File(uri.path!!).readBytes()
-        return context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: throw FileNotFoundException("Unable to open file")
+        val input = if (uri.scheme == "file") File(uri.path!!).inputStream() else context.contentResolver.openInputStream(uri) ?: throw FileNotFoundException("Unable to open file")
+        return input.use { it.readCapped(Limits.FILE) }
     }
 
     fun localCopy(context: Context, uri: Uri, key: String, ext: String): File {
@@ -384,7 +386,7 @@ object BookLoader {
         ZipInputStream(bytes.inputStream()).use { zin ->
             while (true) {
                 val e = zin.nextEntry ?: break
-                if (!e.isDirectory && e.name.endsWith(suffix, true)) return zin.readBytes()
+                if (!e.isDirectory && e.name.endsWith(suffix, true)) return zin.readCapped(Limits.ENTRY)
             }
         }
         return null

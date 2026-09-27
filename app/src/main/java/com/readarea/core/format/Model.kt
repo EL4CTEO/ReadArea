@@ -159,6 +159,6 @@ class ParsedBook(
     fun coverBytes(): ByteArray? = meta.coverRef?.let { resources.read(it) }
 }
 
-enum class ParseError { INVALID, DRM, UNSUPPORTED, EMPTY }
+enum class ParseError { INVALID, DRM, UNSUPPORTED, EMPTY, TOO_LARGE }
 
 class BookParseException(val reason: ParseError, message: String) : Exception(message)

@@ -44,10 +44,10 @@
     <string name="chapter_title_top">ऊपर अध्याय का शीर्षक</string>
     <string name="clear">साफ़ करें</string>
     <string name="clear_selection">चयन हटाएँ</string>
-    <string name="clock">घड़ी</string>
     <string name="close">बंद करें</string>
     <string name="close_search">खोज बंद करें</string>
     <string name="contents_notes">विषय सूची और नोट्स</string>
+    <string name="continue_label">जारी रखें</string>
     <string name="continue_percent">जारी रखें · %d%%</string>
     <string name="continue_reading">पढ़ना जारी रखें</string>
     <string name="copy">कॉपी करें</string>
@@ -65,6 +65,8 @@
     <string name="delete_shelf_body">किताबें आपकी लाइब्रेरी में रहेंगी।</string>
     <string name="delete_shelf_title">“%s” मिटाएँ?</string>
     <string name="details">विवरण</string>
+    <string name="device_scan">किताबें अपने आप ढूँढें</string>
+    <string name="device_scan_hint">इस डिवाइस और SD कार्ड में किताबें खोजें</string>
     <string name="dim">मद्धम</string>
     <string name="dim_hint">स्क्रीन की न्यूनतम चमक से भी कम करने के लिए पूरा बाईं ओर खिसकाएँ — बिस्तर में पढ़ने के लिए बढ़िया।</string>
     <string name="duration_hours_minutes">%1$d घं %2$d मि</string>
@@ -77,6 +79,7 @@
     <string name="error_missing_file">फ़ाइल नहीं मिली। हो सकता है उसे हटाया या कहीं और ले जाया गया हो।</string>
     <string name="error_not_in_library">यह किताब अब आपकी लाइब्रेरी में नहीं है।</string>
     <string name="error_title">यह किताब नहीं खुल सकी</string>
+    <string name="error_too_large">यह फ़ाइल खोलने के लिए बहुत बड़ी है।</string>
     <string name="error_unsupported">यह फ़ाइल फ़ॉर्मैट के ऐसे रूप का इस्तेमाल करती है जो अभी समर्थित नहीं है।</string>
     <string name="export">एक्सपोर्ट करें</string>
     <string name="export_all">सभी एक्सपोर्ट करें</string>
@@ -86,6 +89,9 @@
     <string name="filter_all">सभी</string>
     <string name="filter_favorites">पसंदीदा</string>
     <string name="find">ढूँढें</string>
+    <string name="find_books">मेरी किताबें ढूँढें</string>
+    <string name="find_books_body">ReadArea आपके फ़ोन और SD कार्ड में किताबें खोजकर आपकी लाइब्रेरी को अपने आप अपडेट रख सकता है। Android आपसे सभी फ़ाइलों तक पहुँच की अनुमति देने को कहेगा। ReadArea सिर्फ़ आपकी किताबें पढ़ता है: कुछ भी अपलोड नहीं होता, और ऐप के पास इंटरनेट एक्सेस नहीं है।</string>
+    <string name="find_books_title">अपनी सभी किताबें ढूँढें?</string>
     <string name="finished_this_year">इस साल पूरी हुईं</string>
     <string name="first_line_indent">पहली पंक्ति का इंडेंट</string>
     <string name="follow_system_dark">सिस्टम डार्क मोड का पालन करें</string>
@@ -117,6 +123,11 @@
     <string name="greeting_night">देर रात का पठन</string>
     <string name="hero_empty_body">आपकी मौजूदा किताब यहाँ दिखेगी ताकि आप तुरंत वहीं से पढ़ सकें।</string>
     <string name="hero_empty_title">पढ़ने के लिए कुछ चुनें</string>
+    <string name="highlight_blue">नीला हाइलाइट</string>
+    <string name="highlight_green">हरा हाइलाइट</string>
+    <string name="highlight_orange">नारंगी हाइलाइट</string>
+    <string name="highlight_pink">गुलाबी हाइलाइट</string>
+    <string name="highlight_yellow">पीला हाइलाइट</string>
     <string name="home_also_reading">यह भी पढ़ रहे हैं</string>
     <string name="home_recently_added">हाल ही में जोड़ी गईं</string>
     <string name="hyphenation">हाइफ़नेशन</string>
@@ -143,10 +154,10 @@
     <string name="left_aligned">बाएँ संरेखित</string>
     <string name="left_to_right">बाएँ → दाएँ</string>
     <string name="letter_spacing">अक्षर अंतराल</string>
-    <string name="library_empty_body">एक फ़ोल्डर जोड़ें और ReadArea उसके अंदर की हर किताब ढूँढ लेगा, सबफ़ोल्डर समेत।</string>
+    <string name="library_empty_body">ReadArea को आपकी किताबें ढूँढने दें, या कोई फ़ोल्डर जोड़ें। सबफ़ोल्डर भी शामिल होते हैं।</string>
     <string name="library_empty_title">आपकी लाइब्रेरी खाली है</string>
     <string name="library_folders">लाइब्रेरी फ़ोल्डर</string>
-    <string name="library_folders_body">ReadArea इन फ़ोल्डरों पर नज़र रखता है और नई किताबें अपने आप जोड़ता है। सिर्फ़ आपके चुने फ़ोल्डर ही एक्सेस होते हैं — पूरे स्टोरेज की अनुमति की ज़रूरत नहीं।</string>
+    <string name="library_folders_body">ReadArea आपकी लाइब्रेरी को सिंक रखता है और नई किताबें अपने आप जोड़ता है।</string>
     <string name="line_spacing">पंक्ति अंतराल</string>
     <string name="look_inside">अंदर झाँकें</string>
     <string name="look_up">अर्थ देखें</string>
@@ -178,6 +189,7 @@
     <string name="no_highlights_short">किसी शब्द को देर तक दबाएँ, हैंडल खींचें और रंग चुनें।</string>
     <string name="no_matches_body">कोई दूसरी खोज या फ़िल्टर आज़माएँ।</string>
     <string name="no_matches_title">कुछ नहीं मिला</string>
+    <string name="not_now">अभी नहीं</string>
     <string name="note">नोट</string>
     <string name="notes_subject">नोट्स · %s</string>
     <string name="off">बंद</string>
@@ -234,6 +246,8 @@
     <string name="remove_from_shelf">शेल्फ़ से हटाएँ</string>
     <string name="rename">नाम बदलें</string>
     <string name="rename_shelf">शेल्फ़ का नाम बदलें</string>
+    <string name="reopen_last">आख़िरी किताब फिर से खोलें</string>
+    <string name="reopen_last_hint">ReadArea पर लौटने पर उसी पेज से पढ़ना जारी रखें जहाँ आपने छोड़ा था</string>
     <string name="rescan">दोबारा स्कैन करें</string>
     <string name="rescan_folders">फ़ोल्डर दोबारा स्कैन करें</string>
     <string name="reset">रीसेट करें</string>
@@ -312,6 +326,7 @@
     <string name="theme_sepia">सीपिया</string>
     <string name="theme_sky">आसमान</string>
     <string name="theme_system">सिस्टम</string>
+    <string name="this_device">यह डिवाइस</string>
     <string name="time_left">%s बाकी</string>
     <string name="time_spent">%s बिताए</string>
     <string name="today">आज</string>
@@ -337,7 +352,7 @@
     <string name="wallpaper_colors_hint">Material You डायनैमिक रंग</string>
     <string name="warm_light">गर्म रोशनी</string>
     <string name="weight">मोटाई</string>
-    <string name="welcome_body">अपनी किताबों वाला फ़ोल्डर जोड़ें और ReadArea उसे सिंक रखेगा। EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML और कॉमिक्स समर्थित हैं।</string>
+    <string name="welcome_body">ReadArea आपके डिवाइस की हर किताब खुद ढूँढ सकता है, या आप फ़ोल्डर चुन सकते हैं। EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML और कॉमिक्स समर्थित हैं।</string>
     <string name="welcome_title">ReadArea में आपका स्वागत है</string>
     <string name="writing_horizontal">क्षैतिज</string>
     <string name="writing_mode">लेखन दिशा</string>

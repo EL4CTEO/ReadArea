@@ -70,7 +70,6 @@ class Decorations {
     @Volatile var highlights: List<HighlightRange> = emptyList()
     @Volatile var search: HighlightRange? = null
     @Volatile var speaking: HighlightRange? = null
-    @Volatile var clock: String = ""
     @Volatile var bookTitle: String = ""
     @Volatile var bookmarkedPages: Set<PagePos> = emptySet()
 }
@@ -244,15 +243,8 @@ object PageChrome {
         textPaint.textAlign = Paint.Align.LEFT
         canvas.drawText(pageLabel, left, baseY, textPaint)
         if (!last) return
-        var right = colRight
         textPaint.textAlign = Paint.Align.RIGHT
-        val pct = "${(progress * 100).toInt().coerceIn(0, 100)}%"
-        canvas.drawText(pct, right, baseY, textPaint)
-        right -= textPaint.measureText(pct) + 10 * d
-        if (s.settings.showClock && deco.clock.isNotEmpty()) {
-            textPaint.textAlign = if (s.columns > 1) Paint.Align.RIGHT else Paint.Align.CENTER
-            canvas.drawText(deco.clock, if (s.columns > 1) right else s.width / 2f, baseY, textPaint)
-        }
+        canvas.drawText("${(progress * 100).toInt().coerceIn(0, 100)}%", colRight, baseY, textPaint)
         textPaint.textAlign = Paint.Align.LEFT
         if (s.settings.showProgressLine) {
             val y = s.height - s.bottomInset - s.marginV * 0.45f + 2 * d

@@ -44,10 +44,10 @@
     <string name="chapter_title_top">Üstte bölüm başlığı</string>
     <string name="clear">Temizle</string>
     <string name="clear_selection">Seçimi temizle</string>
-    <string name="clock">Saat</string>
     <string name="close">Kapat</string>
     <string name="close_search">Aramayı kapat</string>
     <string name="contents_notes">İçindekiler ve notlar</string>
+    <string name="continue_label">Devam</string>
     <string name="continue_percent">Devam et · %%%d</string>
     <string name="continue_reading">Okumaya devam et</string>
     <string name="copy">Kopyala</string>
@@ -65,6 +65,8 @@
     <string name="delete_shelf_body">Kitaplar kitaplığınızda kalır.</string>
     <string name="delete_shelf_title">“%s” silinsin mi?</string>
     <string name="details">Ayrıntılar</string>
+    <string name="device_scan">Kitapları otomatik bul</string>
+    <string name="device_scan_hint">Bu cihazda ve SD kartta kitap ara</string>
     <string name="dim">Karart</string>
     <string name="dim_hint">Ekranınızın minimumunun altına karartmak için en sola kaydırın — yatakta okumak için ideal.</string>
     <string name="duration_hours_minutes">%1$d sa %2$d dk</string>
@@ -77,6 +79,7 @@
     <string name="error_missing_file">Dosya bulunamadı. Taşınmış veya silinmiş olabilir.</string>
     <string name="error_not_in_library">Bu kitap artık kitaplığınızda değil.</string>
     <string name="error_title">Bu kitap açılamadı</string>
+    <string name="error_too_large">Bu dosya açılamayacak kadar büyük.</string>
     <string name="error_unsupported">Bu dosya, biçimin henüz desteklenmeyen bir türünü kullanıyor.</string>
     <string name="export">Dışa aktar</string>
     <string name="export_all">Tümünü dışa aktar</string>
@@ -86,6 +89,9 @@
     <string name="filter_all">Tümü</string>
     <string name="filter_favorites">Favoriler</string>
     <string name="find">Bul</string>
+    <string name="find_books">Kitaplarımı bul</string>
+    <string name="find_books_body">ReadArea telefonunuzu ve SD kartınızı kitaplar için tarayabilir ve kitaplığınızı kendiliğinden güncel tutabilir. Android sizden tüm dosyalara erişime izin vermenizi isteyecek. ReadArea yalnızca kitaplarınızı okur: hiçbir şey yüklenmez ve uygulamanın internet erişimi yoktur.</string>
+    <string name="find_books_title">Tüm kitaplarınız bulunsun mu?</string>
     <string name="finished_this_year">Bu yıl bitenler</string>
     <string name="first_line_indent">İlk satır girintisi</string>
     <string name="follow_system_dark">Sistem karanlık modunu izle</string>
@@ -117,6 +123,11 @@
     <string name="greeting_night">Gece okuması</string>
     <string name="hero_empty_body">Okuduğunuz kitap burada görünür, böylece hemen kaldığınız yere dönebilirsiniz.</string>
     <string name="hero_empty_title">Okuyacak bir şey seçin</string>
+    <string name="highlight_blue">Mavi vurgu</string>
+    <string name="highlight_green">Yeşil vurgu</string>
+    <string name="highlight_orange">Turuncu vurgu</string>
+    <string name="highlight_pink">Pembe vurgu</string>
+    <string name="highlight_yellow">Sarı vurgu</string>
     <string name="home_also_reading">Bunları da okuyorsunuz</string>
     <string name="home_recently_added">Son eklenenler</string>
     <string name="hyphenation">Heceleme</string>
@@ -143,10 +154,10 @@
     <string name="left_aligned">Sola hizalı</string>
     <string name="left_to_right">Soldan → sağa</string>
     <string name="letter_spacing">Harf aralığı</string>
-    <string name="library_empty_body">Bir klasör ekleyin, ReadArea alt klasörler dahil içindeki tüm kitapları bulsun.</string>
+    <string name="library_empty_body">Kitaplarınızı ReadArea bulsun ya da bir klasör ekleyin. Alt klasörler de dahildir.</string>
     <string name="library_empty_title">Kitaplığınız boş</string>
     <string name="library_folders">Kitaplık klasörleri</string>
-    <string name="library_folders_body">ReadArea bu klasörleri izler ve yeni kitapları otomatik olarak ekler. Yalnızca seçtiğiniz klasörlere erişilir — geniş depolama izni gerekmez.</string>
+    <string name="library_folders_body">ReadArea kitaplığınızı eşitler ve yeni kitapları otomatik olarak ekler.</string>
     <string name="line_spacing">Satır aralığı</string>
     <string name="look_inside">İçine göz at</string>
     <string name="look_up">Sözlükte bak</string>
@@ -178,6 +189,7 @@
     <string name="no_highlights_short">Bir kelimeye uzun basın, tutamaçları sürükleyin ve bir renk seçin.</string>
     <string name="no_matches_body">Farklı bir arama veya filtre deneyin.</string>
     <string name="no_matches_title">Eşleşme yok</string>
+    <string name="not_now">Şimdi değil</string>
     <string name="note">Not</string>
     <string name="notes_subject">Notlar · %s</string>
     <string name="off">Kapalı</string>
@@ -234,6 +246,8 @@
     <string name="remove_from_shelf">Raftan kaldır</string>
     <string name="rename">Yeniden adlandır</string>
     <string name="rename_shelf">Rafı yeniden adlandır</string>
+    <string name="reopen_last">Son kitabı yeniden aç</string>
+    <string name="reopen_last_hint">ReadArea\'ya döndüğünüzde kaldığınız sayfadan devam edin</string>
     <string name="rescan">Yeniden tara</string>
     <string name="rescan_folders">Klasörleri yeniden tara</string>
     <string name="reset">Sıfırla</string>
@@ -312,6 +326,7 @@
     <string name="theme_sepia">Sepya</string>
     <string name="theme_sky">Gökyüzü</string>
     <string name="theme_system">Sistem</string>
+    <string name="this_device">Bu cihaz</string>
     <string name="time_left">%s kaldı</string>
     <string name="time_spent">%s harcandı</string>
     <string name="today">Bugün</string>
@@ -337,7 +352,7 @@
     <string name="wallpaper_colors_hint">Material You dinamik renkleri</string>
     <string name="warm_light">Sıcak ışık</string>
     <string name="weight">Kalınlık</string>
-    <string name="welcome_body">Kitaplarınızın bulunduğu bir klasör ekleyin, ReadArea onu güncel tutsun. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML ve çizgi romanlar desteklenir.</string>
+    <string name="welcome_body">ReadArea cihazınızdaki tüm kitapları kendisi bulabilir ya da klasörleri siz seçebilirsiniz. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML ve çizgi romanlar desteklenir.</string>
     <string name="welcome_title">ReadArea’ya hoş geldiniz</string>
     <string name="writing_horizontal">Yatay</string>
     <string name="writing_mode">Yazı yönü</string>

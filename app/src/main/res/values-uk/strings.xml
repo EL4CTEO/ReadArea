@@ -44,10 +44,10 @@
     <string name="chapter_title_top">Назва розділу вгорі</string>
     <string name="clear">Очистити</string>
     <string name="clear_selection">Зняти виділення</string>
-    <string name="clock">Годинник</string>
     <string name="close">Закрити</string>
     <string name="close_search">Закрити пошук</string>
     <string name="contents_notes">Зміст і нотатки</string>
+    <string name="continue_label">Продовжити</string>
     <string name="continue_percent">Продовжити · %d%%</string>
     <string name="continue_reading">Продовжити читання</string>
     <string name="copy">Копіювати</string>
@@ -65,6 +65,8 @@
     <string name="delete_shelf_body">Книжки залишаться в бібліотеці.</string>
     <string name="delete_shelf_title">Видалити «%s»?</string>
     <string name="details">Докладніше</string>
+    <string name="device_scan">Знаходити книжки автоматично</string>
+    <string name="device_scan_hint">Шукати книжки на пристрої та SD-карті</string>
     <string name="dim">Затемнення</string>
     <string name="dim_hint">Посуньте до кінця ліворуч, щоб зробити екран темнішим за мінімум — зручно для читання в ліжку.</string>
     <string name="duration_hours_minutes">%1$d год %2$d хв</string>
@@ -77,6 +79,7 @@
     <string name="error_missing_file">Файл не знайдено. Можливо, його переміщено або видалено.</string>
     <string name="error_not_in_library">Цієї книжки більше немає в бібліотеці.</string>
     <string name="error_title">Не вдалося відкрити книжку</string>
+    <string name="error_too_large">Цей файл завеликий, щоб його відкрити.</string>
     <string name="error_unsupported">Цей файл використовує варіант формату, який поки не підтримується.</string>
     <string name="export">Експорт</string>
     <string name="export_all">Експортувати все</string>
@@ -86,6 +89,9 @@
     <string name="filter_all">Усі</string>
     <string name="filter_favorites">Вибране</string>
     <string name="find">Шукати</string>
+    <string name="find_books">Знайти мої книжки</string>
+    <string name="find_books_body">ReadArea може сам шукати книжки в пам\'яті телефона та на SD-карті й підтримувати бібліотеку в актуальному стані. Android попросить дозволити доступ до всіх файлів. ReadArea лише читає ваші книжки: нічого не надсилається, і застосунок не має доступу до інтернету.</string>
+    <string name="find_books_title">Знайти всі ваші книжки?</string>
     <string name="finished_this_year">Прочитано цього року</string>
     <string name="first_line_indent">Абзацний відступ</string>
     <string name="follow_system_dark">Як темний режим системи</string>
@@ -117,6 +123,11 @@
     <string name="greeting_night">Нічне читання</string>
     <string name="hero_empty_body">Тут з’явиться поточна книжка, щоб ви могли одразу повернутися до читання.</string>
     <string name="hero_empty_title">Виберіть, що почитати</string>
+    <string name="highlight_blue">Синє виділення</string>
+    <string name="highlight_green">Зелене виділення</string>
+    <string name="highlight_orange">Помаранчеве виділення</string>
+    <string name="highlight_pink">Рожеве виділення</string>
+    <string name="highlight_yellow">Жовте виділення</string>
     <string name="home_also_reading">Також читаю</string>
     <string name="home_recently_added">Нещодавно додані</string>
     <string name="hyphenation">Перенесення</string>
@@ -143,10 +154,10 @@
     <string name="left_aligned">За лівим краєм</string>
     <string name="left_to_right">Зліва → направо</string>
     <string name="letter_spacing">Міжлітерний інтервал</string>
-    <string name="library_empty_body">Додайте теку, і ReadArea знайде в ній усі книжки, зокрема у вкладених теках.</string>
+    <string name="library_empty_body">Дозвольте ReadArea знайти ваші книжки або додайте теку. Вкладені теки теж враховуються.</string>
     <string name="library_empty_title">Бібліотека порожня</string>
     <string name="library_folders">Теки бібліотеки</string>
-    <string name="library_folders_body">ReadArea стежить за цими теками й автоматично додає нові книжки. Доступні лише вибрані теки — широкий доступ до пам’яті не потрібен.</string>
+    <string name="library_folders_body">ReadArea підтримує бібліотеку в актуальному стані й автоматично додає нові книжки.</string>
     <string name="line_spacing">Міжрядковий інтервал</string>
     <string name="look_inside">Зазирнути всередину</string>
     <string name="look_up">Знайти</string>
@@ -178,6 +189,7 @@
     <string name="no_highlights_short">Натисніть і утримуйте слово, перетягніть маркери й виберіть колір.</string>
     <string name="no_matches_body">Спробуйте інший запит або фільтр.</string>
     <string name="no_matches_title">Нічого не знайдено</string>
+    <string name="not_now">Не зараз</string>
     <string name="note">Нотатка</string>
     <string name="notes_subject">Нотатки · %s</string>
     <string name="off">Вимк.</string>
@@ -234,6 +246,8 @@
     <string name="remove_from_shelf">Прибрати з полиці</string>
     <string name="rename">Перейменувати</string>
     <string name="rename_shelf">Перейменувати полицю</string>
+    <string name="reopen_last">Відкривати останню книжку</string>
+    <string name="reopen_last_hint">Повертаючись до ReadArea, продовжуйте з тієї сторінки, де зупинилися</string>
     <string name="rescan">Пересканувати</string>
     <string name="rescan_folders">Пересканувати теки</string>
     <string name="reset">Скинути</string>
@@ -312,6 +326,7 @@
     <string name="theme_sepia">Сепія</string>
     <string name="theme_sky">Небо</string>
     <string name="theme_system">Системна</string>
+    <string name="this_device">Цей пристрій</string>
     <string name="time_left">Залишилося %s</string>
     <string name="time_spent">Витрачено %s</string>
     <string name="today">Сьогодні</string>
@@ -337,7 +352,7 @@
     <string name="wallpaper_colors_hint">Динамічні кольори Material You</string>
     <string name="warm_light">Тепле світло</string>
     <string name="weight">Товщина</string>
-    <string name="welcome_body">Додайте теку з книжками, і ReadArea стежитиме за її вмістом. Підтримуються EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML і комікси.</string>
+    <string name="welcome_body">ReadArea може сам знайти всі книжки на пристрої, або ви можете вибрати теки. Підтримуються EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML і комікси.</string>
     <string name="welcome_title">Ласкаво просимо до ReadArea</string>
     <string name="writing_horizontal">Горизонтально</string>
     <string name="writing_mode">Напрямок письма</string>
