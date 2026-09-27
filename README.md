@@ -6,18 +6,7 @@ A fast, private e-book reader for Android with a real page-curl animation, caref
 <img src="docs/screenshots/home.jpg" width="200"/>
 <img src="docs/screenshots/library.jpg" width="200"/>
 <img src="docs/screenshots/curl.jpg" width="200"/>
-<img src="docs/screenshots/selection.jpg" width="200"/>
-</p>
-<p>
-<img src="docs/screenshots/reader_menu.jpg" width="200"/>
-<img src="docs/screenshots/night.jpg" width="200"/>
-<img src="docs/screenshots/spread_curl.jpg" width="412"/>
-</p>
-<p>
 <img src="docs/screenshots/vertical.jpg" width="200"/>
-<img src="docs/screenshots/vertical_spread.jpg" width="412"/>
-<img src="docs/screenshots/home_ja.jpg" width="200"/>
-<img src="docs/screenshots/home_ar.jpg" width="200"/>
 </p>
 
 ## Features
