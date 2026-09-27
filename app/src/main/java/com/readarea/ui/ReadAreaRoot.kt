@@ -13,6 +13,7 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.TravelExplore
 import androidx.compose.material3.AlertDialog
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.LaunchedEffect
@@ -111,6 +112,10 @@ fun ReadAreaRoot(vm: LibraryViewModel) {
             if (DeviceStorage.hasAccess(context)) vm.setDeviceScan(true) else findDialog = true
         }
     }
+    LifecycleResumeEffect(Unit) {
+        vm.adoptGrantedAccess()
+        onPauseOrDispose {}
+    }
     if (findDialog) {
         AlertDialog(
             onDismissRequest = { findDialog = false; vm.markDeviceScanAsked() },
@@ -120,7 +125,7 @@ fun ReadAreaRoot(vm: LibraryViewModel) {
             confirmButton = {
                 Button(onClick = {
                     findDialog = false
-                    if (DeviceStorage.needsSettingsScreen) accessSettings.launch(DeviceStorage.accessIntent(context))
+                    if (DeviceStorage.needsSettingsScreen) DeviceStorage.accessIntents(context).firstOrNull { runCatching { accessSettings.launch(it) }.isSuccess }
                     else accessPermission.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
                 }) { Text(stringResource(R.string.continue_label)) }
             },

@@ -72,6 +72,7 @@ data class AppSettings(
     val showFormatBadges: Boolean = true,
     val deviceScan: Boolean = false,
     val askedDeviceScan: Boolean = false,
+    val deviceScanOff: Boolean = false,
     val ignored: List<String> = emptyList(),
     val reopenLastBook: Boolean = true,
     val resumeBookId: Long = 0,

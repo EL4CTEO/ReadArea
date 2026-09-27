@@ -98,7 +98,7 @@ fun HomeScreen(vm: LibraryViewModel, actions: AppActions) {
     ) { padding ->
         if (books != null && list.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                EmptyState(Illustration.BOOKS, stringResource(R.string.welcome_title), stringResource(R.string.welcome_body)) {
+                EmptyState(Illustration.BOOKS, stringResource(if (scan.running) R.string.scanning else R.string.welcome_title), stringResource(R.string.welcome_body)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         if (scan.running) LinearProgressIndicator(Modifier.fillMaxWidth().padding(bottom = 16.dp))
                         Button(onClick = actions.findBooks, modifier = Modifier.fillMaxWidth()) {

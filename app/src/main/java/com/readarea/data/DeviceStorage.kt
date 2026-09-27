@@ -31,10 +31,11 @@ object DeviceStorage {
 
     val needsSettingsScreen: Boolean get() = Build.VERSION.SDK_INT >= 30
 
-    fun accessIntent(context: Context): Intent {
-        val direct = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, "package:${context.packageName}".toUri())
-        return if (direct.resolveActivity(context.packageManager) != null) direct else Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)
-    }
+    fun accessIntents(context: Context): List<Intent> = listOf(
+        Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, "package:${context.packageName}".toUri()),
+        Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION),
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:${context.packageName}".toUri()),
+    )
 
     fun roots(context: Context): List<File> {
         val out = LinkedHashSet<File>()

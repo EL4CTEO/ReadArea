@@ -133,4 +133,65 @@ class LibraryFlowTest {
         assertTrue(s.askedDeviceScan)
         assertFalse(s.deviceScan)
     }
+
+    private fun waitFor(what: String, timeout: Long = 15_000, cond: () -> Boolean) {
+        val end = System.currentTimeMillis() + timeout
+        while (System.currentTimeMillis() < end) {
+            shadowOf(Looper.getMainLooper()).idle()
+            compose.waitForIdle()
+            if (cond()) return
+            Thread.sleep(40)
+        }
+        throw AssertionError("$what: not met in time")
+    }
+
+    private fun shown(text: String) = compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+
+    @Test
+    fun firstLaunchLeadsStraightToAllTheBooksOnThePhone() {
+        denyAllFiles()
+        runBlocking { app.settings.updateApp { AppSettings() } }
+        put("Download/Harbour.epub", TestBooks.epub(chapters = 1, paragraphs = 3, title = "Harbour Light"))
+        put("Documents/School/Notes.epub", TestBooks.epub(chapters = 1, paragraphs = 3, title = "Field Notes"))
+        ActivityScenario.launch(MainActivity::class.java).use { sc ->
+            waitFor("offer") { shown("Find all your books?") }
+            compose.onAllNodesWithText("Continue")[0].performClick()
+            compose.waitForIdle()
+            var sent: android.content.Intent? = null
+            sc.onActivity { sent = shadowOf(it).nextStartedActivityForResult?.intent }
+            assertEquals(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, sent?.action)
+            assertEquals("package:${app.packageName}", sent?.dataString)
+            grantAllFiles()
+            sc.onActivity { shadowOf(it).receiveResult(sent!!, android.app.Activity.RESULT_CANCELED, null) }
+            sc.moveToState(androidx.lifecycle.Lifecycle.State.STARTED)
+            sc.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+            waitFor("books listed on the home screen") { shown("Harbour Light") && shown("Field Notes") }
+        }
+        val s = runBlocking { app.settings.app.first() }
+        assertTrue(s.deviceScan)
+    }
+
+    @Test
+    fun grantingAccessLaterStillFindsTheBooks() {
+        denyAllFiles()
+        runBlocking { app.settings.updateApp { AppSettings(askedDeviceScan = true) } }
+        put("Download/Later.epub", TestBooks.epub(chapters = 1, paragraphs = 3, title = "Later Book"))
+        grantAllFiles()
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitFor("books appear once access exists") { shown("Later Book") }
+        }
+    }
+
+    @Test
+    fun turningTheScanOffIsRespected() {
+        grantAllFiles()
+        runBlocking { app.settings.updateApp { AppSettings(askedDeviceScan = true, deviceScanOff = true) } }
+        put("Download/Hidden.epub", TestBooks.epub(chapters = 1, paragraphs = 3, title = "Should Stay Out"))
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitFor("home") { shown("Home") || shown("Library") }
+            repeat(20) { shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(40) }
+            assertFalse(shown("Should Stay Out"))
+        }
+        assertFalse(runBlocking { app.settings.app.first() }.deviceScan)
+    }
 }

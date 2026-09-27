@@ -148,6 +148,10 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
 
     fun markDeviceScanAsked() = repo.markDeviceScanAsked()
 
+    fun adoptGrantedAccess() {
+        viewModelScope.launch { repo.adoptGrantedAccess() }
+    }
+
     suspend fun resumeTarget(): Long? = repo.resumeTarget()
 
     suspend fun shouldOfferDeviceScan(): Boolean {

@@ -85,7 +85,7 @@ class LibraryRepository(
 
     fun setDeviceScan(enabled: Boolean, removeBooks: Boolean = false) {
         scope.launch {
-            settings.updateApp { it.copy(deviceScan = enabled, askedDeviceScan = true) }
+            settings.updateApp { it.copy(deviceScan = enabled, askedDeviceScan = true, deviceScanOff = !enabled) }
             if (enabled) scanAll() else if (removeBooks) db.books().deleteFolder(DeviceStorage.DEVICE)
         }
     }
@@ -99,6 +99,14 @@ class LibraryRepository(
         if (!s.reopenLastBook || s.resumeBookId <= 0) return null
         val b = db.books().get(s.resumeBookId) ?: return null
         return if (b.missing) null else b.id
+    }
+
+    suspend fun adoptGrantedAccess(): Boolean {
+        val s = settings.appNow()
+        if (s.deviceScan || s.deviceScanOff || !DeviceStorage.hasAccess(context)) return false
+        settings.updateApp { it.copy(deviceScan = true, askedDeviceScan = true) }
+        scope.launch { scanAll() }
+        return true
     }
 
     fun markDeviceScanAsked() {
