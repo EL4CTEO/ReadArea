@@ -18,9 +18,9 @@ class MobiParser(private val data: ByteArray, private val fallbackTitle: String)
     }
 
     fun parse(metadataOnly: Boolean = false): ParsedBook {
-        if (data.size < 78 + 8) throw BookParseException("Invalid MOBI file")
+        if (data.size < 78 + 8) throw BookParseException(ParseError.INVALID, "Invalid MOBI file")
         val type = String(data, 60, 8, Charsets.ISO_8859_1)
-        if (type != "BOOKMOBI" && type != "TEXtREAd") throw BookParseException("Unsupported MOBI variant")
+        if (type != "BOOKMOBI" && type != "TEXtREAd") throw BookParseException(ParseError.UNSUPPORTED, "Unsupported MOBI variant")
         val count = u16(76)
         offsets = IntArray(count) { u32(78 + it * 8) }
         val r0 = record(0)
@@ -28,7 +28,7 @@ class MobiParser(private val data: ByteArray, private val fallbackTitle: String)
         val compression = r0b.getShort(0).toInt() and 0xFFFF
         val recordCount = r0b.getShort(8).toInt() and 0xFFFF
         val encryption = r0b.getShort(12).toInt() and 0xFFFF
-        if (encryption != 0) throw BookParseException("This book is DRM-protected and can't be opened")
+        if (encryption != 0) throw BookParseException(ParseError.DRM, "This book is DRM-protected and can't be opened")
         var title = String(data, 0, 32, Charsets.ISO_8859_1).trim('\u0000', ' ').replace('_', ' ')
         var author = ""
         var description: String? = null
@@ -78,7 +78,7 @@ class MobiParser(private val data: ByteArray, private val fallbackTitle: String)
         val meta = BookMeta(title = title.ifBlank { fallbackTitle }, author = author, language = language, description = description, publisher = publisher, coverRef = coverRef)
         if (metadataOnly) return ParsedBook(meta, emptyList(), emptyList(), resources)
 
-        if (compression == 17480) throw BookParseException("This MOBI uses Huffman compression, which isn't supported yet")
+        if (compression == 17480) throw BookParseException(ParseError.UNSUPPORTED, "This MOBI uses Huffman compression, which isn't supported yet")
         val raw = ByteArrayOutputStream()
         for (i in 1..recordCount.coerceAtMost(offsets.size - 1)) {
             var rec = record(i)
@@ -97,7 +97,7 @@ class MobiParser(private val data: ByteArray, private val fallbackTitle: String)
             val blocks = conv.convert(part)
             if (blocks.isNotEmpty()) chapters.add(Chapter(conv.firstHeading ?: "", href, blocks))
         }
-        if (chapters.isEmpty()) throw BookParseException("This book appears to be empty")
+        if (chapters.isEmpty()) throw BookParseException(ParseError.EMPTY, "This book appears to be empty")
         return ParsedBook(meta, chapters, emptyList(), resources)
     }
 

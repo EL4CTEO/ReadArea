@@ -100,6 +100,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -125,6 +126,10 @@ import com.readarea.reader.view.PageFlipView
 import com.readarea.reader.view.ScrollPageView
 import com.readarea.ui.theme.ReaderChromeTheme
 import com.readarea.ui.theme.highlightPalette
+import com.readarea.ui.components.percent
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.readarea.R
 
 @Composable
 fun ReaderScreen(
@@ -213,7 +218,7 @@ fun ReaderScreen(
                     Row(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.AutoMirrored.Rounded.Undo, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Back", style = MaterialTheme.typography.labelLarge)
+                        Text(stringResource(R.string.back), style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
@@ -229,16 +234,16 @@ fun ReaderScreen(
                     val url = msg.removePrefix("link:")
                     AlertDialog(
                         onDismissRequest = vm::dismissMessage,
-                        title = { Text("Open link?") },
+                        title = { Text(stringResource(R.string.open_link)) },
                         text = { Text(url, maxLines = 4, overflow = TextOverflow.Ellipsis) },
-                        confirmButton = { TextButton({ vm.dismissMessage(); openExternal(url.toUri()) }) { Text("Open") } },
-                        dismissButton = { TextButton(vm::dismissMessage) { Text("Cancel") } },
+                        confirmButton = { TextButton({ vm.dismissMessage(); openExternal(url.toUri()) }) { Text(stringResource(R.string.open)) } },
+                        dismissButton = { TextButton(vm::dismissMessage) { Text(stringResource(R.string.cancel)) } },
                     )
                 } else {
                     AlertDialog(
                         onDismissRequest = vm::dismissMessage,
                         text = { Text(msg) },
-                        confirmButton = { TextButton(vm::dismissMessage) { Text("OK") } },
+                        confirmButton = { TextButton(vm::dismissMessage) { Text(stringResource(R.string.ok)) } },
                     )
                 }
             }
@@ -290,9 +295,8 @@ private fun PageSurface(vm: ReaderViewModel, ui: ReaderUi, s: ReaderSettings, th
                         v.pageBackground = theme.background
                         v.selectionColor = (theme.accent and 0x00FFFFFF) or 0x44000000
                         v.handleColor = theme.accent
-                        if (v.spread != (columns == 2)) {
-                            v.spread = columns == 2
-                        }
+                        v.spread = columns == 2
+                        v.rtl = ui.rtl
                     }
                     is ScrollPageView -> {
                         v.brightnessGesture = s.brightnessGesture
@@ -351,22 +355,22 @@ private fun LightOverlay(s: ReaderSettings, preview: Float?) {
 private fun TopBar(vm: ReaderViewModel, ui: ReaderUi, onBack: () -> Unit) {
     Surface(color = MaterialTheme.colorScheme.surface, shadowElevation = 6.dp, modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.statusBarsPadding().height(60.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") }
+            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) }
             Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
                 Text(ui.title, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (ui.chapterTitle.isNotBlank() && ui.chapterTitle != ui.title) {
                     Text(ui.chapterTitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
-            if (!ui.fixed) IconButton(onClick = { vm.openPanel(Panel.SEARCH) }) { Icon(Icons.Rounded.Search, "Search") }
+            if (!ui.fixed) IconButton(onClick = { vm.openPanel(Panel.SEARCH) }) { Icon(Icons.Rounded.Search, stringResource(R.string.search)) }
             IconButton(onClick = vm::toggleBookmark) {
                 Icon(
                     if (ui.bookmarked) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                    "Bookmark",
+                    stringResource(R.string.bookmark),
                     tint = if (ui.bookmarked) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 )
             }
-            IconButton(onClick = { vm.openPanel(Panel.MORE) }) { Icon(Icons.Rounded.MoreVert, "More") }
+            IconButton(onClick = { vm.openPanel(Panel.MORE) }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.more)) }
         }
     }
 }
@@ -388,13 +392,13 @@ private fun BottomBar(vm: ReaderViewModel, ui: ReaderUi) {
                         modifier = Modifier.weight(1f),
                     )
                     Text(
-                        if (dragging) "${(slider * 100).toInt()}%" else if (!ui.fixed && ui.pagesLeftInChapter > 0) "${ui.pagesLeftInChapter} left in chapter" else "${(ui.progress * 100).toInt()}%",
+                        if (dragging) percent(slider) else if (!ui.fixed && ui.pagesLeftInChapter > 0) pluralStringResource(R.plurals.pages_left_chapter, ui.pagesLeftInChapter, ui.pagesLeftInChapter) else percent(ui.progress),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { vm.chapterStep(false) }) { Icon(Icons.Rounded.SkipPrevious, "Previous chapter") }
+                    IconButton(onClick = { vm.chapterStep(false) }) { Icon(Icons.Rounded.SkipPrevious, stringResource(R.string.previous_chapter)) }
                     Slider(
                         value = slider,
                         onValueChange = {
@@ -407,15 +411,15 @@ private fun BottomBar(vm: ReaderViewModel, ui: ReaderUi) {
                         },
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(onClick = { vm.chapterStep(true) }) { Icon(Icons.Rounded.SkipNext, "Next chapter") }
+                    IconButton(onClick = { vm.chapterStep(true) }) { Icon(Icons.Rounded.SkipNext, stringResource(R.string.next_chapter)) }
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    ToolButton(Icons.Rounded.FormatListBulleted, "Contents") { vm.openPanel(Panel.CONTENTS) }
-                    if (!ui.fixed) ToolButton(Icons.Rounded.TextFields, "Text") { vm.openPanel(Panel.TYPOGRAPHY) }
-                    ToolButton(Icons.Rounded.Palette, "Theme") { vm.openPanel(Panel.THEME) }
-                    ToolButton(Icons.Rounded.LightMode, "Light") { vm.openPanel(Panel.LIGHT) }
-                    ToolButton(Icons.Rounded.AutoStories, "Paging") { vm.openPanel(Panel.PAGING) }
-                    if (ui.ttsAvailable) ToolButton(Icons.Rounded.RecordVoiceOver, "Listen") { vm.openPanel(Panel.SPEECH) }
+                    ToolButton(Icons.Rounded.FormatListBulleted, stringResource(R.string.tool_contents)) { vm.openPanel(Panel.CONTENTS) }
+                    if (!ui.fixed) ToolButton(Icons.Rounded.TextFields, stringResource(R.string.tool_text)) { vm.openPanel(Panel.TYPOGRAPHY) }
+                    ToolButton(Icons.Rounded.Palette, stringResource(R.string.theme)) { vm.openPanel(Panel.THEME) }
+                    ToolButton(Icons.Rounded.LightMode, stringResource(R.string.tool_light)) { vm.openPanel(Panel.LIGHT) }
+                    ToolButton(Icons.Rounded.AutoStories, stringResource(R.string.tool_paging)) { vm.openPanel(Panel.PAGING) }
+                    if (ui.ttsAvailable) ToolButton(Icons.Rounded.RecordVoiceOver, stringResource(R.string.tool_listen)) { vm.openPanel(Panel.SPEECH) }
                 }
             }
         }
@@ -444,7 +448,7 @@ private fun BrightnessBadge(level: Float, modifier: Modifier) {
                 Box(Modifier.fillMaxWidth(level.coerceIn(0f, 1f)).height(6.dp).clip(CircleShape).background(Color.White))
             }
             Spacer(Modifier.width(12.dp))
-            Text(if (level < ReaderActivity.DIM_THRESHOLD) "Dim" else "${(level * 100).toInt()}%", style = MaterialTheme.typography.labelLarge)
+            Text(if (level < ReaderActivity.DIM_THRESHOLD) stringResource(R.string.dim) else percent(level), style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -460,14 +464,14 @@ private fun SpeechBar(vm: ReaderViewModel, ui: ReaderUi, s: ReaderSettings) {
         Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.AutoMirrored.Rounded.VolumeUp, null, Modifier.padding(start = 10.dp).size(20.dp), tint = MaterialTheme.colorScheme.primary)
             Text(
-                "Reading aloud · ${"%.1f".format(s.ttsRate)}×",
+                stringResource(R.string.reading_aloud, s.ttsRate),
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(horizontal = 12.dp).weight(1f, fill = false),
             )
             IconButton(onClick = { vm.updateSettings { it.copy(ttsRate = (it.ttsRate - 0.1f).coerceAtLeast(0.5f)) } }) { Text("−", style = MaterialTheme.typography.titleLarge) }
             IconButton(onClick = { vm.updateSettings { it.copy(ttsRate = (it.ttsRate + 0.1f).coerceAtMost(3f)) } }) { Text("+", style = MaterialTheme.typography.titleLarge) }
-            IconButton(onClick = vm::toggleSpeech) { Icon(if (ui.ttsPaused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, "Play or pause") }
-            IconButton(onClick = vm::stopTts) { Icon(Icons.Rounded.Stop, "Stop") }
+            IconButton(onClick = vm::toggleSpeech) { Icon(if (ui.ttsPaused) Icons.Rounded.PlayArrow else Icons.Rounded.Pause, stringResource(R.string.play_pause)) }
+            IconButton(onClick = vm::stopTts) { Icon(Icons.Rounded.Stop, stringResource(R.string.stop)) }
         }
     }
 }
@@ -484,7 +488,7 @@ private fun AutoTurnChip(vm: ReaderViewModel, s: ReaderSettings) {
         Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Timer, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(8.dp))
-            Text(if (s.pageAnim == "scroll") "Auto-scrolling · tap to stop" else "Turning every ${s.autoTurnSeconds}s · tap to stop", style = MaterialTheme.typography.labelLarge)
+            Text(if (s.pageAnim == "scroll") stringResource(R.string.auto_scrolling) else stringResource(R.string.auto_turning, s.autoTurnSeconds), style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -492,6 +496,7 @@ private fun AutoTurnChip(vm: ReaderViewModel, s: ReaderSettings) {
 @Composable
 private fun SelectionToolbar(vm: ReaderViewModel, sel: com.readarea.reader.SelectionUi, ui: ReaderUi) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     var noteDialog by remember { mutableStateOf(false) }
     val density = LocalDensity.current
     val margin = with(density) { 12.dp.roundToPx() }
@@ -508,30 +513,30 @@ private fun SelectionToolbar(vm: ReaderViewModel, sel: com.readarea.reader.Selec
                             )
                         }
                         if (sel.highlightId != null) {
-                            IconButton(onClick = { vm.deleteHighlight(sel.highlightId) }) { Icon(Icons.Rounded.Delete, "Delete highlight") }
+                            IconButton(onClick = { vm.deleteHighlight(sel.highlightId) }) { Icon(Icons.Rounded.Delete, stringResource(R.string.delete_highlight)) }
                         }
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
-                        SmallAction(Icons.Rounded.ContentCopy, "Copy") {
+                        SmallAction(Icons.Rounded.ContentCopy, stringResource(R.string.copy)) {
                             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            cm.setPrimaryClip(ClipData.newPlainText("Quote", sel.text))
+                            cm.setPrimaryClip(ClipData.newPlainText(resources.getString(R.string.quote), sel.text))
                             vm.clearSelection()
                         }
-                        SmallAction(Icons.Rounded.EditNote, "Note") { noteDialog = true }
-                        SmallAction(Icons.Rounded.Share, "Share") {
+                        SmallAction(Icons.Rounded.EditNote, stringResource(R.string.note)) { noteDialog = true }
+                        SmallAction(Icons.Rounded.Share, stringResource(R.string.share)) {
                             val quote = "“${sel.text}”\n— ${ui.title}${if (ui.author.isNotBlank()) ", ${ui.author}" else ""}"
-                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, quote), "Share quote"))
+                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, quote), resources.getString(R.string.share_quote)))
                             vm.clearSelection()
                         }
-                        SmallAction(Icons.Rounded.Translate, "Look up") {
+                        SmallAction(Icons.Rounded.Translate, stringResource(R.string.look_up)) {
                             val intent = Intent(Intent.ACTION_PROCESS_TEXT).setType("text/plain").putExtra(Intent.EXTRA_PROCESS_TEXT, sel.text).putExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, true)
-                            runCatching { context.startActivity(Intent.createChooser(intent, "Look up")) }.onFailure {
+                            runCatching { context.startActivity(Intent.createChooser(intent, resources.getString(R.string.look_up))) }.onFailure {
                                 runCatching { context.startActivity(Intent(Intent.ACTION_WEB_SEARCH).putExtra(android.app.SearchManager.QUERY, sel.text)) }
                             }
                             vm.clearSelection()
                         }
-                        if (ui.ttsAvailable) SmallAction(Icons.AutoMirrored.Rounded.VolumeUp, "Speak") { vm.speakFromSelection() }
-                        SmallAction(Icons.Rounded.Search, "Find") {
+                        if (ui.ttsAvailable) SmallAction(Icons.AutoMirrored.Rounded.VolumeUp, stringResource(R.string.speak)) { vm.speakFromSelection() }
+                        SmallAction(Icons.Rounded.Search, stringResource(R.string.find)) {
                             val q = sel.text.take(80)
                             vm.clearSelection()
                             vm.openPanel(Panel.SEARCH)
@@ -561,21 +566,21 @@ private fun SelectionToolbar(vm: ReaderViewModel, sel: com.readarea.reader.Selec
         var text by remember { mutableStateOf(sel.note ?: "") }
         AlertDialog(
             onDismissRequest = { noteDialog = false },
-            title = { Text("Add note") },
+            title = { Text(stringResource(R.string.add_note)) },
             text = {
                 Column {
                     Text("“${sel.text.take(160)}${if (sel.text.length > 160) "…" else ""}”", style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Serif, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(text, { text = it }, placeholder = { Text("Your thoughts…") }, minLines = 3, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(text, { text = it }, placeholder = { Text(stringResource(R.string.your_thoughts)) }, minLines = 3, modifier = Modifier.fillMaxWidth())
                 }
             },
             confirmButton = {
                 TextButton({
                     noteDialog = false
                     vm.highlightSelection(if (sel.color >= 0) sel.color else 0, text)
-                }) { Text("Save") }
+                }) { Text(stringResource(R.string.save)) }
             },
-            dismissButton = { TextButton({ noteDialog = false }) { Text("Cancel") } },
+            dismissButton = { TextButton({ noteDialog = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -601,8 +606,8 @@ private fun FootnoteCard(text: String, onGo: () -> Unit, onClose: () -> Unit, mo
     ) {
         Column(Modifier.navigationBarsPadding().padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Note", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, "Close") }
+                Text(stringResource(R.string.note), style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                IconButton(onClick = onClose) { Icon(Icons.Rounded.Close, stringResource(R.string.close)) }
             }
             Text(
                 text,
@@ -612,7 +617,7 @@ private fun FootnoteCard(text: String, onGo: () -> Unit, onClose: () -> Unit, mo
             )
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                TextButton(onClick = onGo) { Text("Go to note") }
+                TextButton(onClick = onGo) { Text(stringResource(R.string.go_to_note)) }
             }
         }
     }
@@ -639,14 +644,14 @@ private fun EndOfBook(vm: ReaderViewModel, ui: ReaderUi, onBack: () -> Unit, mod
                 drawCircle(Color(0xFFE0A84C), radius = size.minDimension * 0.18f)
             }
             Spacer(Modifier.height(12.dp))
-            Text("The end", style = MaterialTheme.typography.headlineSmall)
-            Text("You finished ${ui.title}.", style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.the_end), style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.you_finished, ui.title), style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(20.dp))
             Button(onClick = {
                 vm.markFinished()
                 onBack()
-            }, modifier = Modifier.fillMaxWidth()) { Text("Mark as finished") }
-            FilledTonalButton(onClick = vm::dismissEnd, modifier = Modifier.fillMaxWidth()) { Text("Keep reading") }
+            }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.mark_finished)) }
+            FilledTonalButton(onClick = vm::dismissEnd, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.keep_reading)) }
         }
     }
 }
@@ -656,19 +661,19 @@ private fun LoadingState(title: String) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         CircularProgressIndicator(strokeWidth = 3.dp)
         Spacer(Modifier.height(16.dp))
-        Text(title.ifBlank { "Opening…" }, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 32.dp), textAlign = TextAlign.Center)
-        Text("Preparing pages", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(title.ifBlank { stringResource(R.string.opening) }, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 32.dp), textAlign = TextAlign.Center)
+        Text(stringResource(R.string.preparing_pages), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun ErrorState(message: String, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).padding(32.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("Couldn't open this book", style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
+        Text(stringResource(R.string.error_title), style = MaterialTheme.typography.headlineSmall, textAlign = TextAlign.Center)
         Spacer(Modifier.height(8.dp))
         Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onBack) { Text("Back to library") }
+        Button(onClick = onBack) { Text(stringResource(R.string.back_to_library)) }
     }
 }
 
@@ -680,12 +685,12 @@ private fun TabletopDeck(vm: ReaderViewModel, ui: ReaderUi, modifier: Modifier) 
             Text(ui.pageLabel, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Slider(value = ui.progress, onValueChange = {}, onValueChangeFinished = null, enabled = false)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                LargeDeckButton(Icons.Rounded.SkipPrevious, "Previous") { vm.keyFlip(false) }
-                if (ui.ttsAvailable) LargeDeckButton(if (ui.speaking && !ui.ttsPaused) Icons.Rounded.Pause else Icons.Rounded.RecordVoiceOver, "Listen") { vm.toggleSpeech() }
-                LargeDeckButton(Icons.Rounded.Timer, "Auto") { vm.toggleAutoTurn() }
-                LargeDeckButton(Icons.Rounded.LightMode, "Light") { vm.openPanel(Panel.LIGHT) }
-                LargeDeckButton(Icons.Rounded.MoreVert, "Menu") { vm.openPanel(Panel.MORE) }
-                LargeDeckButton(Icons.Rounded.SkipNext, "Next") { vm.keyFlip(true) }
+                LargeDeckButton(Icons.Rounded.SkipPrevious, stringResource(R.string.previous)) { vm.keyFlip(false) }
+                if (ui.ttsAvailable) LargeDeckButton(if (ui.speaking && !ui.ttsPaused) Icons.Rounded.Pause else Icons.Rounded.RecordVoiceOver, stringResource(R.string.tool_listen)) { vm.toggleSpeech() }
+                LargeDeckButton(Icons.Rounded.Timer, stringResource(R.string.auto)) { vm.toggleAutoTurn() }
+                LargeDeckButton(Icons.Rounded.LightMode, stringResource(R.string.tool_light)) { vm.openPanel(Panel.LIGHT) }
+                LargeDeckButton(Icons.Rounded.MoreVert, stringResource(R.string.menu)) { vm.openPanel(Panel.MORE) }
+                LargeDeckButton(Icons.Rounded.SkipNext, stringResource(R.string.next)) { vm.keyFlip(true) }
             }
         }
     }

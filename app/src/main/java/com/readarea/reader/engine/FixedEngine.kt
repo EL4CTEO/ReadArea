@@ -31,7 +31,7 @@ class FixedEngine(val source: FixedSource, private val tintable: Boolean, val ti
         currentSetup = setup
         cache.resize(if (setup.columns > 1) 7 else 4)
         applyTheme(theme)
-        if (old == null || old.width != setup.width || old.height != setup.height || old.columns != setup.columns || old.settings.pdfCrop != setup.settings.pdfCrop || old.settings.showFooter != setup.settings.showFooter) {
+        if (old == null || old.width != setup.width || old.height != setup.height || old.columns != setup.columns || old.rtl != setup.rtl || old.settings.pdfCrop != setup.settings.pdfCrop || old.settings.showFooter != setup.settings.showFooter) {
             cache.evictAll()
             scrollCache.evictAll()
         }
@@ -86,7 +86,8 @@ class FixedEngine(val source: FixedSource, private val tintable: Boolean, val ti
         if (s.columns > 1) {
             val half = s.width / 2f
             val gap = maxOf(s.hingeGap / 2f, m)
-            return if (col == 0) RectF(m, s.topInset + m, half - gap, bottom) else RectF(half + gap, s.topInset + m, s.width - m, bottom)
+            val leftSide = (col == 0) != s.rtl
+            return if (leftSide) RectF(m, s.topInset + m, half - gap, bottom) else RectF(half + gap, s.topInset + m, s.width - m, bottom)
         }
         return RectF(m, s.topInset + m, s.width - m, bottom)
     }
@@ -146,7 +147,8 @@ class FixedEngine(val source: FixedSource, private val tintable: Boolean, val ti
             val area = pageArea(s, col)
             val bmp = pageBitmap(page)
             if (bmp != null) {
-                val dx = if (s.columns > 1) (if (col == 0) area.right - bmp.width else area.left) else area.left + (area.width() - bmp.width) / 2f
+                val leftSide = (col == 0) != s.rtl
+                val dx = if (s.columns > 1) (if (leftSide) area.right - bmp.width else area.left) else area.left + (area.width() - bmp.width) / 2f
                 val dy = area.top + (area.height() - bmp.height) / 2f
                 dst.set(dx, dy, dx + bmp.width, dy + bmp.height)
                 canvas.drawBitmap(bmp, null, dst, paint)

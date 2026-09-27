@@ -32,7 +32,9 @@ import java.io.File
 import java.time.LocalDate
 import java.time.ZoneId
 
-data class ScanState(val running: Boolean = false, val found: Int = 0, val processed: Int = 0, val total: Int = 0, val message: String? = null)
+enum class ScanPhase { IDLE, FOLDERS, DETAILS }
+
+data class ScanState(val running: Boolean = false, val found: Int = 0, val processed: Int = 0, val total: Int = 0, val phase: ScanPhase = ScanPhase.IDLE)
 
 class LibraryRepository(
     private val context: Context,
@@ -85,7 +87,7 @@ class LibraryRepository(
         if (scanMutex.isLocked) return
         scanMutex.withLock {
             val folders = settings.appNow().folders
-            _scan.value = ScanState(running = true, message = "Scanning folders…")
+            _scan.value = ScanState(running = true, phase = ScanPhase.FOLDERS)
             var found = 0
             for (folder in folders) {
                 val tree = folder.toUri()
@@ -111,7 +113,7 @@ class LibraryRepository(
                 val gone = existing.values.filter { it.uri !in seen && !it.missing }.map { it.id }
                 if (gone.isNotEmpty() && files.isNotEmpty()) db.books().setMissing(gone, true)
             }
-            _scan.value = ScanState(running = true, found = found, message = "Reading book details…")
+            _scan.value = ScanState(running = true, found = found, phase = ScanPhase.DETAILS)
             metaMutex.withLock { loadPendingMetadata() }
             _scan.value = ScanState(running = false, found = found)
         }

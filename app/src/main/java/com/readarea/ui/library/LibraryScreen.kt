@@ -70,12 +70,16 @@ import com.readarea.data.db.BookStatus
 import com.readarea.ui.AppActions
 import com.readarea.ui.LibraryFilter
 import com.readarea.ui.LibraryViewModel
+import com.readarea.data.ScanPhase
 import com.readarea.ui.components.BookGridItem
 import com.readarea.ui.components.BookListItem
 import com.readarea.ui.components.EmptyState
 import com.readarea.ui.components.Illustration
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.readarea.R
 
-val sortOptions = listOf("recent" to "Recently read", "added" to "Date added", "title" to "Title", "author" to "Author & series", "progress" to "Progress", "size" to "File size")
+val sortOptions = listOf("recent" to R.string.sort_recent, "added" to R.string.sort_added, "title" to R.string.sort_title, "author" to R.string.sort_author, "progress" to R.string.sort_progress, "size" to R.string.sort_size)
 
 @Composable
 fun LibraryScreen(vm: LibraryViewModel, actions: AppActions) {
@@ -105,68 +109,68 @@ fun LibraryScreen(vm: LibraryViewModel, actions: AppActions) {
         topBar = {
             if (selection.isNotEmpty()) {
                 TopAppBar(
-                    navigationIcon = { IconButton(onClick = { selection = emptySet() }) { Icon(Icons.Rounded.Close, "Clear selection") } },
-                    title = { Text("${selection.size} selected") },
+                    navigationIcon = { IconButton(onClick = { selection = emptySet() }) { Icon(Icons.Rounded.Close, stringResource(R.string.clear_selection)) } },
+                    title = { Text(pluralStringResource(R.plurals.selected_count, selection.size, selection.size)) },
                     actions = {
-                        if (selection.size == 1) IconButton(onClick = { actions.showDetails(selection.first()); selection = emptySet() }) { Icon(Icons.Rounded.Info, "Details") }
-                        IconButton(onClick = { selection = books.map { it.id }.toSet() }) { Icon(Icons.Rounded.SelectAll, "Select all") }
+                        if (selection.size == 1) IconButton(onClick = { actions.showDetails(selection.first()); selection = emptySet() }) { Icon(Icons.Rounded.Info, stringResource(R.string.details)) }
+                        IconButton(onClick = { selection = books.map { it.id }.toSet() }) { Icon(Icons.Rounded.SelectAll, stringResource(R.string.select_all)) }
                         IconButton(onClick = {
                             val allFav = books.filter { it.id in selection }.all { it.favorite }
                             vm.setFavorite(selection.toList(), !allFav)
-                        }) { Icon(Icons.Rounded.Favorite, "Favorite") }
-                        IconButton(onClick = { shelfDialog = true }) { Icon(Icons.Rounded.CollectionsBookmark, "Add to shelf") }
+                        }) { Icon(Icons.Rounded.Favorite, stringResource(R.string.favorite)) }
+                        IconButton(onClick = { shelfDialog = true }) { Icon(Icons.Rounded.CollectionsBookmark, stringResource(R.string.add_to_shelf)) }
                         Box {
-                            IconButton(onClick = { statusMenu = true }) { Icon(Icons.Rounded.Check, "Mark as") }
+                            IconButton(onClick = { statusMenu = true }) { Icon(Icons.Rounded.Check, stringResource(R.string.mark_as)) }
                             DropdownMenu(statusMenu, { statusMenu = false }) {
-                                listOf(BookStatus.WANT to "Want to read", BookStatus.READING to "Reading", BookStatus.FINISHED to "Finished").forEach { (st, label) ->
-                                    DropdownMenuItem(text = { Text("Mark as $label") }, onClick = {
+                                listOf(BookStatus.WANT to R.string.mark_want, BookStatus.READING to R.string.mark_reading, BookStatus.FINISHED to R.string.mark_finished).forEach { (st, label) ->
+                                    DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = {
                                         vm.setStatus(selection.toList(), st)
                                         statusMenu = false
                                         selection = emptySet()
                                     })
                                 }
-                                DropdownMenuItem(text = { Text("Reset progress") }, onClick = {
+                                DropdownMenuItem(text = { Text(stringResource(R.string.reset_progress)) }, onClick = {
                                     vm.resetProgress(selection.toList())
                                     statusMenu = false
                                     selection = emptySet()
                                 })
                             }
                         }
-                        IconButton(onClick = { removeDialog = true }) { Icon(Icons.Rounded.Delete, "Remove") }
+                        IconButton(onClick = { removeDialog = true }) { Icon(Icons.Rounded.Delete, stringResource(R.string.remove)) }
                     },
                 )
             } else if (searching) {
                 TopAppBar(
-                    navigationIcon = { IconButton(onClick = { searching = false; vm.setQuery(q.copy(text = "")) }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Close search") } },
+                    navigationIcon = { IconButton(onClick = { searching = false; vm.setQuery(q.copy(text = "")) }) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.close_search)) } },
                     title = {
                         TextField(
                             value = q.text,
                             onValueChange = { vm.setQuery(q.copy(text = it)) },
-                            placeholder = { Text("Title, author or series") },
+                            placeholder = { Text(stringResource(R.string.search_library_hint)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                             colors = TextFieldDefaults.colors(focusedContainerColor = Color.Transparent, unfocusedContainerColor = Color.Transparent, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
                             modifier = Modifier.fillMaxWidth(),
                         )
                     },
-                    actions = { if (q.text.isNotEmpty()) IconButton(onClick = { vm.setQuery(q.copy(text = "")) }) { Icon(Icons.Rounded.Close, "Clear") } },
+                    actions = { if (q.text.isNotEmpty()) IconButton(onClick = { vm.setQuery(q.copy(text = "")) }) { Icon(Icons.Rounded.Close, stringResource(R.string.clear)) } },
                 )
             } else {
                 TopAppBar(
                     title = {
                         Column {
-                            Text("Library")
-                            all?.let { Text("${it.size} books", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            Text(stringResource(R.string.nav_library))
+                            all?.let { Text(pluralStringResource(R.plurals.book_count, it.size, it.size), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         }
                     },
                     actions = {
-                        IconButton(onClick = { searching = true }) { Icon(Icons.Rounded.Search, "Search") }
+                        IconButton(onClick = { searching = true }) { Icon(Icons.Rounded.Search, stringResource(R.string.search)) }
                         Box {
-                            IconButton(onClick = { sortMenu = true }) { Icon(Icons.AutoMirrored.Rounded.Sort, "Sort") }
+                            IconButton(onClick = { sortMenu = true }) { Icon(Icons.AutoMirrored.Rounded.Sort, stringResource(R.string.sort)) }
                             DropdownMenu(sortMenu, { sortMenu = false }) {
                                 sortOptions.forEach { (k, l) ->
                                     DropdownMenuItem(
-                                        text = { Text(l) },
+                                        text = { Text(stringResource(l)) },
                                         trailingIcon = { if (s.sort == k) Icon(Icons.Rounded.Check, null) },
                                         onClick = {
                                             vm.updateSettings { it.copy(sort = k) }
@@ -177,14 +181,14 @@ fun LibraryScreen(vm: LibraryViewModel, actions: AppActions) {
                             }
                         }
                         IconButton(onClick = { vm.updateSettings { it.copy(libraryGrid = !it.libraryGrid) } }) {
-                            Icon(if (s.libraryGrid) Icons.AutoMirrored.Rounded.ViewList else Icons.Rounded.GridView, "Change view")
+                            Icon(if (s.libraryGrid) Icons.AutoMirrored.Rounded.ViewList else Icons.Rounded.GridView, stringResource(R.string.change_view))
                         }
                         Box {
-                            IconButton(onClick = { moreMenu = true }) { Icon(Icons.Rounded.MoreVert, "More") }
+                            IconButton(onClick = { moreMenu = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.more)) }
                             DropdownMenu(moreMenu, { moreMenu = false }) {
-                                DropdownMenuItem(text = { Text("Rescan folders") }, leadingIcon = { Icon(Icons.Rounded.Refresh, null) }, onClick = { moreMenu = false; vm.rescan() })
-                                listOf(2 to "Large covers", 3 to "Medium covers", 4 to "Small covers").forEach { (c, l) ->
-                                    DropdownMenuItem(text = { Text(l) }, trailingIcon = { if (s.gridColumns == c) Icon(Icons.Rounded.Check, null) }, onClick = { moreMenu = false; vm.updateSettings { it.copy(gridColumns = c, libraryGrid = true) } })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.rescan_folders)) }, leadingIcon = { Icon(Icons.Rounded.Refresh, null) }, onClick = { moreMenu = false; vm.rescan() })
+                                listOf(2 to R.string.covers_large, 3 to R.string.covers_medium, 4 to R.string.covers_small).forEach { (c, l) ->
+                                    DropdownMenuItem(text = { Text(stringResource(l)) }, trailingIcon = { if (s.gridColumns == c) Icon(Icons.Rounded.Check, null) }, onClick = { moreMenu = false; vm.updateSettings { it.copy(gridColumns = c, libraryGrid = true) } })
                                 }
                             }
                         }
@@ -195,16 +199,16 @@ fun LibraryScreen(vm: LibraryViewModel, actions: AppActions) {
         floatingActionButton = {
             if (selection.isEmpty()) {
                 Box {
-                    ExtendedFloatingActionButton(onClick = { addMenu = true }, icon = { Icon(Icons.Rounded.Add, null) }, text = { Text("Add books") })
+                    ExtendedFloatingActionButton(onClick = { addMenu = true }, icon = { Icon(Icons.Rounded.Add, null) }, text = { Text(stringResource(R.string.add_books)) })
                     DropdownMenu(addMenu, { addMenu = false }) {
-                        DropdownMenuItem(text = { Text("Add a folder") }, leadingIcon = { Icon(Icons.Rounded.CreateNewFolder, null) }, onClick = { addMenu = false; actions.addFolder() })
-                        DropdownMenuItem(text = { Text("Open files") }, leadingIcon = { Icon(Icons.Rounded.NoteAdd, null) }, onClick = { addMenu = false; actions.importFiles() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.add_folder)) }, leadingIcon = { Icon(Icons.Rounded.CreateNewFolder, null) }, onClick = { addMenu = false; actions.addFolder() })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.open_files)) }, leadingIcon = { Icon(Icons.Rounded.NoteAdd, null) }, onClick = { addMenu = false; actions.importFiles() })
                     }
                 }
             }
         },
     ) { padding ->
-        PullToRefreshBox(isRefreshing = scan.running && scan.message?.startsWith("Scanning") == true, onRefresh = vm::rescan, modifier = Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
+        PullToRefreshBox(isRefreshing = scan.running && scan.phase == ScanPhase.FOLDERS, onRefresh = vm::rescan, modifier = Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
             Column(Modifier.fillMaxSize()) {
                 if (scan.running) {
                     val p = if (scan.total > 0) scan.processed.toFloat() / scan.total else null
@@ -212,7 +216,7 @@ fun LibraryScreen(vm: LibraryViewModel, actions: AppActions) {
                 }
                 Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     LibraryFilter.entries.forEach { f ->
-                        FilterChip(selected = q.filter == f, onClick = { vm.setQuery(q.copy(filter = f)) }, label = { Text(f.label) })
+                        FilterChip(selected = q.filter == f, onClick = { vm.setQuery(q.copy(filter = f)) }, label = { Text(stringResource(f.label)) })
                     }
                     if (formats.size > 1) {
                         formats.forEach { f ->
@@ -223,11 +227,11 @@ fun LibraryScreen(vm: LibraryViewModel, actions: AppActions) {
                 if (books.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         if (all.isNullOrEmpty()) {
-                            EmptyState(Illustration.BOOKS, "Your library is empty", "Add a folder and ReadArea will find every book inside it, including subfolders.") {
-                                TextButton(onClick = actions.addFolder) { Text("Add a folder") }
+                            EmptyState(Illustration.BOOKS, stringResource(R.string.library_empty_title), stringResource(R.string.library_empty_body)) {
+                                TextButton(onClick = actions.addFolder) { Text(stringResource(R.string.add_folder)) }
                             }
                         } else {
-                            EmptyState(Illustration.SEARCH, "Nothing matches", "Try a different search or filter.")
+                            EmptyState(Illustration.SEARCH, stringResource(R.string.no_matches_title), stringResource(R.string.no_matches_body))
                         }
                     }
                 } else if (s.libraryGrid) {
@@ -290,7 +294,7 @@ fun AddToShelfDialog(vm: LibraryViewModel, bookIds: List<Long>, onDismiss: () ->
     var name by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add to shelf") },
+        title = { Text(stringResource(R.string.add_to_shelf)) },
         text = {
             Column {
                 LazyColumn(Modifier.fillMaxWidth().weight(1f, fill = false)) {
@@ -305,16 +309,16 @@ fun AddToShelfDialog(vm: LibraryViewModel, bookIds: List<Long>, onDismiss: () ->
                     }
                 }
                 Spacer(Modifier.width(8.dp))
-                OutlinedTextField(name, { name = it }, label = { Text("New shelf") }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                OutlinedTextField(name, { name = it }, label = { Text(stringResource(R.string.new_shelf)) }, singleLine = true, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             }
         },
         confirmButton = {
             TextButton(enabled = name.isNotBlank(), onClick = {
                 vm.createCollection(name, bookIds)
                 onDismiss()
-            }) { Text("Create") }
+            }) { Text(stringResource(R.string.create)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -323,17 +327,17 @@ fun RemoveDialog(count: Int, onDismiss: () -> Unit, onConfirm: (Boolean) -> Unit
     var deleteFiles by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (count == 1) "Remove book?" else "Remove $count books?") },
+        title = { Text(pluralStringResource(R.plurals.remove_books_title, count, count)) },
         text = {
             Column {
-                Text("Reading progress, notes and highlights for ${if (count == 1) "this book" else "these books"} will be removed.")
+                Text(pluralStringResource(R.plurals.remove_books_body, count, count))
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
                     androidx.compose.material3.Checkbox(checked = deleteFiles, onCheckedChange = { deleteFiles = it })
-                    Text("Also delete the file${if (count == 1) "" else "s"} from the device")
+                    Text(pluralStringResource(R.plurals.delete_files_too, count, count))
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { onConfirm(deleteFiles) }) { Text("Remove", color = MaterialTheme.colorScheme.error) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        confirmButton = { TextButton(onClick = { onConfirm(deleteFiles) }) { Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }

@@ -10,7 +10,7 @@ class OdtParser(private val zip: ZipAccess, private val fallbackTitle: String) {
         val author = (metaXml?.find("creator") ?: metaXml?.find("initial-creator"))?.text?.trim().orEmpty()
         val meta = BookMeta(title = title, author = author)
         if (metadataOnly) return ParsedBook(meta, emptyList(), emptyList(), zip)
-        val content = zip.read("content.xml")?.let { TextDecoder.decode(it) } ?: throw BookParseException("Invalid ODT document")
+        val content = zip.read("content.xml")?.let { TextDecoder.decode(it) } ?: throw BookParseException(ParseError.INVALID, "Invalid ODT document")
         val styles = HashMap<String, Style>()
         zip.read("styles.xml")?.let { collectStyles(XmlNode.parse(TextDecoder.decode(it)), styles) }
         val root = XmlNode.parse(content)

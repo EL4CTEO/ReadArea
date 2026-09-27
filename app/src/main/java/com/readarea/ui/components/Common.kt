@@ -1,5 +1,6 @@
 package com.readarea.ui.components
 
+import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -35,6 +36,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,13 +45,18 @@ import androidx.compose.ui.unit.dp
 import com.readarea.core.format.BookFormat
 import com.readarea.data.db.BookEntity
 import com.readarea.data.db.BookStatus
+import androidx.compose.ui.res.stringResource
+import com.readarea.R
 
-fun formatDuration(ms: Long): String {
+@Composable
+fun formatDuration(ms: Long): String = durationText(LocalContext.current, ms)
+
+fun durationText(context: Context, ms: Long): String {
     val min = ms / 60_000
     return when {
-        min < 1 -> if (ms > 0) "<1 min" else "0 min"
-        min < 60 -> "$min min"
-        else -> "${min / 60}h ${min % 60}m"
+        min < 1 -> if (ms > 0) context.getString(R.string.duration_under_minute) else context.getString(R.string.duration_minutes, 0)
+        min < 60 -> context.getString(R.string.duration_minutes, min.toInt())
+        else -> context.getString(R.string.duration_hours_minutes, (min / 60).toInt(), (min % 60).toInt())
     }
 }
 
@@ -59,11 +66,15 @@ fun formatSize(bytes: Long): String = when {
     else -> "%.1f MB".format(bytes / 1024f / 1024f)
 }
 
+@Composable
 fun timeLeft(book: BookEntity): String? {
     if (book.progress < 0.03f || book.readingMs < 120_000 || book.progress >= 0.999f) return null
     val left = (book.readingMs / book.progress * (1 - book.progress)).toLong()
-    return "${formatDuration(left)} left"
+    return stringResource(R.string.time_left, formatDuration(left))
 }
+
+@Composable
+fun percent(value: Float): String = stringResource(R.string.percent, (value * 100).toInt().coerceIn(0, 100))
 
 @Composable
 fun ProgressLine(progress: Float, modifier: Modifier = Modifier, height: Dp = 4.dp, color: Color = MaterialTheme.colorScheme.primary) {
@@ -95,7 +106,7 @@ fun BookGridItem(book: BookEntity, selected: Boolean, onClick: () -> Unit, onLon
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ProgressLine(book.progress, Modifier.weight(1f), 3.dp)
                 Spacer(Modifier.width(6.dp))
-                Text("${(book.progress * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(percent(book.progress), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -121,14 +132,14 @@ fun BookListItem(book: BookEntity, selected: Boolean, onClick: () -> Unit, onLon
                 if (book.favorite) Icon(Icons.Rounded.Favorite, null, tint = Color(0xFFE5484D), modifier = Modifier.padding(start = 6.dp).size(14.dp))
                 Spacer(Modifier.width(8.dp))
                 when {
-                    book.status == BookStatus.FINISHED -> Text("Finished", style = MaterialTheme.typography.labelSmall, color = Color(0xFF3E8E5A))
+                    book.status == BookStatus.FINISHED -> Text(stringResource(R.string.status_finished), style = MaterialTheme.typography.labelSmall, color = Color(0xFF3E8E5A))
                     book.progress > 0f -> {
                         ProgressLine(book.progress, Modifier.widthIn(max = 120.dp).weight(1f, fill = false).width(120.dp), 3.dp)
                         Spacer(Modifier.width(6.dp))
-                        Text("${(book.progress * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(percent(book.progress), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    book.status == BookStatus.WANT -> Text("Want to read", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
-                    else -> Text("New", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                    book.status == BookStatus.WANT -> Text(stringResource(R.string.status_want), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.tertiary)
+                    else -> Text(stringResource(R.string.status_new), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 }
             }
         }

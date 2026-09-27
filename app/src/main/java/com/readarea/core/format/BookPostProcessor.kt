@@ -29,7 +29,21 @@ object BookPostProcessor {
                 item.copy(chapter = target)
             }
         }
-        return ParsedBook(book.meta, result, toc, book.resources)
+        var meta = book.meta
+        if (!meta.rtl) {
+            val rtl = if (meta.language != null) TextDirection.isRtlLanguage(meta.language) else TextDirection.looksRtl(sample(result))
+            if (rtl) meta = meta.copy(rtl = true)
+        }
+        return ParsedBook(meta, result, toc, book.resources)
+    }
+
+    private fun sample(chapters: List<Chapter>): String {
+        val sb = StringBuilder()
+        for (c in chapters) for (b in c.blocks) {
+            sb.append(b.text)
+            if (sb.length > 3000) return sb.toString()
+        }
+        return sb.toString()
     }
 
     private fun splitByHeadings(chapter: Chapter): List<Chapter> {

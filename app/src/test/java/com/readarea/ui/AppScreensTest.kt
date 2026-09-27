@@ -128,6 +128,34 @@ class AppScreensTest {
     }
 
     @Test
+    @Config(qualifiers = "+ja")
+    fun japaneseUi() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitText("続きを読む")
+            settle()
+            shot("app_home_ja.png")
+            compose.onAllNodesWithText("ライブラリ")[0].performClick()
+            waitText("8冊")
+            settle()
+            shot("app_library_ja.png")
+        }
+    }
+
+    @Test
+    @Config(qualifiers = "+ar")
+    fun arabicUi() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitText("متابعة القراءة")
+            settle()
+            shot("app_home_ar.png")
+            compose.onAllNodesWithText("الإحصاءات")[0].performClick()
+            waitText("آخر 7 أيام")
+            settle()
+            shot("app_stats_ar.png")
+        }
+    }
+
+    @Test
     @Config(qualifiers = "w841dp-h701dp-xhdpi")
     fun foldableHome() {
         ActivityScenario.launch(MainActivity::class.java).use {

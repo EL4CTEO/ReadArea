@@ -54,6 +54,7 @@ class PageFlipView(context: Context) : View(context) {
     var selectionColor: Int = 0x552F6FDB
     var handleColor: Int = 0xFF2F6FDB.toInt()
     var spread: Boolean = false
+    var rtl: Boolean = false
 
     private var bmPrev: Bitmap? = null
     private var bmCur: Bitmap? = null
@@ -71,6 +72,7 @@ class PageFlipView(context: Context) : View(context) {
 
     private var state = State.IDLE
     private var downX = 0f
+    private var physicalDownX = 0f
     private var downY = 0f
     private var lastY = 0f
     private var forward = true
@@ -97,7 +99,7 @@ class PageFlipView(context: Context) : View(context) {
             longPressed = true
             state = State.SELECTING
             performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS)
-            callback?.onLongPress(downX, downY)
+            callback?.onLongPress(physicalDownX, downY)
         }
     }
 
@@ -192,12 +194,34 @@ class PageFlipView(context: Context) : View(context) {
         canvas.drawPath(handlePath, handlePaint)
     }
 
+    private fun blit(canvas: Canvas, bmp: Bitmap, left: Float, top: Float, paint: Paint?) {
+        if (!rtl) {
+            canvas.drawBitmap(bmp, left, top, paint)
+            return
+        }
+        canvas.save()
+        canvas.scale(-1f, 1f, left + bmp.width / 2f, 0f)
+        canvas.drawBitmap(bmp, left, top, paint)
+        canvas.restore()
+    }
+
     private fun drawTransition(canvas: Canvas, cur: Bitmap) {
         val other = if (forward) ensure(1) else ensure(-1)
         if (other == null) {
             canvas.drawBitmap(cur, 0f, 0f, null)
             return
         }
+        if (rtl) {
+            canvas.save()
+            canvas.scale(-1f, 1f, width / 2f, 0f)
+            drawTransitionContent(canvas, cur, other)
+            canvas.restore()
+        } else {
+            drawTransitionContent(canvas, cur, other)
+        }
+    }
+
+    private fun drawTransitionContent(canvas: Canvas, cur: Bitmap, other: Bitmap) {
         val w = width.toFloat()
         when (mode) {
             FlipMode.CURL -> {
@@ -205,29 +229,29 @@ class PageFlipView(context: Context) : View(context) {
             }
             FlipMode.SLIDE -> {
                 if (forward) {
-                    canvas.drawBitmap(cur, offsetX, 0f, null)
-                    canvas.drawBitmap(other, offsetX + w, 0f, null)
+                    blit(canvas, cur, offsetX, 0f, null)
+                    blit(canvas, other, offsetX + w, 0f, null)
                 } else {
-                    canvas.drawBitmap(other, offsetX - w, 0f, null)
-                    canvas.drawBitmap(cur, offsetX, 0f, null)
+                    blit(canvas, other, offsetX - w, 0f, null)
+                    blit(canvas, cur, offsetX, 0f, null)
                 }
             }
             FlipMode.COVER -> {
                 if (forward) {
-                    canvas.drawBitmap(other, 0f, 0f, null)
-                    canvas.drawBitmap(cur, offsetX, 0f, null)
+                    blit(canvas, other, 0f, 0f, null)
+                    blit(canvas, cur, offsetX, 0f, null)
                     drawEdgeShadow(canvas, offsetX + w)
                 } else {
-                    canvas.drawBitmap(cur, 0f, 0f, null)
-                    canvas.drawBitmap(other, offsetX - w, 0f, null)
+                    blit(canvas, cur, 0f, 0f, null)
+                    blit(canvas, other, offsetX - w, 0f, null)
                     drawEdgeShadow(canvas, offsetX)
                 }
             }
             FlipMode.FADE, FlipMode.NONE -> {
                 val p = (abs(offsetX) / w).coerceIn(0f, 1f)
-                canvas.drawBitmap(other, 0f, 0f, null)
+                blit(canvas, other, 0f, 0f, null)
                 fadePaint.alpha = ((1f - p) * 255).toInt()
-                canvas.drawBitmap(cur, 0f, 0f, fadePaint)
+                blit(canvas, cur, 0f, 0f, fadePaint)
             }
         }
     }
@@ -247,7 +271,8 @@ class PageFlipView(context: Context) : View(context) {
                 if (state == State.ANIM) animator?.end()
                 velocity?.recycle()
                 velocity = VelocityTracker.obtain().also { it.addMovement(e) }
-                downX = e.x
+                physicalDownX = e.x
+                downX = lx(e.x)
                 downY = e.y
                 lastY = e.y
                 longPressed = false
@@ -258,7 +283,7 @@ class PageFlipView(context: Context) : View(context) {
             }
             MotionEvent.ACTION_MOVE -> {
                 velocity?.addMovement(e)
-                val dx = e.x - downX
+                val dx = lx(e.x) - downX
                 val dy = e.y - downY
                 when (state) {
                     State.PRESSED -> {
@@ -266,13 +291,13 @@ class PageFlipView(context: Context) : View(context) {
                             removeCallbacks(longPress)
                             if (selectionPath != null) {
                                 state = State.IGNORE
-                            } else if (brightnessGesture && downX < width * 0.12f && abs(dy) > abs(dx) * 1.4f) {
+                            } else if (brightnessGesture && physicalDownX < width * 0.12f && abs(dy) > abs(dx) * 1.4f) {
                                 state = State.BRIGHTNESS
                                 lastY = e.y
                             } else if (abs(dx) > abs(dy) * 0.6f) {
                                 val fwd = dx < 0
                                 if (cb.canFlip(fwd)) {
-                                    startDrag(fwd, e.x, e.y)
+                                    startDrag(fwd, lx(e.x), e.y)
                                 } else {
                                     cb.onFlipBlocked(fwd)
                                     state = State.IGNORE
@@ -282,7 +307,7 @@ class PageFlipView(context: Context) : View(context) {
                             }
                         }
                     }
-                    State.DRAG -> updateDrag(e.x, e.y)
+                    State.DRAG -> updateDrag(lx(e.x), e.y)
                     State.BRIGHTNESS -> {
                         cb.onBrightnessDrag(-(e.y - lastY) / (height * 0.7f), false)
                         lastY = e.y
@@ -312,7 +337,7 @@ class PageFlipView(context: Context) : View(context) {
                         state = State.IDLE
                         if (e.actionMasked == MotionEvent.ACTION_UP) cb.onTap(e.x, e.y)
                     }
-                    State.DRAG -> release(e.x, e.y, vx, e.actionMasked == MotionEvent.ACTION_CANCEL)
+                    State.DRAG -> release(lx(e.x), e.y, if (rtl) -vx else vx, e.actionMasked == MotionEvent.ACTION_CANCEL)
                     State.BRIGHTNESS -> {
                         state = State.IDLE
                         cb.onBrightnessDrag(0f, true)
@@ -328,6 +353,8 @@ class PageFlipView(context: Context) : View(context) {
         }
         return super.onTouchEvent(e)
     }
+
+    private fun lx(x: Float): Float = if (rtl) width - x else x
 
     private fun showMagnifier(x: Float, y: Float) {
         if (Build.VERSION.SDK_INT < 29) return
@@ -624,7 +651,7 @@ class PageFlipView(context: Context) : View(context) {
             if (spread) {
                 canvas.save()
                 canvas.clipRect(0f, 0f, ox, h)
-                canvas.drawBitmap(top, 0f, 0f, null)
+                blit(canvas, top, 0f, 0f, null)
                 canvas.restore()
             }
             canvas.save()
@@ -646,7 +673,7 @@ class PageFlipView(context: Context) : View(context) {
             if (!compute()) {
                 canvas.save()
                 canvas.clipRect(0f, 0f, w, h)
-                canvas.drawBitmap(top, -ox, 0f, null)
+                blit(canvas, top, -ox, 0f, null)
                 canvas.restore()
                 return
             }
@@ -666,7 +693,7 @@ class PageFlipView(context: Context) : View(context) {
             canvas.save()
             canvas.clipRect(0f, 0f, w, h)
             canvas.clipOutPath(path0)
-            canvas.drawBitmap(top, -ox, 0f, null)
+            blit(canvas, top, -ox, 0f, null)
             canvas.restore()
 
             path1.reset()
@@ -681,7 +708,7 @@ class PageFlipView(context: Context) : View(context) {
             canvas.clipPath(path0)
             canvas.clipPath(path1)
             canvas.clipRect(0f, 0f, w, h)
-            canvas.drawBitmap(bottom, -ox, 0f, null)
+            blit(canvas, bottom, -ox, 0f, null)
             canvas.rotate(deg, s1x, s1y)
             val back = if (rtlb) backShadowLR else backShadowRL
             if (rtlb) back.setBounds(s1x.toInt(), s1y.toInt(), (s1x + dist / 4).toInt(), (maxLen + s1y).toInt())
@@ -764,8 +791,10 @@ class PageFlipView(context: Context) : View(context) {
                 if (spread) {
                     matrix.preScale(-1f, 1f)
                     matrix.preTranslate(-ox, 0f)
+                    if (rtl) matrix.preScale(-1f, 1f, bottom.width / 2f, 0f)
                     canvas.drawBitmap(bottom, matrix, sheetPaint)
                 } else {
+                    if (rtl) matrix.preScale(-1f, 1f, top.width / 2f, 0f)
                     canvas.drawBitmap(top, matrix, backPaint)
                 }
             }

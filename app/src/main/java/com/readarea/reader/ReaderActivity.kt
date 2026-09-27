@@ -42,6 +42,10 @@ class ReaderActivity : ComponentActivity() {
         override fun onReceive(context: Context, intent: Intent) = updateClock()
     }
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(com.readarea.AppLanguage.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
@@ -203,12 +207,16 @@ class ReaderActivity : ComponentActivity() {
         }
         if (!vm.ui.value.menu) {
             when (keyCode) {
-                KeyEvent.KEYCODE_PAGE_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_SPACE -> {
+                KeyEvent.KEYCODE_PAGE_DOWN, KeyEvent.KEYCODE_SPACE -> {
                     vm.keyFlip(true)
                     return true
                 }
-                KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_DPAD_LEFT -> {
+                KeyEvent.KEYCODE_PAGE_UP -> {
                     vm.keyFlip(false)
+                    return true
+                }
+                KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    vm.keyFlip((keyCode == KeyEvent.KEYCODE_DPAD_RIGHT) != vm.ui.value.rtl)
                     return true
                 }
             }

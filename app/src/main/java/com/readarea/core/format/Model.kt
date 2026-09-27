@@ -89,7 +89,29 @@ data class BookMeta(
     val seriesIndex: Float? = null,
     val publisher: String? = null,
     val coverRef: String? = null,
+    val rtl: Boolean = false,
 )
+
+object TextDirection {
+    private val rtlLanguages = setOf("ar", "he", "iw", "fa", "ur", "yi", "ji", "ps", "dv", "ckb", "sd", "ug", "syr")
+
+    fun isRtlLanguage(tag: String?): Boolean {
+        val lang = tag?.trim()?.lowercase()?.substringBefore('-')?.substringBefore('_') ?: return false
+        return lang in rtlLanguages
+    }
+
+    fun looksRtl(sample: CharSequence): Boolean {
+        var rtl = 0
+        var ltr = 0
+        for (ch in sample) {
+            when (Character.getDirectionality(ch)) {
+                Character.DIRECTIONALITY_RIGHT_TO_LEFT, Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC -> rtl++
+                Character.DIRECTIONALITY_LEFT_TO_RIGHT -> ltr++
+            }
+        }
+        return rtl > 40 && rtl > ltr * 2
+    }
+}
 
 fun interface ResourceProvider {
     fun read(path: String): ByteArray?
@@ -104,4 +126,6 @@ class ParsedBook(
     fun coverBytes(): ByteArray? = meta.coverRef?.let { resources.read(it) }
 }
 
-class BookParseException(message: String) : Exception(message)
+enum class ParseError { INVALID, DRM, UNSUPPORTED, EMPTY }
+
+class BookParseException(val reason: ParseError, message: String) : Exception(message)

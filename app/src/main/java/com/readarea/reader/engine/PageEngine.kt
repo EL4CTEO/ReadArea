@@ -25,6 +25,7 @@ class PageSetup(
     val columns: Int = 1,
     val hingeGap: Float = 0f,
     val scrollMode: Boolean = false,
+    val rtl: Boolean = false,
 ) {
     val marginH: Float = settings.marginH * density
     val marginV: Float = settings.marginV * density
@@ -40,16 +41,20 @@ class PageSetup(
     val contentHeight: Int = if (scrollMode) height else (height - contentTop - bottomInset - marginV - footerH).toInt().coerceAtLeast(100)
     val fontPx: Float = settings.fontSize * density * fontScale
 
-    fun columnLeft(col: Int): Float = contentLeft + col * (rawColumn + gutter)
+    fun columnLeft(col: Int): Float = contentLeft + (if (rtl) columns - 1 - col else col) * (rawColumn + gutter)
 
-    fun columnAt(x: Float): Int = if (columns > 1 && x > width / 2f) 1 else 0
+    fun columnAt(x: Float): Int {
+        if (columns < 2) return 0
+        val right = x > width / 2f
+        return if (right != rtl) 1 else 0
+    }
 
     fun sameLayout(o: PageSetup?): Boolean {
         if (o == null) return false
         val a = settings
         val b = o.settings
         return width == o.width && height == o.height && topInset == o.topInset && bottomInset == o.bottomInset &&
-            columns == o.columns && hingeGap == o.hingeGap && scrollMode == o.scrollMode &&
+            columns == o.columns && hingeGap == o.hingeGap && scrollMode == o.scrollMode && rtl == o.rtl &&
             a.fontFamily == b.fontFamily && a.fontSize == b.fontSize && a.fontWeight == b.fontWeight && a.lineSpacing == b.lineSpacing &&
             a.paragraphSpacing == b.paragraphSpacing && a.indent == b.indent && a.marginH == b.marginH && a.marginV == b.marginV &&
             a.justify == b.justify && a.hyphenation == b.hyphenation && a.letterSpacing == b.letterSpacing &&
@@ -220,7 +225,7 @@ object PageChrome {
         val d = s.density
         val left = if (s.columns > 1) s.columnLeft(col) else s.marginH
         val colRight = if (s.columns > 1) left + s.contentWidth else s.width - s.marginH
-        val last = col == s.columns - 1
+        val last = s.columns < 2 || left >= s.width / 2f
         textPaint.color = theme.secondary
         textPaint.textSize = 11.5f * d
         textPaint.typeface = null

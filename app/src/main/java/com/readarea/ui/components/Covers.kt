@@ -49,6 +49,8 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.abs
 import kotlin.math.sin
+import androidx.compose.ui.res.stringResource
+import com.readarea.R
 
 object CoverCache {
     private val cache = object : LruCache<String, ImageBitmap>((Runtime.getRuntime().maxMemory() / 16).toInt().coerceAtMost(48 shl 20)) {
@@ -157,7 +159,7 @@ fun GeneratedCover(title: String, author: String, format: BookFormat, modifier: 
             }
         }
         BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 12.dp)) {
-            val label = title.ifBlank { "Untitled" }
+            val label = title.ifBlank { stringResource(R.string.untitled) }
             val longest = label.split(' ', '-').maxOfOrNull { it.length }?.coerceAtLeast(4) ?: 4
             val scale = maxWidth.value / 110f
             val size = (maxWidth.value / (longest * 0.62f)).coerceIn(8f, 15f * scale.coerceIn(0.7f, 1.6f))

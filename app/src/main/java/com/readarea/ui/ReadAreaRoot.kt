@@ -40,6 +40,8 @@ import com.readarea.ui.shelves.ShelfScreen
 import com.readarea.ui.shelves.ShelvesScreen
 import com.readarea.ui.stats.StatsScreen
 import kotlinx.serialization.Serializable
+import androidx.compose.ui.res.stringResource
+import com.readarea.R
 
 @Serializable data object HomeKey : NavKey
 @Serializable data object LibraryKey : NavKey
@@ -50,14 +52,14 @@ import kotlinx.serialization.Serializable
 @Serializable data class ShelfKey(val id: Long) : NavKey
 @Serializable data class GroupKey(val kind: String, val value: String) : NavKey
 
-private data class Destination(val key: NavKey, val label: String, val icon: ImageVector)
+private data class Destination(val key: NavKey, val label: Int, val icon: ImageVector)
 
 private val destinations = listOf(
-    Destination(HomeKey, "Home", Icons.Rounded.Home),
-    Destination(LibraryKey, "Library", Icons.AutoMirrored.Rounded.LibraryBooks),
-    Destination(ShelvesKey, "Shelves", Icons.Rounded.CollectionsBookmark),
-    Destination(NotesKey, "Notes", Icons.AutoMirrored.Rounded.StickyNote2),
-    Destination(StatsKey, "Stats", Icons.Rounded.BarChart),
+    Destination(HomeKey, R.string.nav_home, Icons.Rounded.Home),
+    Destination(LibraryKey, R.string.nav_library, Icons.AutoMirrored.Rounded.LibraryBooks),
+    Destination(ShelvesKey, R.string.nav_shelves, Icons.Rounded.CollectionsBookmark),
+    Destination(NotesKey, R.string.nav_notes, Icons.AutoMirrored.Rounded.StickyNote2),
+    Destination(StatsKey, R.string.nav_stats, Icons.Rounded.BarChart),
 )
 
 class AppActions(
@@ -116,16 +118,16 @@ fun ReadAreaRoot(vm: LibraryViewModel) {
                 item(
                     selected = currentTab == d.key && top != SettingsKey,
                     onClick = { actions.navigate(d.key) },
-                    icon = { Icon(d.icon, d.label) },
-                    label = { Text(d.label) },
+                    icon = { Icon(d.icon, stringResource(d.label)) },
+                    label = { Text(stringResource(d.label)) },
                 )
             }
             if (layoutType != NavigationSuiteType.NavigationBar) {
                 item(
                     selected = top == SettingsKey,
                     onClick = { if (top != SettingsKey) backStack.add(SettingsKey) },
-                    icon = { Icon(Icons.Rounded.Settings, "Settings") },
-                    label = { Text("Settings") },
+                    icon = { Icon(Icons.Rounded.Settings, stringResource(R.string.nav_settings)) },
+                    label = { Text(stringResource(R.string.nav_settings)) },
                 )
             }
         },

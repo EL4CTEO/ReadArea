@@ -66,6 +66,9 @@ import com.readarea.ui.components.BookListItem
 import com.readarea.ui.components.EmptyState
 import com.readarea.ui.components.Illustration
 import com.readarea.ui.components.SectionHeader
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.readarea.R
 
 @Composable
 fun ShelvesScreen(vm: LibraryViewModel, actions: AppActions) {
@@ -78,7 +81,7 @@ fun ShelvesScreen(vm: LibraryViewModel, actions: AppActions) {
     val formats = remember(all) { all.groupBy { it.format }.toList().sortedByDescending { it.second.size } }
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Shelves") }, actions = { IconButton(onClick = { create = true }) { Icon(Icons.Rounded.Add, "New shelf") } })
+            TopAppBar(title = { Text(stringResource(R.string.nav_shelves)) }, actions = { IconButton(onClick = { create = true }) { Icon(Icons.Rounded.Add, stringResource(R.string.new_shelf)) } })
         },
     ) { padding ->
         LazyVerticalGrid(
@@ -91,8 +94,8 @@ fun ShelvesScreen(vm: LibraryViewModel, actions: AppActions) {
             if (shelves.isEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        EmptyState(Illustration.SHELF, "Make your first shelf", "Group books any way you like — summer reads, classics, book club.") {
-                            TextButton(onClick = { create = true }) { Text("New shelf") }
+                        EmptyState(Illustration.SHELF, stringResource(R.string.shelves_empty_title), stringResource(R.string.shelves_empty_body)) {
+                            TextButton(onClick = { create = true }) { Text(stringResource(R.string.new_shelf)) }
                         }
                     }
                 }
@@ -101,21 +104,21 @@ fun ShelvesScreen(vm: LibraryViewModel, actions: AppActions) {
                 ShelfCard(s.collection, s.count, s.coverPath?.let { p -> all.firstOrNull { it.coverPath == p } }, vm) { actions.navigate(ShelfKey(s.collection.id)) }
             }
             if (authors.isNotEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader("Authors") }
+                item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader(stringResource(R.string.authors)) }
                 item(span = { GridItemSpan(maxLineSpan) }) { ChipFlow(authors.take(40).map { it.first to it.second.size }) { actions.navigate(GroupKey("author", it)) } }
             }
             if (series.isNotEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader("Series") }
+                item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader(stringResource(R.string.series)) }
                 item(span = { GridItemSpan(maxLineSpan) }) { ChipFlow(series.map { it.first to it.second.size }) { actions.navigate(GroupKey("series", it)) } }
             }
             if (formats.size > 1) {
-                item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader("Formats") }
+                item(span = { GridItemSpan(maxLineSpan) }) { SectionHeader(stringResource(R.string.formats)) }
                 item(span = { GridItemSpan(maxLineSpan) }) { ChipFlow(formats.map { BookFormat.byName(it.first).label to it.second.size }) { label -> actions.navigate(GroupKey("format", BookFormat.entries.first { f -> f.label == label }.name)) } }
             }
         }
     }
     if (create) {
-        NameDialog("New shelf", "") { name ->
+        NameDialog(stringResource(R.string.new_shelf), "") { name ->
             create = false
             if (name != null) vm.createCollection(name)
         }
@@ -154,28 +157,28 @@ private fun ShelfCard(c: CollectionEntity, count: Int, coverBook: BookEntity?, v
         Row(Modifier.padding(start = 16.dp, end = 4.dp, bottom = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(c.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("$count ${if (count == 1) "book" else "books"}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(pluralStringResource(R.plurals.book_count, count, count), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Box {
-                IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "Shelf options") }
+                IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.shelf_options)) }
                 DropdownMenu(menu, { menu = false }) {
-                    DropdownMenuItem(text = { Text("Rename") }, leadingIcon = { Icon(Icons.Rounded.Edit, null) }, onClick = { menu = false; rename = true })
-                    DropdownMenuItem(text = { Text("Delete shelf") }, leadingIcon = { Icon(Icons.Rounded.Delete, null) }, onClick = { menu = false; delete = true })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, leadingIcon = { Icon(Icons.Rounded.Edit, null) }, onClick = { menu = false; rename = true })
+                    DropdownMenuItem(text = { Text(stringResource(R.string.delete_shelf)) }, leadingIcon = { Icon(Icons.Rounded.Delete, null) }, onClick = { menu = false; delete = true })
                 }
             }
         }
     }
-    if (rename) NameDialog("Rename shelf", c.name) { n ->
+    if (rename) NameDialog(stringResource(R.string.rename_shelf), c.name) { n ->
         rename = false
         if (n != null) vm.renameCollection(c, n)
     }
     if (delete) {
         AlertDialog(
             onDismissRequest = { delete = false },
-            title = { Text("Delete “${c.name}”?") },
-            text = { Text("The books stay in your library.") },
-            confirmButton = { TextButton(onClick = { delete = false; vm.deleteCollection(c.id) }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = { delete = false }) { Text("Cancel") } },
+            title = { Text(stringResource(R.string.delete_shelf_title, c.name)) },
+            text = { Text(stringResource(R.string.delete_shelf_body)) },
+            confirmButton = { TextButton(onClick = { delete = false; vm.deleteCollection(c.id) }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(onClick = { delete = false }) { Text(stringResource(R.string.cancel)) } },
         )
     }
 }
@@ -186,9 +189,9 @@ fun NameDialog(title: String, initial: String, onDone: (String?) -> Unit) {
     AlertDialog(
         onDismissRequest = { onDone(null) },
         title = { Text(title) },
-        text = { OutlinedTextField(name, { name = it }, singleLine = true, label = { Text("Name") }, modifier = Modifier.fillMaxWidth()) },
-        confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { onDone(name.trim()) }) { Text("Save") } },
-        dismissButton = { TextButton(onClick = { onDone(null) }) { Text("Cancel") } },
+        text = { OutlinedTextField(name, { name = it }, singleLine = true, label = { Text(stringResource(R.string.name)) }, modifier = Modifier.fillMaxWidth()) },
+        confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { onDone(name.trim()) }) { Text(stringResource(R.string.save)) } },
+        dismissButton = { TextButton(onClick = { onDone(null) }) { Text(stringResource(R.string.cancel)) } },
     )
 }
 
@@ -201,14 +204,14 @@ fun ShelfScreen(vm: LibraryViewModel, actions: AppActions, id: Long) {
     Scaffold(
         topBar = {
             TopAppBar(
-                navigationIcon = { IconButton(onClick = actions.back) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
+                navigationIcon = { IconButton(onClick = actions.back) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) } },
                 title = { Text(shelf?.name ?: "") },
                 actions = {
                     Box {
-                        IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, "More") }
+                        IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.more)) }
                         DropdownMenu(menu, { menu = false }) {
-                            DropdownMenuItem(text = { Text("Rename") }, onClick = { menu = false; rename = true })
-                            DropdownMenuItem(text = { Text("Delete shelf") }, onClick = {
+                            DropdownMenuItem(text = { Text(stringResource(R.string.rename)) }, onClick = { menu = false; rename = true })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.delete_shelf)) }, onClick = {
                                 menu = false
                                 vm.deleteCollection(id)
                                 actions.back()
@@ -221,7 +224,7 @@ fun ShelfScreen(vm: LibraryViewModel, actions: AppActions, id: Long) {
     ) { padding ->
         if (books.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                EmptyState(Illustration.SHELF, "This shelf is empty", "In the library, long-press books and tap the shelf icon to add them here.")
+                EmptyState(Illustration.SHELF, stringResource(R.string.shelf_empty_title), stringResource(R.string.shelf_empty_body))
             }
             return@Scaffold
         }
@@ -231,15 +234,15 @@ fun ShelfScreen(vm: LibraryViewModel, actions: AppActions, id: Long) {
                 Box {
                     BookListItem(b, false, onClick = { actions.openBook(b.id) }, onLongClick = { itemMenu = true })
                     DropdownMenu(itemMenu, { itemMenu = false }) {
-                        DropdownMenuItem(text = { Text("Details") }, onClick = { itemMenu = false; actions.showDetails(b.id) })
-                        DropdownMenuItem(text = { Text("Remove from shelf") }, onClick = { itemMenu = false; vm.removeFromCollection(id, listOf(b.id)) })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.details)) }, onClick = { itemMenu = false; actions.showDetails(b.id) })
+                        DropdownMenuItem(text = { Text(stringResource(R.string.remove_from_shelf)) }, onClick = { itemMenu = false; vm.removeFromCollection(id, listOf(b.id)) })
                     }
                 }
             }
         }
     }
     val s = shelf
-    if (rename && s != null) NameDialog("Rename shelf", s.name) { n ->
+    if (rename && s != null) NameDialog(stringResource(R.string.rename_shelf), s.name) { n ->
         rename = false
         if (n != null) vm.renameCollection(s, n)
     }
@@ -261,11 +264,11 @@ fun GroupScreen(vm: LibraryViewModel, actions: AppActions, kind: String, value: 
     Scaffold(
         topBar = {
             TopAppBar(
-                navigationIcon = { IconButton(onClick = actions.back) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
+                navigationIcon = { IconButton(onClick = actions.back) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) } },
                 title = {
                     Column {
                         Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${books.size} books", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(pluralStringResource(R.plurals.book_count, books.size, books.size), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
             )

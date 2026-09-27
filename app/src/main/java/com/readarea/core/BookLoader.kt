@@ -15,6 +15,7 @@ import androidx.core.net.toUri
 import com.readarea.core.format.BookFormat
 import com.readarea.core.format.BookMeta
 import com.readarea.core.format.BookParseException
+import com.readarea.core.format.ParseError
 import com.readarea.core.format.BookPostProcessor
 import com.readarea.core.format.DocxParser
 import com.readarea.core.format.EpubParser
@@ -237,10 +238,14 @@ object BookLoader {
                 val l = name.lowercase()
                 l.endsWith(".opf") || l.endsWith(".xml") || l.endsWith(".ncx") || ((l.endsWith("html") || l.endsWith(".htm")) && (l.contains("cover") || l.contains("title")))
             }
-            val parsed = EpubParser(zip).parse(true)
-            val coverRef = parsed.meta.coverRef
+            val parser = EpubParser(zip)
+            val parsed = parser.parse(true)
+            val coverRef = parsed.meta.coverRef ?: parser.firstSpineDocument()?.let { doc ->
+                val docZip = metaZip(context, uri) { name, _ -> name.equals(doc, true) || PathUtil.decode(name).equals(doc, true) }
+                EpubParser(docZip).firstImageIn(doc)
+            }
             val coverBytes = coverRef?.let { ref -> zip.read(ref) ?: metaZip(context, uri) { name, _ -> name.equals(ref, true) || PathUtil.decode(name).equals(ref, true) }.read(ref) }
-            val meta = if (parsed.meta.title.isBlank()) parsed.meta.copy(title = title) else parsed.meta
+            val meta = (if (parsed.meta.title.isBlank()) parsed.meta.copy(title = title) else parsed.meta).copy(coverRef = coverRef)
             ReflowableBook(ParsedBook(meta, emptyList(), emptyList(), ResourceProvider { p -> if (p == coverRef) coverBytes else null }))
         }
         BookFormat.DOCX -> {
@@ -287,7 +292,7 @@ object BookLoader {
             BookFormat.DOCX -> zipBook(context, uri, cacheKey, "docx", metadataOnly) { DocxParser(it, title).parse(metadataOnly) }
             BookFormat.ODT -> zipBook(context, uri, cacheKey, "odt", metadataOnly) { OdtParser(it, title).parse(metadataOnly) }
             BookFormat.FB2 -> {
-                val bytes = readBytes(context, uri).let { if (isZip(it)) unzipFirst(it, ".fb2") ?: throw BookParseException("No FB2 file found in archive") else it }
+                val bytes = readBytes(context, uri).let { if (isZip(it)) unzipFirst(it, ".fb2") ?: throw BookParseException(ParseError.INVALID, "No FB2 file found in archive") else it }
                 val parsed = Fb2Parser(TextDecoder.decode(bytes)).parse(metadataOnly)
                 val fixed = if (parsed.meta.title.isBlank()) parsed.withTitle(title) else parsed
                 ReflowableBook(if (metadataOnly) fixed else BookPostProcessor.process(fixed, false))

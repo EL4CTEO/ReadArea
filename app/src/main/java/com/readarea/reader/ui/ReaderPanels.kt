@@ -88,6 +88,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -108,10 +109,14 @@ import com.readarea.reader.ReaderViewModel
 import com.readarea.reader.ReadingTheme
 import com.readarea.reader.ReadingThemes
 import com.readarea.ui.theme.highlightPalette
+import com.readarea.ui.components.percent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.readarea.R
 
 @Composable
 fun PanelHost(vm: ReaderViewModel, ui: ReaderUi, s: ReaderSettings, theme: ReadingTheme) {
@@ -142,6 +147,30 @@ fun PanelHost(vm: ReaderViewModel, ui: ReaderUi, s: ReaderSettings, theme: Readi
     }
 }
 
+fun themeLabel(id: String): Int = when (id) {
+    "day" -> R.string.theme_day
+    "paper" -> R.string.theme_paper
+    "sepia" -> R.string.theme_sepia
+    "mint" -> R.string.theme_mint
+    "sky" -> R.string.theme_sky
+    "dusk" -> R.string.theme_dusk
+    "night" -> R.string.theme_night
+    "amoled" -> R.string.theme_amoled
+    else -> R.string.theme_custom
+}
+
+fun fontLabel(key: String): Int = when (key) {
+    "serif" -> R.string.font_serif
+    "sans" -> R.string.font_sans
+    "light" -> R.string.font_light
+    "condensed" -> R.string.font_condensed
+    "medium" -> R.string.font_medium
+    "serif-mono" -> R.string.font_typewriter
+    "mono" -> R.string.font_mono
+    "casual" -> R.string.font_casual
+    else -> R.string.font_cursive
+}
+
 @Composable
 private fun PanelBody(content: @Composable () -> Unit) {
     Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 22.dp).padding(bottom = 24.dp).navigationBarsPadding()) { content() }
@@ -150,7 +179,7 @@ private fun PanelBody(content: @Composable () -> Unit) {
 @Composable
 private fun ContentsPanel(vm: ReaderViewModel, ui: ReaderUi) {
     var tab by remember { mutableIntStateOf(0) }
-    val tabs = listOf("Contents", "Bookmarks (${ui.bookmarks.size})", "Notes (${ui.highlights.size})")
+    val tabs = listOf(stringResource(R.string.tool_contents), stringResource(R.string.tab_bookmarks, ui.bookmarks.size), stringResource(R.string.tab_notes, ui.highlights.size))
     PrimaryTabRow(selectedTabIndex = tab, containerColor = MaterialTheme.colorScheme.surface) {
         tabs.forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t, maxLines = 1) }) }
     }
@@ -200,11 +229,11 @@ private fun GoToPage(vm: ReaderViewModel, ui: ReaderUi) {
     val total = vm.engine?.let { e -> if (e.fixed) e.pageCount(0) else e.totalPages() } ?: 0
     var text by remember { mutableStateOf("") }
     PanelBody {
-        SectionTitle("Go to")
+        SectionTitle(stringResource(R.string.go_to))
         OutlinedTextField(
             value = text,
             onValueChange = { v -> text = v.filter { it.isDigit() }.take(6) },
-            label = { Text(if (ui.fixed && total > 0) "Page (1–$total)" else "Percent (0–100)") },
+            label = { Text(if (ui.fixed && total > 0) stringResource(R.string.page_range, total) else stringResource(R.string.percent_range)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Go),
             modifier = Modifier.fillMaxWidth(),
@@ -215,8 +244,8 @@ private fun GoToPage(vm: ReaderViewModel, ui: ReaderUi) {
             vm.closePanel()
             vm.toggleMenu(false)
             if (ui.fixed && total > 0) vm.goTo(0, (n - 1).coerceIn(0, total - 1)) else vm.goToProgress(n.coerceIn(0, 100) / 100f)
-        }) { Text("Go") }
-        SectionTitle("Quick jump")
+        }) { Text(stringResource(R.string.go)) }
+        SectionTitle(stringResource(R.string.quick_jump))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(0, 10, 25, 50, 75, 90).forEach { p ->
                 FilterChip(selected = false, onClick = {
@@ -232,16 +261,16 @@ private fun GoToPage(vm: ReaderViewModel, ui: ReaderUi) {
 @Composable
 private fun BookmarkList(vm: ReaderViewModel, ui: ReaderUi) {
     if (ui.bookmarks.isEmpty()) {
-        EmptyNote("No bookmarks yet", "Tap the ribbon in the top bar to bookmark a page.")
+        EmptyNote(stringResource(R.string.no_bookmarks), stringResource(R.string.no_bookmarks_body))
         return
     }
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
         items(ui.bookmarks, key = { it.id }) { b ->
             ListItem(
                 leadingContent = { Icon(Icons.Rounded.Bookmark, null, tint = MaterialTheme.colorScheme.primary) },
-                headlineContent = { Text(b.snippet.ifBlank { "Bookmark" }, maxLines = 2, overflow = TextOverflow.Ellipsis, fontFamily = FontFamily.Serif) },
-                supportingContent = { Text("${b.chapterTitle.ifBlank { "Chapter ${b.chapter + 1}" }} · ${(b.progress * 100).toInt()}%", maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                trailingContent = { IconButton(onClick = { vm.deleteBookmark(b.id) }) { Icon(Icons.Rounded.Delete, "Delete") } },
+                headlineContent = { Text(b.snippet.ifBlank { stringResource(R.string.bookmark) }, maxLines = 2, overflow = TextOverflow.Ellipsis, fontFamily = FontFamily.Serif) },
+                supportingContent = { Text("${b.chapterTitle.ifBlank { stringResource(R.string.chapter_number, b.chapter + 1) }} · ${percent(b.progress)}", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                trailingContent = { IconButton(onClick = { vm.deleteBookmark(b.id) }) { Icon(Icons.Rounded.Delete, stringResource(R.string.delete)) } },
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 modifier = Modifier.clickable {
                     vm.closePanel()
@@ -256,8 +285,9 @@ private fun BookmarkList(vm: ReaderViewModel, ui: ReaderUi) {
 @Composable
 private fun NotesList(vm: ReaderViewModel, ui: ReaderUi) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     if (ui.highlights.isEmpty()) {
-        EmptyNote("No highlights yet", "Long-press a word, drag the handles and pick a color.")
+        EmptyNote(stringResource(R.string.no_highlights), stringResource(R.string.no_highlights_short))
         return
     }
     LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
@@ -274,11 +304,11 @@ private fun NotesList(vm: ReaderViewModel, ui: ReaderUi) {
                             append("— ").append(h.chapterTitle).append(", ").append((h.progress * 100).toInt()).append("%\n\n")
                         }
                     }
-                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/markdown").putExtra(Intent.EXTRA_SUBJECT, "Notes · ${ui.title}").putExtra(Intent.EXTRA_TEXT, md), "Export notes"))
+                    context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/markdown").putExtra(Intent.EXTRA_SUBJECT, resources.getString(R.string.notes_subject, ui.title)).putExtra(Intent.EXTRA_TEXT, md), resources.getString(R.string.export_notes)))
                 }) {
                     Icon(Icons.Rounded.Share, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Export")
+                    Text(stringResource(R.string.export))
                 }
             }
         }
@@ -298,9 +328,9 @@ private fun NotesList(vm: ReaderViewModel, ui: ReaderUi) {
                         Spacer(Modifier.height(4.dp))
                         Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     }
-                    Text("${h.chapterTitle} · ${(h.progress * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    Text("${h.chapterTitle} · ${percent(h.progress)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
                 }
-                IconButton(onClick = { vm.deleteHighlight(h.id) }) { Icon(Icons.Rounded.Delete, "Delete", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                IconButton(onClick = { vm.deleteHighlight(h.id) }) { Icon(Icons.Rounded.Delete, stringResource(R.string.delete), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }
     }
@@ -382,16 +412,16 @@ private fun TypographyPanel(vm: ReaderViewModel, s: ReaderSettings) {
     }
     PanelBody {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
-            FilledTonalIconButton(onClick = { vm.updateSettings { it.copy(fontSize = (it.fontSize - 1f).coerceAtLeast(10f)) } }) { Icon(Icons.Rounded.Remove, "Smaller") }
+            FilledTonalIconButton(onClick = { vm.updateSettings { it.copy(fontSize = (it.fontSize - 1f).coerceAtLeast(10f)) } }) { Icon(Icons.Rounded.Remove, stringResource(R.string.smaller)) }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("${s.fontSize.toInt()}", style = MaterialTheme.typography.headlineSmall)
-                Text("Font size", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.font_size), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            FilledTonalIconButton(onClick = { vm.updateSettings { it.copy(fontSize = (it.fontSize + 1f).coerceAtMost(48f)) } }) { Icon(Icons.Rounded.Add, "Larger") }
+            FilledTonalIconButton(onClick = { vm.updateSettings { it.copy(fontSize = (it.fontSize + 1f).coerceAtMost(48f)) } }) { Icon(Icons.Rounded.Add, stringResource(R.string.larger)) }
         }
-        SectionTitle("Typeface")
+        SectionTitle(stringResource(R.string.typeface))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val all = ReaderFonts.builtIn.map { it.key to it.label } + appSettings.customFonts.map { it to ReaderFonts.label(it) }
+            val all = ReaderFonts.builtIn.map { it.key to stringResource(fontLabel(it.key)) } + appSettings.customFonts.map { it to ReaderFonts.label(it) }
             all.forEach { (key, label) ->
                 val selected = s.fontFamily == key
                 val family = remember(key) { FontFamily(ReaderFonts.base(key)) }
@@ -410,31 +440,31 @@ private fun TypographyPanel(vm: ReaderViewModel, s: ReaderSettings) {
             OutlinedButton(onClick = { fontPicker.launch(arrayOf("font/*", "application/x-font-ttf", "application/x-font-otf", "application/octet-stream", "*/*")) }, modifier = Modifier.height(64.dp)) {
                 Icon(Icons.Rounded.Add, null)
                 Spacer(Modifier.width(4.dp))
-                Text("Import")
+                Text(stringResource(R.string.import_font))
             }
         }
         if (Build.VERSION.SDK_INT >= 28) {
-            LabeledSlider("Weight", s.fontWeight.toFloat(), 200f..800f, 11, { it.toInt().toString() }) { v -> vm.updateSettings { it.copy(fontWeight = (v / 50).toInt() * 50) } }
+            LabeledSlider(stringResource(R.string.weight), s.fontWeight.toFloat(), 200f..800f, 11, { it.toInt().toString() }) { v -> vm.updateSettings { it.copy(fontWeight = (v / 50).toInt() * 50) } }
         }
-        SectionTitle("Spacing")
-        LabeledSlider("Line spacing", s.lineSpacing, 1.0f..2.4f, 13, { "%.1f".format(it) }) { v -> vm.updateSettings { it.copy(lineSpacing = (v * 10).toInt() / 10f) } }
-        LabeledSlider("Paragraph spacing", s.paragraphSpacing, 0f..1.5f, 14, { "%.1f".format(it) }) { v -> vm.updateSettings { it.copy(paragraphSpacing = (v * 10).toInt() / 10f) } }
-        LabeledSlider("First-line indent", s.indent, 0f..3f, 11, { "%.1f".format(it) }) { v -> vm.updateSettings { it.copy(indent = (v * 4).toInt() / 4f) } }
-        LabeledSlider("Letter spacing", s.letterSpacing, -0.05f..0.15f, 19, { "%.2f".format(it) }) { v -> vm.updateSettings { it.copy(letterSpacing = (v * 100).toInt() / 100f) } }
-        LabeledSlider("Side margins", s.marginH.toFloat(), 4f..64f, 14, { "${it.toInt()}" }) { v -> vm.updateSettings { it.copy(marginH = v.toInt()) } }
-        LabeledSlider("Top & bottom margins", s.marginV.toFloat(), 4f..64f, 14, { "${it.toInt()}" }) { v -> vm.updateSettings { it.copy(marginV = v.toInt()) } }
-        SectionTitle("Layout")
-        Segmented(listOf(true to "Justified", false to "Left aligned"), s.justify) { v -> vm.updateSettings { it.copy(justify = v) } }
+        SectionTitle(stringResource(R.string.spacing))
+        LabeledSlider(stringResource(R.string.line_spacing), s.lineSpacing, 1.0f..2.4f, 13, { "%.1f".format(it) }) { v -> vm.updateSettings { it.copy(lineSpacing = (v * 10).toInt() / 10f) } }
+        LabeledSlider(stringResource(R.string.paragraph_spacing), s.paragraphSpacing, 0f..1.5f, 14, { "%.1f".format(it) }) { v -> vm.updateSettings { it.copy(paragraphSpacing = (v * 10).toInt() / 10f) } }
+        LabeledSlider(stringResource(R.string.first_line_indent), s.indent, 0f..3f, 11, { "%.1f".format(it) }) { v -> vm.updateSettings { it.copy(indent = (v * 4).toInt() / 4f) } }
+        LabeledSlider(stringResource(R.string.letter_spacing), s.letterSpacing, -0.05f..0.15f, 19, { "%.2f".format(it) }) { v -> vm.updateSettings { it.copy(letterSpacing = (v * 100).toInt() / 100f) } }
+        LabeledSlider(stringResource(R.string.side_margins), s.marginH.toFloat(), 4f..64f, 14, { "${it.toInt()}" }) { v -> vm.updateSettings { it.copy(marginH = v.toInt()) } }
+        LabeledSlider(stringResource(R.string.vertical_margins), s.marginV.toFloat(), 4f..64f, 14, { "${it.toInt()}" }) { v -> vm.updateSettings { it.copy(marginV = v.toInt()) } }
+        SectionTitle(stringResource(R.string.layout))
+        Segmented(listOf(true to stringResource(R.string.justified), false to stringResource(R.string.left_aligned)), s.justify) { v -> vm.updateSettings { it.copy(justify = v) } }
         Spacer(Modifier.height(8.dp))
-        SwitchRow("Hyphenation", "Break long words at line ends", s.hyphenation) { v -> vm.updateSettings { it.copy(hyphenation = v) } }
-        SwitchRow("Publisher styles", "Keep the book's own alignment and sizes", s.publisherStyles) { v -> vm.updateSettings { it.copy(publisherStyles = v) } }
+        SwitchRow(stringResource(R.string.hyphenation), stringResource(R.string.hyphenation_hint), s.hyphenation) { v -> vm.updateSettings { it.copy(hyphenation = v) } }
+        SwitchRow(stringResource(R.string.publisher_styles), stringResource(R.string.publisher_styles_hint), s.publisherStyles) { v -> vm.updateSettings { it.copy(publisherStyles = v) } }
         Spacer(Modifier.height(8.dp))
         TextButton(onClick = {
             vm.updateSettings { cur ->
                 val d = ReaderSettings()
                 cur.copy(fontFamily = d.fontFamily, fontSize = d.fontSize, fontWeight = d.fontWeight, lineSpacing = d.lineSpacing, paragraphSpacing = d.paragraphSpacing, indent = d.indent, marginH = d.marginH, marginV = d.marginV, justify = d.justify, hyphenation = d.hyphenation, letterSpacing = d.letterSpacing, publisherStyles = d.publisherStyles)
             }
-        }) { Text("Reset text settings") }
+        }) { Text(stringResource(R.string.reset_text_settings)) }
     }
 }
 
@@ -445,30 +475,30 @@ private val inkTones = listOf(0xFF000000, 0xFF1F1F1F, 0xFF2D2A26, 0xFF4A3928, 0x
 @Composable
 private fun ThemePanel(vm: ReaderViewModel, s: ReaderSettings, current: ReadingTheme) {
     PanelBody {
-        SectionTitle("Reading theme")
+        SectionTitle(stringResource(R.string.reading_theme))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ReadingThemes.all.forEach { t -> ThemeSwatch(t.name, t.background, t.text, s.theme == t.id) { vm.updateSettings { it.copy(theme = t.id) } } }
-            ThemeSwatch("Custom", s.customBg, s.customFg, s.theme == "custom") { vm.updateSettings { it.copy(theme = "custom") } }
+            ReadingThemes.all.forEach { t -> ThemeSwatch(stringResource(themeLabel(t.id)), t.background, t.text, s.theme == t.id) { vm.updateSettings { it.copy(theme = t.id) } } }
+            ThemeSwatch(stringResource(R.string.theme_custom), s.customBg, s.customFg, s.theme == "custom") { vm.updateSettings { it.copy(theme = "custom") } }
         }
         if (s.theme == "custom") {
-            SectionTitle("Page color")
+            SectionTitle(stringResource(R.string.page_color))
             ColorRow(paperTones, s.customBg) { c -> vm.updateSettings { it.copy(customBg = c) } }
-            SectionTitle("Text color")
+            SectionTitle(stringResource(R.string.text_color))
             ColorRow(inkTones, s.customFg) { c -> vm.updateSettings { it.copy(customFg = c) } }
         }
         Spacer(Modifier.height(8.dp))
-        SwitchRow("Paper texture", "Subtle grain on light pages", s.texture) { v -> vm.updateSettings { it.copy(texture = v) } }
-        SwitchRow("Follow system dark mode", "Switch to a night theme when your phone is dark", s.autoNight) { v -> vm.updateSettings { it.copy(autoNight = v) } }
+        SwitchRow(stringResource(R.string.paper_texture), stringResource(R.string.paper_texture_hint), s.texture) { v -> vm.updateSettings { it.copy(texture = v) } }
+        SwitchRow(stringResource(R.string.follow_system_dark), stringResource(R.string.follow_system_dark_hint), s.autoNight) { v -> vm.updateSettings { it.copy(autoNight = v) } }
         if (s.autoNight) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                 ReadingThemes.all.filter { it.dark }.forEach { t ->
-                    FilterChip(selected = s.nightTheme == t.id, onClick = { vm.updateSettings { it.copy(nightTheme = t.id) } }, label = { Text(t.name) })
+                    FilterChip(selected = s.nightTheme == t.id, onClick = { vm.updateSettings { it.copy(nightTheme = t.id) } }, label = { Text(stringResource(themeLabel(t.id))) })
                 }
             }
         }
         if (current.dark) {
             Spacer(Modifier.height(8.dp))
-            Text("Tip: AMOLED uses true black, which saves battery on OLED screens.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.amoled_tip), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -508,18 +538,20 @@ private fun ColorRow(colors: List<Int>, selected: Int, onPick: (Int) -> Unit) {
 @Composable
 private fun LightPanel(vm: ReaderViewModel, s: ReaderSettings) {
     PanelBody {
-        SwitchRow("Use system brightness", null, s.brightnessSystem) { v -> vm.updateSettings { it.copy(brightnessSystem = v) } }
-        LabeledSlider("Brightness", s.brightness, 0f..1f, 0, { if (it < com.readarea.reader.ReaderActivity.DIM_THRESHOLD) "Below min" else "${(it * 100).toInt()}%" }) { v ->
+        val belowMin = stringResource(R.string.below_min)
+        val offLabel = stringResource(R.string.off)
+        SwitchRow(stringResource(R.string.use_system_brightness), null, s.brightnessSystem) { v -> vm.updateSettings { it.copy(brightnessSystem = v) } }
+        LabeledSlider(stringResource(R.string.brightness), s.brightness, 0f..1f, 0, { if (it < com.readarea.reader.ReaderActivity.DIM_THRESHOLD) belowMin else "${(it * 100).toInt()}%" }) { v ->
             vm.updateSettings { it.copy(brightness = v, brightnessSystem = false) }
         }
-        Text("Slide to the far left to dim below your screen's minimum — great for reading in bed.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        LabeledSlider("Warm light", s.warmth, 0f..1f, 0, { if (it == 0f) "Off" else "${(it * 100).toInt()}%" }) { v -> vm.updateSettings { it.copy(warmth = v) } }
-        SwitchRow("Brightness gesture", "Swipe up or down along the left edge", s.brightnessGesture) { v -> vm.updateSettings { it.copy(brightnessGesture = v) } }
-        SectionTitle("Keep screen awake")
-        Text("While you read, the screen stays on. After this long without touching it, your phone's normal sleep timer takes over to save battery.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.dim_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        LabeledSlider(stringResource(R.string.warm_light), s.warmth, 0f..1f, 0, { if (it == 0f) offLabel else "${(it * 100).toInt()}%" }) { v -> vm.updateSettings { it.copy(warmth = v) } }
+        SwitchRow(stringResource(R.string.brightness_gesture), stringResource(R.string.brightness_gesture_hint), s.brightnessGesture) { v -> vm.updateSettings { it.copy(brightnessGesture = v) } }
+        SectionTitle(stringResource(R.string.keep_awake))
+        Text(stringResource(R.string.keep_awake_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(8.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(0 to "System", 1 to "1 min", 2 to "2 min", 5 to "5 min", 10 to "10 min", 15 to "15 min", 30 to "30 min", -1 to "Always").forEach { (v, l) ->
+            listOf(0 to stringResource(R.string.theme_system), 1 to stringResource(R.string.duration_minutes, 1), 2 to stringResource(R.string.duration_minutes, 2), 5 to stringResource(R.string.duration_minutes, 5), 10 to stringResource(R.string.duration_minutes, 10), 15 to stringResource(R.string.duration_minutes, 15), 30 to stringResource(R.string.duration_minutes, 30), -1 to stringResource(R.string.always)).forEach { (v, l) ->
                 FilterChip(selected = s.screenTimeoutMin == v, onClick = { vm.updateSettings { it.copy(screenTimeoutMin = v) } }, label = { Text(l) })
             }
         }
@@ -530,50 +562,59 @@ private fun LightPanel(vm: ReaderViewModel, s: ReaderSettings) {
 @Composable
 private fun PagingPanel(vm: ReaderViewModel, s: ReaderSettings, ui: ReaderUi) {
     PanelBody {
-        SectionTitle("Page turn")
-        SwitchRow("Realistic page curl", "The page follows your finger like real paper", s.pageAnim == "curl") { v -> vm.updateSettings { it.copy(pageAnim = if (v) "curl" else "slide") } }
+        SectionTitle(stringResource(R.string.page_turn))
+        SwitchRow(stringResource(R.string.realistic_curl), stringResource(R.string.realistic_curl_hint), s.pageAnim == "curl") { v -> vm.updateSettings { it.copy(pageAnim = if (v) "curl" else "slide") } }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            listOf("curl" to "Curl", "slide" to "Slide", "cover" to "Cover", "fade" to "Fade", "none" to "Instant", "scroll" to "Scroll").forEach { (k, l) ->
+            listOf("curl" to stringResource(R.string.anim_curl), "slide" to stringResource(R.string.anim_slide), "cover" to stringResource(R.string.anim_cover), "fade" to stringResource(R.string.anim_fade), "none" to stringResource(R.string.anim_instant), "scroll" to stringResource(R.string.anim_scroll)).forEach { (k, l) ->
                 FilterChip(selected = s.pageAnim == k, onClick = { vm.updateSettings { it.copy(pageAnim = k) } }, label = { Text(l) })
             }
         }
         if (s.pageAnim != "none" && s.pageAnim != "scroll") {
-            LabeledSlider("Animation speed", s.animSpeed, 0.5f..2f, 5, { "%.2g×".format(it) }) { v -> vm.updateSettings { it.copy(animSpeed = v) } }
+            LabeledSlider(stringResource(R.string.animation_speed), s.animSpeed, 0.5f..2f, 5, { "%.2g×".format(it) }) { v -> vm.updateSettings { it.copy(animSpeed = v) } }
         }
-        SectionTitle("Tap zones")
+        SectionTitle(stringResource(R.string.page_direction))
+        Segmented(listOf("auto" to stringResource(R.string.auto), "ltr" to stringResource(R.string.left_to_right), "rtl" to stringResource(R.string.right_to_left)), s.pageDirection) { v -> vm.updateSettings { it.copy(pageDirection = v) } }
+        Text(
+            stringResource(if (ui.bookRtl) R.string.book_is_rtl else R.string.page_direction_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 6.dp),
+        )
+        SectionTitle(stringResource(R.string.tap_zones))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            listOf("sides" to "Sides", "forward" to "Mostly next", "rows" to "Top / bottom", "off" to "Menu only").forEach { (k, l) ->
+            listOf("sides" to stringResource(R.string.zones_sides), "forward" to stringResource(R.string.zones_forward), "rows" to stringResource(R.string.zones_rows), "off" to stringResource(R.string.zones_off)).forEach { (k, l) ->
                 TapZoneCard(k, l, s.tapZones == k) { vm.updateSettings { it.copy(tapZones = k) } }
             }
         }
         Spacer(Modifier.height(8.dp))
-        SwitchRow("Volume keys turn pages", null, s.volumeKeys) { v -> vm.updateSettings { it.copy(volumeKeys = v) } }
+        SwitchRow(stringResource(R.string.volume_keys), null, s.volumeKeys) { v -> vm.updateSettings { it.copy(volumeKeys = v) } }
         if (s.pageAnim != "scroll") {
-            SectionTitle("Two-page spread")
-            Segmented(listOf("auto" to "Auto", "on" to "Always", "off" to "Off"), s.spread) { v -> vm.updateSettings { it.copy(spread = v) } }
-            Text("Auto shows two pages side by side on unfolded foldables, tablets and in landscape.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
+            SectionTitle(stringResource(R.string.two_page_spread))
+            Segmented(listOf("auto" to stringResource(R.string.auto), "on" to stringResource(R.string.always), "off" to stringResource(R.string.off)), s.spread) { v -> vm.updateSettings { it.copy(spread = v) } }
+            Text(stringResource(R.string.two_page_spread_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 6.dp))
         }
-        SectionTitle("Auto page turn")
-        LabeledSlider(if (s.pageAnim == "scroll") "Scroll one screen every" else "Turn every", s.autoTurnSeconds.toFloat(), 5f..120f, 22, { "${it.toInt()} s" }) { v -> vm.updateSettings { it.copy(autoTurnSeconds = v.toInt()) } }
+        SectionTitle(stringResource(R.string.auto_page_turn))
+        val secondsFormat = stringResource(R.string.seconds_short)
+        LabeledSlider(stringResource(if (s.pageAnim == "scroll") R.string.scroll_every else R.string.turn_every), s.autoTurnSeconds.toFloat(), 5f..120f, 22, { secondsFormat.format(it.toInt()) }) { v -> vm.updateSettings { it.copy(autoTurnSeconds = v.toInt()) } }
         FilledTonalButton(onClick = { vm.closePanel(); vm.toggleAutoTurn() }) {
             Icon(Icons.Rounded.Timer, null, Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text(if (ui.autoTurn) "Stop" else "Start")
+            Text(stringResource(if (ui.autoTurn) R.string.stop else R.string.start))
         }
-        SectionTitle("Screen")
-        SwitchRow("Full screen", "Hide status and navigation bars", s.fullscreen) { v -> vm.updateSettings { it.copy(fullscreen = v) } }
-        SwitchRow("Chapter title at top", null, s.showHeader) { v -> vm.updateSettings { it.copy(showHeader = v) } }
-        SwitchRow("Page info at bottom", null, s.showFooter) { v -> vm.updateSettings { it.copy(showFooter = v) } }
+        SectionTitle(stringResource(R.string.screen))
+        SwitchRow(stringResource(R.string.full_screen), stringResource(R.string.full_screen_hint), s.fullscreen) { v -> vm.updateSettings { it.copy(fullscreen = v) } }
+        SwitchRow(stringResource(R.string.chapter_title_top), null, s.showHeader) { v -> vm.updateSettings { it.copy(showHeader = v) } }
+        SwitchRow(stringResource(R.string.page_info_bottom), null, s.showFooter) { v -> vm.updateSettings { it.copy(showFooter = v) } }
         if (s.showFooter) {
-            SwitchRow("Clock", null, s.showClock) { v -> vm.updateSettings { it.copy(showClock = v) } }
-            SwitchRow("Progress line", null, s.showProgressLine) { v -> vm.updateSettings { it.copy(showProgressLine = v) } }
+            SwitchRow(stringResource(R.string.clock), null, s.showClock) { v -> vm.updateSettings { it.copy(showClock = v) } }
+            SwitchRow(stringResource(R.string.progress_line), null, s.showProgressLine) { v -> vm.updateSettings { it.copy(showProgressLine = v) } }
         }
-        SectionTitle("Orientation")
-        Segmented(listOf("auto" to "Auto", "portrait" to "Portrait", "landscape" to "Landscape"), s.orientation) { v -> vm.updateSettings { it.copy(orientation = v) } }
+        SectionTitle(stringResource(R.string.orientation))
+        Segmented(listOf("auto" to stringResource(R.string.auto), "portrait" to stringResource(R.string.portrait), "landscape" to stringResource(R.string.landscape)), s.orientation) { v -> vm.updateSettings { it.copy(orientation = v) } }
         if (ui.fixed) {
-            SectionTitle("PDF & comics")
-            SwitchRow("Crop margins", "Trim empty borders around pages", s.pdfCrop) { v -> vm.updateSettings { it.copy(pdfCrop = v) } }
-            SwitchRow("Match theme colors", "Recolor PDF pages to your reading theme", s.pdfInvert) { v -> vm.updateSettings { it.copy(pdfInvert = v) } }
+            SectionTitle(stringResource(R.string.pdf_comics))
+            SwitchRow(stringResource(R.string.crop_margins), stringResource(R.string.crop_margins_hint), s.pdfCrop) { v -> vm.updateSettings { it.copy(pdfCrop = v) } }
+            SwitchRow(stringResource(R.string.match_theme_colors), stringResource(R.string.match_theme_colors_hint), s.pdfInvert) { v -> vm.updateSettings { it.copy(pdfInvert = v) } }
         }
     }
 }
@@ -626,17 +667,17 @@ private fun SearchPanel(vm: ReaderViewModel, ui: ReaderUi) {
                 vm.search(it)
             },
             leadingIcon = { Icon(Icons.Rounded.Search, null) },
-            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = ""; vm.search("") }) { Icon(Icons.Rounded.Close, "Clear") } },
-            placeholder = { Text("Search in book") },
+            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { query = ""; vm.search("") }) { Icon(Icons.Rounded.Close, stringResource(R.string.clear)) } },
+            placeholder = { Text(stringResource(R.string.search_in_book)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             modifier = Modifier.fillMaxWidth(),
         )
         Text(
             when {
-                ui.searching -> "Searching…"
-                query.length >= 2 -> "${ui.searchResults.size}${if (ui.searchResults.size >= 500) "+" else ""} results"
-                else -> "Type at least two characters"
+                ui.searching -> stringResource(R.string.searching)
+                query.length >= 2 -> if (ui.searchResults.size >= 500) stringResource(R.string.results_many, 500) else pluralStringResource(R.plurals.results, ui.searchResults.size, ui.searchResults.size)
+                else -> stringResource(R.string.type_two_chars)
             },
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -669,44 +710,45 @@ private fun SearchPanel(vm: ReaderViewModel, ui: ReaderUi) {
 private fun SpeechPanel(vm: ReaderViewModel, s: ReaderSettings, ui: ReaderUi) {
     val context = LocalContext.current
     PanelBody {
-        SectionTitle("Read aloud")
-        Text("Uses your device's text-to-speech voice. The sentence being read is highlighted and pages turn by themselves.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        SectionTitle(stringResource(R.string.read_aloud))
+        Text(stringResource(R.string.read_aloud_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             FilledTonalButton(onClick = { vm.closePanel(); vm.startTts() }) {
                 Icon(Icons.Rounded.PlayArrow, null)
                 Spacer(Modifier.width(6.dp))
-                Text("From this page")
+                Text(stringResource(R.string.from_this_page))
             }
             if (ui.speaking) OutlinedButton(onClick = vm::stopTts) {
                 Icon(Icons.Rounded.Stop, null)
                 Spacer(Modifier.width(6.dp))
-                Text("Stop")
+                Text(stringResource(R.string.stop))
             }
         }
-        LabeledSlider("Speed", s.ttsRate, 0.5f..3f, 24, { "%.1f×".format(it) }) { v -> vm.updateSettings { it.copy(ttsRate = (v * 10).toInt() / 10f) } }
-        LabeledSlider("Pitch", s.ttsPitch, 0.5f..2f, 14, { "%.1f".format(it) }) { v -> vm.updateSettings { it.copy(ttsPitch = (v * 10).toInt() / 10f) } }
-        TextButton(onClick = { runCatching { context.startActivity(Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }) { Text("Voice settings") }
+        LabeledSlider(stringResource(R.string.speed), s.ttsRate, 0.5f..3f, 24, { "%.1f×".format(it) }) { v -> vm.updateSettings { it.copy(ttsRate = (v * 10).toInt() / 10f) } }
+        LabeledSlider(stringResource(R.string.pitch), s.ttsPitch, 0.5f..2f, 14, { "%.1f".format(it) }) { v -> vm.updateSettings { it.copy(ttsPitch = (v * 10).toInt() / 10f) } }
+        TextButton(onClick = { runCatching { context.startActivity(Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }) { Text(stringResource(R.string.voice_settings)) }
     }
 }
 
 @Composable
 private fun MorePanel(vm: ReaderViewModel, ui: ReaderUi, s: ReaderSettings) {
     val context = LocalContext.current
+    val resources = LocalResources.current
     PanelBody {
         Text(ui.title, style = MaterialTheme.typography.titleLarge, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
         if (ui.author.isNotBlank()) Text(ui.author, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(8.dp))
-        Text("${ui.format.label} · ${(ui.progress * 100).toInt()}% read · ${ui.pageLabel}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("${ui.format.label} · ${stringResource(R.string.percent_read, (ui.progress * 100).toInt())} · ${ui.pageLabel}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(16.dp))
-        MoreRow(Icons.Rounded.Timer, if (ui.autoTurn) "Stop auto page turn" else "Auto page turn") { vm.closePanel(); vm.toggleAutoTurn() }
-        if (ui.ttsAvailable) MoreRow(Icons.Rounded.PlayArrow, if (ui.speaking) "Stop reading aloud" else "Read aloud") { vm.closePanel(); if (ui.speaking) vm.stopTts() else vm.startTts() }
-        if (!ui.fixed) MoreRow(Icons.Rounded.Search, "Search in book") { vm.openPanel(Panel.SEARCH) }
-        MoreRow(Icons.AutoMirrored.Rounded.FormatAlignLeft, "Contents & notes") { vm.openPanel(Panel.CONTENTS) }
-        MoreRow(Icons.Rounded.FormatAlignJustify, "Go to page or percent") { vm.openPanel(Panel.CONTENTS) }
-        MoreRow(Icons.Rounded.Share, "Share progress") {
-            val text = "I'm ${(ui.progress * 100).toInt()}% through “${ui.title}”${if (ui.author.isNotBlank()) " by ${ui.author}" else ""} — reading with ReadArea."
-            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), "Share"))
+        MoreRow(Icons.Rounded.Timer, stringResource(if (ui.autoTurn) R.string.stop_auto_turn else R.string.auto_page_turn)) { vm.closePanel(); vm.toggleAutoTurn() }
+        if (ui.ttsAvailable) MoreRow(Icons.Rounded.PlayArrow, stringResource(if (ui.speaking) R.string.stop_reading_aloud else R.string.read_aloud)) { vm.closePanel(); if (ui.speaking) vm.stopTts() else vm.startTts() }
+        if (!ui.fixed) MoreRow(Icons.Rounded.Search, stringResource(R.string.search_in_book)) { vm.openPanel(Panel.SEARCH) }
+        MoreRow(Icons.AutoMirrored.Rounded.FormatAlignLeft, stringResource(R.string.contents_notes)) { vm.openPanel(Panel.CONTENTS) }
+        MoreRow(Icons.Rounded.FormatAlignJustify, stringResource(R.string.go_to_page_percent)) { vm.openPanel(Panel.CONTENTS) }
+        MoreRow(Icons.Rounded.Share, stringResource(R.string.share_progress)) {
+            val text = if (ui.author.isNotBlank()) resources.getString(R.string.share_progress_text_author, (ui.progress * 100).toInt(), ui.title, ui.author) else resources.getString(R.string.share_progress_text, (ui.progress * 100).toInt(), ui.title)
+            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), resources.getString(R.string.share)))
         }
     }
 }

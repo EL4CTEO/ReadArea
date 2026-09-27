@@ -8,8 +8,8 @@ class EpubParser(private val zip: ZipAccess) {
         val container = zip.read("META-INF/container.xml")?.let { XmlNode.parse(TextDecoder.decode(it)) }
         val opfPath = container?.find("rootfile")?.get("full-path")
             ?: zip.entries.firstOrNull { it.endsWith(".opf", true) }
-            ?: throw BookParseException("Invalid EPUB: package document not found")
-        val opfBytes = zip.read(opfPath) ?: throw BookParseException("Invalid EPUB: missing $opfPath")
+            ?: throw BookParseException(ParseError.INVALID, "Invalid EPUB: package document not found")
+        val opfBytes = zip.read(opfPath) ?: throw BookParseException(ParseError.INVALID, "Invalid EPUB: missing $opfPath")
         val opf = XmlNode.parse(TextDecoder.decode(opfBytes))
 
         val manifest = LinkedHashMap<String, Item>()
@@ -51,6 +51,7 @@ class EpubParser(private val zip: ZipAccess) {
             seriesIndex = seriesIndex,
             publisher = publisher,
             coverRef = coverRef,
+            rtl = opf.find("spine")?.get("page-progression-direction")?.equals("rtl", true) ?: TextDirection.isRtlLanguage(language),
         )
         if (metadataOnly) return ParsedBook(meta, emptyList(), emptyList(), zip)
 
@@ -58,7 +59,7 @@ class EpubParser(private val zip: ZipAccess) {
         val spineItems = spine?.children("itemref")?.mapNotNull { manifest[it["idref"]] }
             ?.filter { it.mediaType.contains("html") || it.href.endsWith("html", true) || it.href.endsWith(".htm", true) || it.mediaType.contains("svg") }
             .orEmpty()
-        if (spineItems.isEmpty()) throw BookParseException("This EPUB has no readable content")
+        if (spineItems.isEmpty()) throw BookParseException(ParseError.EMPTY, "This EPUB has no readable content")
 
         val tocRaw = parseNav(manifest) ?: parseNcx(spine?.get("toc"), manifest) ?: emptyList()
         val cssCache = HashMap<String, String?>()
@@ -80,9 +81,23 @@ class EpubParser(private val zip: ZipAccess) {
             val idx = chapterIndex[file] ?: return@mapNotNull null
             TocItem(t, idx, href.substringAfter('#', "").ifEmpty { null }, depth)
         }
-        val finalMeta = if (meta.title.isEmpty()) meta.copy(title = chapters.firstOrNull { it.title.isNotEmpty() }?.title ?: "") else meta
+        var finalMeta = if (meta.title.isEmpty()) meta.copy(title = chapters.firstOrNull { it.title.isNotEmpty() }?.title ?: "") else meta
+        if (finalMeta.coverRef == null) {
+            chapters.take(3).firstNotNullOfOrNull { c -> c.blocks.firstOrNull { it.kind == BlockKind.IMAGE }?.image }?.let { finalMeta = finalMeta.copy(coverRef = it) }
+        }
         return ParsedBook(finalMeta, chapters, toc, zip)
     }
+
+    fun firstSpineDocument(): String? {
+        val container = zip.read("META-INF/container.xml")?.let { XmlNode.parse(TextDecoder.decode(it)) }
+        val opfPath = container?.find("rootfile")?.get("full-path") ?: zip.entries.firstOrNull { it.endsWith(".opf", true) } ?: return null
+        val opf = zip.read(opfPath)?.let { XmlNode.parse(TextDecoder.decode(it)) } ?: return null
+        val items = opf.find("manifest")?.children("item").orEmpty().associateBy { it["id"] }
+        val first = opf.find("spine")?.children("itemref")?.firstNotNullOfOrNull { items[it["idref"]]?.get("href") } ?: return null
+        return PathUtil.resolve(opfPath, first)
+    }
+
+    fun firstImageIn(path: String): String? = zip.read(path)?.let { firstImage(TextDecoder.decode(it), path) }
 
     private fun findCover(metas: List<XmlNode>, manifest: Map<String, Item>, opf: XmlNode, opfPath: String): String? {
         manifest.values.firstOrNull { it.properties.split(' ').contains("cover-image") }?.let { return it.href }

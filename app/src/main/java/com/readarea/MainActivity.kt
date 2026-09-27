@@ -15,6 +15,10 @@ import com.readarea.ui.theme.ReadAreaTheme
 class MainActivity : ComponentActivity() {
     private val vm: LibraryViewModel by viewModels()
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(AppLanguage.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splash = installSplashScreen()
         super.onCreate(savedInstanceState)

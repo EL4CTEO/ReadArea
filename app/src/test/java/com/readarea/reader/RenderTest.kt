@@ -32,12 +32,12 @@ import java.io.File
 class RenderTest {
     private val out = File("build/screens").apply { mkdirs() }
 
-    private fun engine(settings: ReaderSettings = ReaderSettings(), w: Int = 1080, h: Int = 2340, columns: Int = 1): TextEngine {
+    private fun engine(settings: ReaderSettings = ReaderSettings(), w: Int = 1080, h: Int = 2340, columns: Int = 1, rtl: Boolean = false): TextEngine {
         val file = TestBooks.tempFile(TestBooks.epub(chapters = 4, paragraphs = 14), "epub")
         val book = BookPostProcessor.process(EpubParser(FileZipAccess(file)).parse(), false)
         val e = TextEngine(book, 16 shl 20)
         val theme = ReadingThemes.resolve(settings)
-        e.configure(PageSetup(w, h, 2.75f, 1f, settings, 80, 60, columns), theme)
+        e.configure(PageSetup(w, h, 2.75f, 1f, settings, 80, 60, columns, rtl = rtl), theme)
         for (c in 0 until e.chapterCount) e.ensure(c)
         return e
     }
@@ -84,6 +84,59 @@ class RenderTest {
         }
     }
 
+    private fun png(w: Int, h: Int, a: Int, b: Int): ByteArray {
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        p.shader = android.graphics.LinearGradient(0f, 0f, w.toFloat(), h.toFloat(), a, b, android.graphics.Shader.TileMode.CLAMP)
+        c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), p)
+        p.shader = null
+        p.color = android.graphics.Color.WHITE
+        c.drawCircle(w * 0.7f, h * 0.35f, minOf(w, h) * 0.12f, p)
+        p.color = 0x66000000
+        val path = android.graphics.Path().apply {
+            moveTo(0f, h.toFloat())
+            lineTo(w * 0.35f, h * 0.45f)
+            lineTo(w * 0.6f, h * 0.75f)
+            lineTo(w * 0.8f, h * 0.55f)
+            lineTo(w.toFloat(), h.toFloat())
+            close()
+        }
+        c.drawPath(path, p)
+        return java.io.ByteArrayOutputStream().also { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
+    }
+
+    @Test
+    fun rendersEpubImages() {
+        val files = LinkedHashMap<String, ByteArray>()
+        files["mimetype"] = "application/epub+zip".toByteArray()
+        files["META-INF/container.xml"] = "<container><rootfiles><rootfile full-path=\"OPS/book.opf\"/></rootfiles></container>".toByteArray()
+        files["OPS/book.opf"] = """<package><metadata><dc:title>Pictures</dc:title></metadata>
+<manifest><item id="c1" href="c1.xhtml" media-type="application/xhtml+xml"/><item id="w" href="img/wide.png" media-type="image/png"/><item id="t" href="img/tall.png" media-type="image/png"/><item id="s" href="img/small.png" media-type="image/png"/></manifest>
+<spine><itemref idref="c1"/></spine></package>""".toByteArray()
+        files["OPS/c1.xhtml"] = ("<html><body><h1>Illustrated</h1><p>" + TestBooks.lorem(40) + "</p><div class=\"figure\"><img src=\"img/wide.png\"/><p class=\"caption\">Figure 1. A wide landscape.</p></div><p>" + TestBooks.lorem(60, 3) + "</p><p><img src=\"img/tall.png\"/></p><p>" + TestBooks.lorem(30, 5) + " <img src=\"img/small.png\"/></p></body></html>").toByteArray()
+        files["OPS/img/wide.png"] = png(1600, 1000, 0xFF2E4057.toInt(), 0xFFE0A84C.toInt())
+        files["OPS/img/tall.png"] = png(700, 2600, 0xFF4F7A5A.toInt(), 0xFFB0463C.toInt())
+        files["OPS/img/small.png"] = png(48, 48, 0xFF9A5B34.toInt(), 0xFF3F6E8C.toInt())
+        val file = TestBooks.tempFile(TestBooks.zip(files), "epub")
+        val parsed = EpubParser(FileZipAccess(file)).parse()
+        org.junit.Assert.assertEquals("OPS/img/wide.png", parsed.meta.coverRef)
+        val book = BookPostProcessor.process(parsed, false)
+        val e = TextEngine(book, 16 shl 20)
+        val settings = ReaderSettings()
+        e.configure(PageSetup(1080, 2340, 2.75f, 1f, settings, 80, 60), ReadingThemes.resolve(settings))
+        e.ensure(0)
+        val pages = e.pageCount(0)
+        assertTrue(pages >= 2)
+        val bmp = Bitmap.createBitmap(1080, 2340, Bitmap.Config.ARGB_8888)
+        for (p in 0 until minOf(pages, 3)) {
+            e.drawPage(Canvas(bmp), PagePos(0, p), Decorations().apply { clock = "8:15" })
+            save(bmp, "images_p$p.png")
+        }
+        val cp = e.pages(0)!!
+        for (p in 0 until cp.pageCount) assertTrue(cp.bottom(p) - cp.top(p) <= e.setup!!.contentHeight)
+    }
+
     @Test
     fun rendersTwoPageSpread() {
         val e = engine(w = 2176, h = 1812, columns = 2)
@@ -93,13 +146,14 @@ class RenderTest {
         assertEquals(PagePos(1, 2), e.next(PagePos(1, 0)))
     }
 
-    private fun flipView(e: TextEngine, w: Int, h: Int, spread: Boolean): PageFlipView {
+    private fun flipView(e: TextEngine, w: Int, h: Int, spread: Boolean, rtl: Boolean = false): PageFlipView {
         val ctx = ApplicationProvider.getApplicationContext<android.app.Application>()
         var pos = PagePos(0, 0)
         val deco = Decorations().apply { bookTitle = "The Test Book"; clock = "9:30" }
         val v = PageFlipView(ctx)
         v.mode = FlipMode.CURL
         v.spread = spread
+        v.rtl = rtl
         v.pageBackground = ReadingThemes.all[1].background
         v.callback = object : PageFlipView.Callback {
             override fun canFlip(forward: Boolean) = (if (forward) e.next(pos) else e.prev(pos)) != null
@@ -168,6 +222,41 @@ class RenderTest {
         touch(v, MotionEvent.ACTION_MOVE, w - 120f, 150f, t3 + 16)
         touch(v, MotionEvent.ACTION_MOVE, w * 0.45f, h * 0.2f, t3 + 32)
         snapshot(v, "curl_5_top_corner.png")
+    }
+
+    @Test
+    fun rtlCurlAndSpread() {
+        val w = 1080
+        val h = 2340
+        val e = engine(w = w, h = h)
+        val v = flipView(e, w, h, false, rtl = true)
+        val t = SystemClock.uptimeMillis()
+        touch(v, MotionEvent.ACTION_DOWN, 40f, h - 60f, t)
+        touch(v, MotionEvent.ACTION_MOVE, 120f, h - 140f, t + 16)
+        touch(v, MotionEvent.ACTION_MOVE, w * 0.6f, h * 0.8f, t + 32)
+        snapshot(v, "rtl_curl.png")
+        touch(v, MotionEvent.ACTION_CANCEL, w * 0.6f, h * 0.8f, t + 48)
+        val sw = 2176
+        val sh = 1812
+        val se = engine(w = sw, h = sh, columns = 2, rtl = true)
+        val bmp = Bitmap.createBitmap(sw, sh, Bitmap.Config.ARGB_8888)
+        se.drawPage(Canvas(bmp), PagePos(1, 0), Decorations().apply { bookTitle = "The Test Book"; clock = "9:30" })
+        save(bmp, "rtl_spread.png")
+        val sv = flipView(se, sw, sh, true, rtl = true)
+        val t2 = t + 3000
+        touch(sv, MotionEvent.ACTION_DOWN, 40f, sh - 50f, t2)
+        touch(sv, MotionEvent.ACTION_MOVE, 120f, sh - 120f, t2 + 16)
+        touch(sv, MotionEvent.ACTION_MOVE, sw * 0.8f, sh * 0.75f, t2 + 32)
+        snapshot(sv, "rtl_spread_curl.png")
+        org.junit.Assert.assertEquals(1, se.setup!!.columnAt(100f))
+        org.junit.Assert.assertEquals(0, se.setup!!.columnAt(sw - 100f))
+    }
+
+    @Test
+    fun arabicBookIsDetectedAsRtl() {
+        val blocks = listOf(com.readarea.core.format.Block(com.readarea.core.format.BlockKind.PARAGRAPH, listOf(com.readarea.core.format.Run("كان يا ما كان في قديم الزمان وسالف العصر والأوان كان هناك قارئ يحب الكتب كثيرا ويقرأ كل ليلة تحت ضوء القمر"))))
+        val book = BookPostProcessor.process(com.readarea.core.format.ParsedBook(com.readarea.core.format.BookMeta("كتاب"), listOf(com.readarea.core.format.Chapter("", "a", blocks)), emptyList(), com.readarea.core.format.ResourceProvider { null }), false)
+        assertTrue(book.meta.rtl)
     }
 
     @Test

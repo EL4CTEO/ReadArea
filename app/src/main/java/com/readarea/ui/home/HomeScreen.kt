@@ -65,8 +65,12 @@ import com.readarea.ui.components.Illustration
 import com.readarea.ui.components.ProgressLine
 import com.readarea.ui.components.SectionHeader
 import com.readarea.ui.components.formatDuration
+import com.readarea.ui.components.percent
 import com.readarea.ui.components.timeLeft
 import java.time.LocalTime
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import com.readarea.R
 
 @Composable
 fun HomeScreen(vm: LibraryViewModel, actions: AppActions) {
@@ -81,29 +85,29 @@ fun HomeScreen(vm: LibraryViewModel, actions: AppActions) {
             TopAppBar(
                 title = {
                     Column {
-                        Text(greeting(), style = MaterialTheme.typography.headlineSmall)
-                        if (stats.streak > 1) Text("${stats.streak}-day reading streak", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(stringResource(greeting()), style = MaterialTheme.typography.headlineSmall)
+                        if (stats.streak > 1) Text(pluralStringResource(R.plurals.reading_streak, stats.streak, stats.streak), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     }
                 },
-                actions = { IconButton(onClick = { actions.navigate(SettingsKey) }) { Icon(Icons.Rounded.Settings, "Settings") } },
+                actions = { IconButton(onClick = { actions.navigate(SettingsKey) }) { Icon(Icons.Rounded.Settings, stringResource(R.string.nav_settings)) } },
                 scrollBehavior = scroll,
             )
         },
     ) { padding ->
         if (books != null && list.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                EmptyState(Illustration.BOOKS, "Welcome to ReadArea", "Add a folder with your books and ReadArea will keep it in sync. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML and comics are supported.") {
+                EmptyState(Illustration.BOOKS, stringResource(R.string.welcome_title), stringResource(R.string.welcome_body)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         if (scan.running) LinearProgressIndicator(Modifier.fillMaxWidth().padding(bottom = 16.dp))
                         Button(onClick = actions.addFolder, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Rounded.CreateNewFolder, null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Add a folder")
+                            Text(stringResource(R.string.add_folder))
                         }
                         FilledTonalButton(onClick = actions.importFiles, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Rounded.NoteAdd, null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Open files")
+                            Text(stringResource(R.string.open_files))
                         }
                     }
                 }
@@ -133,30 +137,30 @@ fun HomeScreen(vm: LibraryViewModel, actions: AppActions) {
                 }
             }
             if (reading.isNotEmpty()) {
-                item { SectionHeader("Also reading") }
+                item { SectionHeader(stringResource(R.string.home_also_reading)) }
                 item { BookRow(reading, actions) }
             }
-            item { SectionHeader("Recently added", "See all") { actions.navigate(LibraryKey) } }
+            item { SectionHeader(stringResource(R.string.home_recently_added), stringResource(R.string.see_all)) { actions.navigate(LibraryKey) } }
             item { BookRow(recent, actions) }
             if (want.isNotEmpty()) {
-                item { SectionHeader("Want to read") }
+                item { SectionHeader(stringResource(R.string.status_want)) }
                 item { BookRow(want, actions) }
             }
             if (finished.isNotEmpty()) {
-                item { SectionHeader("Finished") }
+                item { SectionHeader(stringResource(R.string.status_finished)) }
                 item { BookRow(finished.take(20), actions) }
             }
         }
     }
 }
 
-private fun greeting(): String {
+private fun greeting(): Int {
     val h = LocalTime.now().hour
     return when (h) {
-        in 5..11 -> "Good morning"
-        in 12..17 -> "Good afternoon"
-        in 18..22 -> "Good evening"
-        else -> "Late-night reading"
+        in 5..11 -> R.string.greeting_morning
+        in 12..17 -> R.string.greeting_afternoon
+        in 18..22 -> R.string.greeting_evening
+        else -> R.string.greeting_night
     }
 }
 
@@ -170,11 +174,11 @@ private fun Hero(book: BookEntity?, actions: AppActions) {
     ) {
         if (book == null) {
             Column(Modifier.padding(24.dp)) {
-                Text("Pick something to read", style = MaterialTheme.typography.titleLarge)
+                Text(stringResource(R.string.hero_empty_title), style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(6.dp))
-                Text("Your current book will appear here so you can jump right back in.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                Text(stringResource(R.string.hero_empty_body), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = { actions.navigate(LibraryKey) }) { Text("Browse library") }
+                Button(onClick = { actions.navigate(LibraryKey) }) { Text(stringResource(R.string.browse_library)) }
             }
             return@Card
         }
@@ -182,19 +186,19 @@ private fun Hero(book: BookEntity?, actions: AppActions) {
             BookCover(book, Modifier.width(104.dp).clickable { actions.showDetails(book.id) }, elevation = 10.dp)
             Spacer(Modifier.width(20.dp))
             Column(Modifier.weight(1f)) {
-                Text("Continue reading", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.continue_reading), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 Spacer(Modifier.height(4.dp))
                 Text(book.title, style = MaterialTheme.typography.titleLarge, fontFamily = FontFamily.Serif, maxLines = 3, overflow = TextOverflow.Ellipsis)
                 if (book.author.isNotBlank()) Text(book.author, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(12.dp))
                 ProgressLine(book.progress, Modifier.fillMaxWidth(), 6.dp)
                 Spacer(Modifier.height(6.dp))
-                Text(listOfNotNull("${(book.progress * 100).toInt()}%", timeLeft(book)).joinToString(" · "), style = MaterialTheme.typography.labelMedium)
+                Text(listOfNotNull(percent(book.progress), timeLeft(book)).joinToString(" · "), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(12.dp))
                 Button(onClick = { actions.openBook(book.id) }) {
                     Icon(Icons.Rounded.PlayArrow, null)
                     Spacer(Modifier.width(6.dp))
-                    Text("Read")
+                    Text(stringResource(R.string.read))
                 }
             }
         }
@@ -216,17 +220,17 @@ private fun GoalCard(stats: StatsUi, onClick: () -> Unit) {
                     drawArc(track, -90f, 360f, false, topLeft = Offset(inset, inset), size = Size(size.width - sw, size.height - sw), style = Stroke(sw, cap = StrokeCap.Round))
                     drawArc(primary, -90f, 360f * p, false, topLeft = Offset(inset, inset), size = Size(size.width - sw, size.height - sw), style = Stroke(sw, cap = StrokeCap.Round))
                 }
-                Text("${(p * 100).toInt()}%", style = MaterialTheme.typography.titleMedium)
+                Text(percent(p), style = MaterialTheme.typography.titleMedium)
             }
             Spacer(Modifier.width(18.dp))
             Column {
-                Text("Today", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("${formatDuration(stats.todayMs)} of ${stats.goalMinutes} min", style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.today), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.goal_progress, formatDuration(stats.todayMs), stats.goalMinutes), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.LocalFireDepartment, null, tint = if (stats.streak > 0) androidx.compose.ui.graphics.Color(0xFFE8833A) else MaterialTheme.colorScheme.outline, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(if (stats.streak > 0) "${stats.streak} day streak" else "Start a streak today", style = MaterialTheme.typography.bodySmall)
+                    Text(if (stats.streak > 0) pluralStringResource(R.plurals.day_streak, stats.streak, stats.streak) else stringResource(R.string.start_streak), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }

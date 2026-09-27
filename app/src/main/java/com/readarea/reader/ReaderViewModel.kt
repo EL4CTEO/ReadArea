@@ -16,6 +16,8 @@ import com.readarea.core.BookLoader
 import com.readarea.core.FixedBook
 import com.readarea.core.ReflowableBook
 import com.readarea.core.format.BookFormat
+import com.readarea.core.format.BookParseException
+import com.readarea.core.format.ParseError
 import com.readarea.core.format.TocItem
 import com.readarea.data.ReaderSettings
 import com.readarea.data.db.BookEntity
@@ -47,6 +49,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import com.readarea.R
 
 data class Viewport(
     val width: Int,
@@ -98,6 +101,8 @@ data class ReaderUi(
     val laidOut: Boolean = false,
     val endReached: Boolean = false,
     val ttsAvailable: Boolean = true,
+    val rtl: Boolean = false,
+    val bookRtl: Boolean = false,
 )
 
 sealed interface ViewCommand {
@@ -157,6 +162,21 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
 
     val scrollMode: Boolean get() = settings.value.pageAnim == "scroll"
 
+    private fun errorText(e: Throwable): String = when {
+        e is BookParseException && e.reason == ParseError.DRM -> ctx.getString(R.string.error_drm)
+        e is BookParseException && e.reason == ParseError.UNSUPPORTED -> ctx.getString(R.string.error_unsupported)
+        e is BookParseException && e.reason == ParseError.EMPTY -> ctx.getString(R.string.error_empty)
+        e is BookParseException -> ctx.getString(R.string.error_invalid)
+        e is java.io.FileNotFoundException || e is SecurityException -> ctx.getString(R.string.error_missing_file)
+        else -> ctx.getString(R.string.error_generic)
+    }
+
+    private fun rtlFor(s: ReaderSettings): Boolean = when (s.pageDirection) {
+        "rtl" -> true
+        "ltr" -> false
+        else -> _ui.value.bookRtl
+    }
+
     fun open(id: Long, at: Pair<Int, Int>? = null) {
         if (bookId == id && engine != null) {
             at?.let { goTo(it.first, it.second) }
@@ -166,7 +186,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val b = repo.get(id)
             if (b == null) {
-                _ui.update { it.copy(loading = false, error = "This book is no longer in your library.") }
+                _ui.update { it.copy(loading = false, error = ctx.getString(R.string.error_not_in_library)) }
                 return@launch
             }
             book = b
@@ -185,14 +205,16 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
             result.onFailure { e ->
-                _ui.update { it.copy(loading = false, error = e.message ?: "Unable to open this book.") }
+                _ui.update { it.copy(loading = false, error = errorText(e)) }
             }
             result.onSuccess { e ->
                 engine = e
                 if (e is FixedEngine) e.onPageRendered = { _commands.tryEmit(ViewCommand.RefreshCurrent) }
                 pendingAnchor = at?.let { it.first.coerceIn(0, e.chapterCount - 1) to it.second } ?: (b.chapter.coerceIn(0, e.chapterCount - 1) to b.offset)
                 val toc = (e as? TextEngine)?.book?.toc.orEmpty()
-                _ui.update { it.copy(toc = toc, chapterCount = e.chapterCount, fixed = e.fixed, ttsAvailable = e is TextEngine) }
+                val bookRtl = (e as? TextEngine)?.book?.meta?.rtl ?: false
+                _ui.update { it.copy(toc = toc, chapterCount = e.chapterCount, fixed = e.fixed, ttsAvailable = e is TextEngine, bookRtl = bookRtl) }
+                _ui.update { it.copy(rtl = rtlFor(settings.value)) }
                 launch { db.notes().bookmarks(id).collect { list -> onBookmarks(list) } }
                 launch { db.notes().highlights(id).collect { list -> onHighlights(list) } }
                 launch { settings.collect { s -> onSettings(s) } }
@@ -225,7 +247,9 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
             prev.marginH != s.marginH, prev.marginV != s.marginV, prev.justify != s.justify, prev.hyphenation != s.hyphenation,
             prev.letterSpacing != s.letterSpacing, prev.publisherStyles != s.publisherStyles, prev.showHeader != s.showHeader,
             prev.showFooter != s.showFooter, prev.pdfCrop != s.pdfCrop, (prev.pageAnim == "scroll") != (s.pageAnim == "scroll"),
+            prev.pageDirection != s.pageDirection,
         ).any { it }
+        _ui.update { it.copy(rtl = rtlFor(s)) }
         if (setupChanged) {
             relayout()
         } else {
@@ -245,7 +269,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
 
     private fun buildSetup(v: Viewport, s: ReaderSettings): PageSetup {
         val scroll = s.pageAnim == "scroll"
-        return PageSetup(v.width, v.height, v.density, v.fontScale, s, if (scroll) 0 else v.top, if (scroll) 0 else v.bottom, if (scroll) 1 else v.columns, v.hinge, scroll)
+        return PageSetup(v.width, v.height, v.density, v.fontScale, s, if (scroll) 0 else v.top, if (scroll) 0 else v.bottom, if (scroll) 1 else v.columns, v.hinge, scroll, rtlFor(s))
     }
 
     private fun anchor(): Pair<Int, Int> {
@@ -322,9 +346,9 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
         val gp = e.globalPage(pos)
         val total = e.totalPages()
         val label = when {
-            e.fixed -> "Page ${pos.page + 1} of ${e.pageCount(0)}"
-            gp != null && total != null -> "Page $gp of $total"
-            else -> "Page ${pos.page + 1} of ${e.pageCount(pos.chapter)} in chapter"
+            e.fixed -> ctx.getString(R.string.page_of, pos.page + 1, e.pageCount(0))
+            gp != null && total != null -> ctx.getString(R.string.page_of, gp, total)
+            else -> ctx.getString(R.string.page_of_chapter, pos.page + 1, e.pageCount(pos.chapter))
         }
         val tocTitle = (e as? TextEngine)?.let { te ->
             val items = te.book.toc
@@ -477,7 +501,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
             if (existing.isNotEmpty()) existing.forEach { db.notes().deleteBookmark(it.id) } else {
                 val snippet = when (e) {
                     is TextEngine -> e.text(pos.chapter, s, (s + 160).coerceAtMost(en)).replace('\n', ' ')
-                    else -> "Page ${pos.page + 1}"
+                    else -> ctx.getString(R.string.page_number, pos.page + 1)
                 }
                 db.notes().insertBookmark(BookmarkEntity(bookId = bookId, chapter = pos.chapter, offset = s, progress = e.progress(pos.chapter, s), snippet = snippet, chapterTitle = _ui.value.chapterTitle))
             }
@@ -671,9 +695,10 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
                 else -> 0
             }
         }
-        when (action) {
+        val directed = if (_ui.value.rtl && zone != "rows") -action else action
+        when (directed) {
             0 -> toggleMenu(true)
-            else -> _commands.tryEmit(ViewCommand.Flip(action > 0))
+            else -> _commands.tryEmit(ViewCommand.Flip(directed > 0))
         }
     }
 
@@ -721,7 +746,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     fun titleAt(progress: Float): String {
         val e = engine ?: return ""
         val (c, o) = e.locate(progress)
-        if (e.fixed) return "Page ${o + 1}"
+        if (e.fixed) return ctx.getString(R.string.page_number, o + 1)
         val te = e as? TextEngine
         val toc = te?.book?.toc.orEmpty()
         return toc.lastOrNull { it.chapter < c || (it.chapter == c && (it.anchor == null || (te?.anchors(c)?.get(it.anchor) ?: 0) <= o)) }?.title ?: e.chapterTitle(c)
@@ -847,7 +872,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
                 viewModelScope.launch(Dispatchers.Main) { start() }
             } else {
                 viewModelScope.launch(Dispatchers.Main) {
-                    _ui.update { it.copy(speaking = false, message = "Text-to-speech is not available on this device.") }
+                    _ui.update { it.copy(speaking = false, message = ctx.getString(R.string.tts_unavailable)) }
                 }
             }
         }

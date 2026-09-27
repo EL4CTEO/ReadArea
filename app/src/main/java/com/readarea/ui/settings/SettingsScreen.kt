@@ -60,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.readarea.app
+import com.readarea.AppLanguage
+import androidx.compose.material.icons.rounded.Translate
 import com.readarea.data.ReaderSettings
 import com.readarea.ui.AppActions
 import com.readarea.ui.LibraryViewModel
@@ -68,6 +70,8 @@ import com.readarea.ui.theme.Accents
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.res.stringResource
+import com.readarea.R
 
 @Composable
 fun SettingsScreen(vm: LibraryViewModel, actions: AppActions) {
@@ -81,24 +85,24 @@ fun SettingsScreen(vm: LibraryViewModel, actions: AppActions) {
     Scaffold(
         topBar = {
             TopAppBar(
-                navigationIcon = { IconButton(onClick = actions.back) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back") } },
-                title = { Text("Settings") },
+                navigationIcon = { IconButton(onClick = actions.back) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) } },
+                title = { Text(stringResource(R.string.nav_settings)) },
             )
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding()), contentAlignment = Alignment.TopCenter) {
             Column(Modifier.widthIn(max = 720.dp).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(bottom = 40.dp)) {
-                Group("Appearance")
-                Text("Theme", style = MaterialTheme.typography.bodyLarge)
+                Group(stringResource(R.string.appearance))
+                Text(stringResource(R.string.theme), style = MaterialTheme.typography.bodyLarge)
                 Spacer(Modifier.height(8.dp))
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    val opts = listOf("system" to "System", "light" to "Light", "dark" to "Dark")
+                    val opts = listOf("system" to R.string.theme_system, "light" to R.string.theme_light, "dark" to R.string.theme_dark)
                     opts.forEachIndexed { i, (k, l) ->
-                        SegmentedButton(selected = s.themeMode == k, onClick = { vm.updateSettings { it.copy(themeMode = k) } }, shape = SegmentedButtonDefaults.itemShape(i, opts.size), label = { Text(l) })
+                        SegmentedButton(selected = s.themeMode == k, onClick = { vm.updateSettings { it.copy(themeMode = k) } }, shape = SegmentedButtonDefaults.itemShape(i, opts.size), label = { Text(stringResource(l)) })
                     }
                 }
                 Spacer(Modifier.height(16.dp))
-                Text("Accent", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.accent), style = MaterialTheme.typography.bodyLarge)
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Accents.colors.forEachIndexed { i, c ->
@@ -112,60 +116,97 @@ fun SettingsScreen(vm: LibraryViewModel, actions: AppActions) {
                     }
                 }
                 if (Build.VERSION.SDK_INT >= 31) {
-                    Toggle("Use wallpaper colors", "Material You dynamic color", s.dynamicColor) { v -> vm.updateSettings { it.copy(dynamicColor = v) } }
+                    Toggle(stringResource(R.string.wallpaper_colors), stringResource(R.string.wallpaper_colors_hint), s.dynamicColor) { v -> vm.updateSettings { it.copy(dynamicColor = v) } }
                 }
-                Toggle("Format badges", "Show EPUB, PDF… labels in list view", s.showFormatBadges) { v -> vm.updateSettings { it.copy(showFormatBadges = v) } }
+                Toggle(stringResource(R.string.format_badges), stringResource(R.string.format_badges_hint), s.showFormatBadges) { v -> vm.updateSettings { it.copy(showFormatBadges = v) } }
 
-                Group("Library folders")
-                Text("ReadArea watches these folders and adds new books automatically. Only the folders you pick are accessible — no broad storage permission needed.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Group(stringResource(R.string.language))
+                val activity = context as? android.app.Activity
+                var langDialog by remember { mutableStateOf(false) }
+                val currentLang = remember(langDialog) { AppLanguage.current(context) }
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { langDialog = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Translate, null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.app_language), style = MaterialTheme.typography.bodyLarge)
+                        Text(if (currentLang.isEmpty()) stringResource(R.string.system_default) else AppLanguage.displayName(currentLang), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (langDialog) {
+                    AlertDialog(
+                        onDismissRequest = { langDialog = false },
+                        title = { Text(stringResource(R.string.app_language)) },
+                        text = {
+                            Column(Modifier.verticalScroll(rememberScrollState())) {
+                                (listOf("") + AppLanguage.tags).forEach { tag ->
+                                    Row(
+                                        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable {
+                                            langDialog = false
+                                            activity?.let { AppLanguage.set(it, tag) }
+                                        }.padding(vertical = 10.dp, horizontal = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        androidx.compose.material3.RadioButton(selected = currentLang == tag || (tag.isNotEmpty() && currentLang.startsWith(tag)), onClick = null)
+                                        Spacer(Modifier.width(12.dp))
+                                        Text(if (tag.isEmpty()) stringResource(R.string.system_default) else AppLanguage.displayName(tag), style = MaterialTheme.typography.bodyLarge)
+                                    }
+                                }
+                            }
+                        },
+                        confirmButton = { TextButton(onClick = { langDialog = false }) { Text(stringResource(R.string.cancel)) } },
+                    )
+                }
+
+                Group(stringResource(R.string.library_folders))
+                Text(stringResource(R.string.library_folders_body), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
                 s.folders.forEach { f ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Folder, null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(14.dp))
-                        Text(folderName(f), style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        IconButton(onClick = { removing = f }) { Icon(Icons.Rounded.Delete, "Remove folder") }
+                        Text(folderName(context, f), style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { removing = f }) { Icon(Icons.Rounded.Delete, stringResource(R.string.remove_folder)) }
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                     OutlinedButton(onClick = actions.addFolder) {
                         Icon(Icons.Rounded.CreateNewFolder, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Add folder")
+                        Text(stringResource(R.string.add_folder))
                     }
                     OutlinedButton(onClick = vm::rescan, enabled = !scan.running && s.folders.isNotEmpty()) {
                         Icon(Icons.Rounded.Refresh, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text(if (scan.running) "Scanning…" else "Rescan")
+                        Text(stringResource(if (scan.running) R.string.scanning else R.string.rescan))
                     }
                 }
 
-                Group("Reading")
-                Text("Fonts, themes, brightness, page-turn animation and more live inside a book — tap the center of a page to open the menu.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TextButton(onClick = { scope.launch { context.app.settings.updateReader { ReaderSettings() } } }) { Text("Reset all reading settings") }
+                Group(stringResource(R.string.reading))
+                Text(stringResource(R.string.reading_settings_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = { scope.launch { context.app.settings.updateReader { ReaderSettings() } } }) { Text(stringResource(R.string.reset_reading_settings)) }
 
-                Group("Storage")
+                Group(stringResource(R.string.storage))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Book cache", style = MaterialTheme.typography.bodyLarge)
-                        Text("Temporary copies used for fast opening · ${formatSize(cache)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.book_cache), style = MaterialTheme.typography.bodyLarge)
+                        Text(stringResource(R.string.book_cache_hint, formatSize(cache)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    TextButton(onClick = { vm.clearCache(); cache = 0 }) { Text("Clear") }
+                    TextButton(onClick = { vm.clearCache(); cache = 0 }) { Text(stringResource(R.string.clear)) }
                 }
 
-                Group("About")
+                Group(stringResource(R.string.about))
                 Text("ReadArea ${appVersion(context)}", style = MaterialTheme.typography.bodyLarge)
-                Text("No ads, no accounts, no tracking. ReadArea doesn't even have internet access — your books and notes never leave your device.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.about_privacy), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
     removing?.let { f ->
         AlertDialog(
             onDismissRequest = { removing = null },
-            title = { Text("Remove folder?") },
-            text = { Text("Stop watching “${folderName(f)}”. Do you also want to remove its books from your library?") },
-            confirmButton = { TextButton(onClick = { vm.removeFolder(f, true); removing = null }) { Text("Remove books too") } },
-            dismissButton = { TextButton(onClick = { vm.removeFolder(f, false); removing = null }) { Text("Keep books") } },
+            title = { Text(stringResource(R.string.remove_folder_title)) },
+            text = { Text(stringResource(R.string.remove_folder_body, folderName(context, f))) },
+            confirmButton = { TextButton(onClick = { vm.removeFolder(f, true); removing = null }) { Text(stringResource(R.string.remove_books_too)) } },
+            dismissButton = { TextButton(onClick = { vm.removeFolder(f, false); removing = null }) { Text(stringResource(R.string.keep_books)) } },
         )
     }
 }
@@ -186,11 +227,11 @@ private fun Toggle(title: String, subtitle: String?, checked: Boolean, onChange:
     }
 }
 
-private fun folderName(uri: String): String = runCatching {
+private fun folderName(context: android.content.Context, uri: String): String = runCatching {
     val id = DocumentsContract.getTreeDocumentId(uri.toUri())
     val path = id.substringAfter(':', id)
     val root = id.substringBefore(':')
-    (if (root.equals("primary", true)) "Internal storage" else root) + if (path.isNotEmpty()) " › " + path.replace("/", " › ") else ""
+    (if (root.equals("primary", true)) context.getString(R.string.internal_storage) else root) + if (path.isNotEmpty()) " › " + path.replace("/", " › ") else ""
 }.getOrElse { Uri.decode(uri) }
 
 private fun appVersion(context: android.content.Context): String = runCatching {

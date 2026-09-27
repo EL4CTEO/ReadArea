@@ -21,17 +21,20 @@ A fast, private e-book reader for Android with a real page-curl animation, caref
 **Reading**
 - Realistic page curl that follows your finger (corner, top-corner and flat folds, fling or cancel), with a see-through back side. Can be switched off in favour of Slide, Cover, Fade, Instant or continuous Scroll.
 - Brightness control in the reader: slider, left-edge swipe gesture, dimming below the screen's minimum, and a warm-light (blue light) filter.
-- Themes: Day, Paper, Sepia, Mint, Sky, Dusk, Night, AMOLED and Custom, with procedurally generated paper grain; optional switch to follow system dark mode.
+- Themes: Day, Paper, Sepia, Mint, Sky, Dusk, Night, AMOLED and Custom, with procedurally generated paper grain; follows the system light/dark setting by default.
 - Typography: nine typefaces plus imported TTF/OTF fonts, weight, size, line/paragraph spacing, indent, letter spacing, margins, justification, hyphenation, publisher styles.
 - Selection with handles and magnifier → highlight (5 colors), notes, copy, share quote, look up / translate, read aloud from here, find.
 - Contents, bookmarks, highlights, full-text search with highlighted results, footnote pop-ups with "back" navigation.
 - Read aloud (TTS) that highlights the current sentence and turns pages; auto page turn / auto-scroll.
 - Tap zones, volume-key paging, fullscreen, orientation lock, chapter header and page/clock/progress footer.
 - PDF: pinch-zoom with sharp re-rendering in scroll mode, auto-crop margins, recolor to reading theme.
+- Right-to-left books (Arabic, Hebrew, Persian, manga): detected from the book's language, page-progression direction or text, with mirrored curl, spreads, tap zones and keys; switchable per reader.
 
-**Library** — add folders (Storage Access Framework, no broad storage permission) or single files, "Open with" from other apps, embedded or generated covers, grid/list, search, filters, sorting, multi-select, shelves, authors/series/format browsing, book details with rating and status.
+**Library** — "Look inside" excerpt and cover (with first-image fallback) in book details, add folders (Storage Access Framework, no broad storage permission) or single files, "Open with" from other apps, embedded or generated covers, grid/list, search, filters, sorting, multi-select, shelves, authors/series/format browsing, book details with rating and status.
 
-**Extras** — home screen with continue-reading hero and daily goal ring, reading stats (streaks, weekly chart, 20-week heatmap, top books), notes hub with Markdown export, Material 3 with accent colors or dynamic color.
+**Extras** — home screen with continue-reading hero and daily goal ring, reading stats (streaks, weekly chart, 20-week heatmap, top books), notes hub with Markdown export, Material 3 with accent colors or dynamic color, light/dark following the phone.
+
+**Languages** — English, Español, Français, Deutsch, Italiano, Português (Brasil), Русский, Українська, Polski, Nederlands, Türkçe, العربية (full RTL layout), हिन्दी, Bahasa Indonesia, 日本語, 한국어, 简体中文. Follows the phone language or pick one in Settings (per-app language on Android 13+).
 
 ## Foldables & large screens
 

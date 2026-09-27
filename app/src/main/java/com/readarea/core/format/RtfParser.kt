@@ -28,7 +28,7 @@ class RtfParser(private val data: ByteArray, private val fallbackTitle: String) 
 
     fun parse(): ParsedBook {
         val src = String(data, Charsets.ISO_8859_1)
-        if (!src.startsWith("{\\rtf")) throw BookParseException("Not a valid RTF document")
+        if (!src.startsWith("{\\rtf")) throw BookParseException(ParseError.INVALID, "Not a valid RTF document")
         val stack = ArrayList<State>()
         var st = State()
         var i = 0

@@ -169,6 +169,7 @@ class HtmlConverter(
         }
         val cls = attrs["class"]?.lowercase() ?: ""
         if (isBlock && (cls.contains("poem") || cls.contains("stanza") || cls.contains("verse"))) kind = BlockKind.VERSE
+        if (isBlock && kind == null && (cls.contains("caption") || cls.contains("figcaption"))) kind = BlockKind.CAPTION
 
         css["font-weight"]?.let { w ->
             val num = w.toIntOrNull()

@@ -24,8 +24,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.readarea.R
 
-enum class LibraryFilter(val label: String) { ALL("All"), READING("Reading"), WANT("Want to read"), FINISHED("Finished"), FAVORITES("Favorites"), NEW("New") }
+enum class LibraryFilter(val label: Int) { ALL(R.string.filter_all), READING(R.string.status_reading), WANT(R.string.status_want), FINISHED(R.string.status_finished), FAVORITES(R.string.filter_favorites), NEW(R.string.status_new) }
 
 data class LibraryQuery(val text: String = "", val filter: LibraryFilter = LibraryFilter.ALL, val format: String? = null)
 

@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,13 +52,17 @@ import com.readarea.ui.AppActions
 import com.readarea.ui.LibraryViewModel
 import com.readarea.ui.components.EmptyState
 import com.readarea.ui.components.Illustration
+import com.readarea.ui.components.percent
 import com.readarea.ui.theme.highlightPalette
+import androidx.compose.ui.res.stringResource
+import com.readarea.R
 
 @Composable
 fun NotesScreen(vm: LibraryViewModel, @Suppress("UNUSED_PARAMETER") actions: AppActions) {
     val highlights by vm.highlights.collectAsStateWithLifecycle()
     val bookmarks by vm.bookmarks.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val resources = LocalResources.current
     var tab by remember { mutableIntStateOf(0) }
     var query by remember { mutableStateOf("") }
     val q = query.trim().lowercase()
@@ -66,11 +71,11 @@ fun NotesScreen(vm: LibraryViewModel, @Suppress("UNUSED_PARAMETER") actions: App
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Notes") },
+                title = { Text(stringResource(R.string.nav_notes)) },
                 actions = {
                     if (highlights.isNotEmpty()) IconButton(onClick = {
                         val md = buildString {
-                            append("# ReadArea notes\n\n")
+                            append("# ").append(resources.getString(R.string.export_notes_heading)).append("\n\n")
                             highlights.groupBy { it.bookTitle }.forEach { (title, list) ->
                                 append("## ").append(title).append('\n')
                                 list.firstOrNull()?.bookAuthor?.takeIf { it.isNotBlank() }?.let { append("*").append(it).append("*\n") }
@@ -81,23 +86,23 @@ fun NotesScreen(vm: LibraryViewModel, @Suppress("UNUSED_PARAMETER") actions: App
                                 }
                             }
                         }
-                        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/markdown").putExtra(Intent.EXTRA_SUBJECT, "ReadArea notes").putExtra(Intent.EXTRA_TEXT, md), "Export notes"))
-                    }) { Icon(Icons.Rounded.Share, "Export all") }
+                        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/markdown").putExtra(Intent.EXTRA_SUBJECT, resources.getString(R.string.export_notes_heading)).putExtra(Intent.EXTRA_TEXT, md), resources.getString(R.string.export_notes)))
+                    }) { Icon(Icons.Rounded.Share, stringResource(R.string.export_all)) }
                 },
             )
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding())) {
             PrimaryTabRow(selectedTabIndex = tab) {
-                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Highlights (${highlights.size})") })
-                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Bookmarks (${bookmarks.size})") })
+                Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(R.string.tab_highlights, highlights.size)) })
+                Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(R.string.tab_bookmarks, bookmarks.size)) })
             }
             if (highlights.isNotEmpty() || bookmarks.isNotEmpty()) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
                     leadingIcon = { Icon(Icons.Rounded.Search, null) },
-                    placeholder = { Text("Search notes") },
+                    placeholder = { Text(stringResource(R.string.search_notes)) },
                     singleLine = true,
                     shape = RoundedCornerShape(28.dp),
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
@@ -106,7 +111,7 @@ fun NotesScreen(vm: LibraryViewModel, @Suppress("UNUSED_PARAMETER") actions: App
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
                 if (tab == 0) {
                     if (hl.isEmpty()) {
-                        EmptyState(Illustration.NOTES, if (highlights.isEmpty()) "No highlights yet" else "No matches", "While reading, long-press a word, drag the handles to select a passage and pick a color. Everything you mark lands here.")
+                        EmptyState(Illustration.NOTES, stringResource(if (highlights.isEmpty()) R.string.no_highlights else R.string.no_matches_title), stringResource(R.string.no_highlights_body))
                     } else {
                         LazyColumn(Modifier.widthIn(max = 840.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
                             items(hl, key = { it.highlight.id }) { item ->
@@ -128,9 +133,9 @@ fun NotesScreen(vm: LibraryViewModel, @Suppress("UNUSED_PARAMETER") actions: App
                                     Column {
                                         IconButton(onClick = {
                                             val quote = "“${h.text}”\n— ${item.bookTitle}${if (item.bookAuthor.isNotBlank()) ", ${item.bookAuthor}" else ""}"
-                                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, quote), "Share quote"))
-                                        }) { Icon(Icons.Rounded.Share, "Share", Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-                                        IconButton(onClick = { vm.deleteHighlight(h.id) }) { Icon(Icons.Rounded.Delete, "Delete", Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, quote), resources.getString(R.string.share_quote)))
+                                        }) { Icon(Icons.Rounded.Share, stringResource(R.string.share), Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                        IconButton(onClick = { vm.deleteHighlight(h.id) }) { Icon(Icons.Rounded.Delete, stringResource(R.string.delete), Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
                                     }
                                 }
                             }
@@ -138,7 +143,7 @@ fun NotesScreen(vm: LibraryViewModel, @Suppress("UNUSED_PARAMETER") actions: App
                     }
                 } else {
                     if (bm.isEmpty()) {
-                        EmptyState(Illustration.NOTES, if (bookmarks.isEmpty()) "No bookmarks yet" else "No matches", "Tap the ribbon icon in the reader's top bar to bookmark a page.")
+                        EmptyState(Illustration.NOTES, stringResource(if (bookmarks.isEmpty()) R.string.no_bookmarks else R.string.no_matches_title), stringResource(R.string.no_bookmarks_body))
                     } else {
                         LazyColumn(Modifier.widthIn(max = 840.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
                             items(bm, key = { it.bookmark.id }) { item ->
@@ -151,9 +156,9 @@ fun NotesScreen(vm: LibraryViewModel, @Suppress("UNUSED_PARAMETER") actions: App
                                     Spacer(Modifier.width(16.dp))
                                     Column(Modifier.weight(1f)) {
                                         Text(b.snippet, fontFamily = FontFamily.Serif, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                                        Text("${item.bookTitle} · ${(b.progress * 100).toInt()}%", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text("${item.bookTitle} · ${percent(b.progress)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
-                                    IconButton(onClick = { vm.deleteBookmark(b.id) }) { Icon(Icons.Rounded.Delete, "Delete", tint = MaterialTheme.colorScheme.onSurfaceVariant) }
+                                    IconButton(onClick = { vm.deleteBookmark(b.id) }) { Icon(Icons.Rounded.Delete, stringResource(R.string.delete), tint = MaterialTheme.colorScheme.onSurfaceVariant) }
                                 }
                             }
                         }

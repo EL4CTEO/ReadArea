@@ -7,6 +7,10 @@ import com.readarea.data.SettingsRepository
 import com.readarea.data.db.AppDatabase
 
 class ReadAreaApp : Application() {
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(AppLanguage.wrap(base))
+    }
+
     val database: AppDatabase by lazy { AppDatabase.create(this) }
     val settings: SettingsRepository by lazy { SettingsRepository(this) }
     val library: LibraryRepository by lazy { LibraryRepository(this, database, settings) }
