@@ -70,6 +70,9 @@ import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
+import com.readarea.data.db.BookEntity
+import com.readarea.ui.components.BookCover
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -189,7 +192,7 @@ fun ReaderScreen(
                 LightOverlay(s, ui.brightnessPreview)
             }
 
-            if (ui.loading) LoadingState(ui.title)
+            if (ui.loading) LoadingState(ui.title, ui.book)
             ui.error?.let { ErrorState(it, onBack) }
 
             AnimatedVisibility(ui.menu && !tabletop, enter = slideInVertically { -it } + fadeIn(), exit = slideOutVertically { -it } + fadeOut(), modifier = Modifier.align(Alignment.TopCenter)) {
@@ -657,12 +660,18 @@ private fun EndOfBook(vm: ReaderViewModel, ui: ReaderUi, onBack: () -> Unit, mod
 }
 
 @Composable
-private fun LoadingState(title: String) {
+private fun LoadingState(title: String, book: BookEntity?) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        CircularProgressIndicator(strokeWidth = 3.dp)
-        Spacer(Modifier.height(16.dp))
+        if (book != null) {
+            BookCover(book, Modifier.width(150.dp), elevation = 14.dp)
+            Spacer(Modifier.height(28.dp))
+        } else {
+            CircularProgressIndicator(strokeWidth = 3.dp)
+            Spacer(Modifier.height(16.dp))
+        }
         Text(title.ifBlank { stringResource(R.string.opening) }, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 32.dp), textAlign = TextAlign.Center)
         Text(stringResource(R.string.preparing_pages), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (book != null) LinearProgressIndicator(Modifier.padding(top = 16.dp).width(120.dp))
     }
 }
 

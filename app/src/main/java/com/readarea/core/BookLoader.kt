@@ -32,6 +32,7 @@ import com.readarea.core.format.ResourceProvider
 import com.readarea.core.format.RtfParser
 import com.readarea.core.format.TextDecoder
 import com.readarea.core.format.TxtParser
+import com.readarea.core.format.ZipAccess
 import com.readarea.core.format.Chapter
 import java.io.File
 import java.io.FileNotFoundException
@@ -232,6 +233,12 @@ object BookLoader {
         return l.endsWith(".jpg") || l.endsWith(".jpeg") || l.endsWith(".png") || l.endsWith(".webp") || l.endsWith(".gif") || l.endsWith(".bmp")
     }
 
+    private fun withCover(context: Context, uri: Uri, zip: ZipAccess, parsed: ParsedBook): ReflowableBook {
+        val ref = parsed.meta.coverRef
+        val bytes = ref?.let { r -> zip.read(r) ?: metaZip(context, uri) { name, _ -> name.equals(r, true) || PathUtil.decode(name).equals(r, true) }.read(r) }
+        return ReflowableBook(ParsedBook(parsed.meta, emptyList(), emptyList(), ResourceProvider { p -> if (p == ref) bytes else null }))
+    }
+
     private fun openMetadata(context: Context, uri: Uri, format: BookFormat, title: String): OpenedBook? = when (format) {
         BookFormat.EPUB -> {
             val zip = metaZip(context, uri) { name, _ ->
@@ -249,12 +256,12 @@ object BookLoader {
             ReflowableBook(ParsedBook(meta, emptyList(), emptyList(), ResourceProvider { p -> if (p == coverRef) coverBytes else null }))
         }
         BookFormat.DOCX -> {
-            val zip = metaZip(context, uri) { name, _ -> name == "docProps/core.xml" }
-            ReflowableBook(DocxParser(zip, title).parse(true))
+            val zip = metaZip(context, uri) { name, _ -> name == "docProps/core.xml" || name == "word/document.xml" || name == "word/_rels/document.xml.rels" || name.startsWith("docProps/thumbnail") }
+            withCover(context, uri, zip, DocxParser(zip, title).parse(true))
         }
         BookFormat.ODT -> {
-            val zip = metaZip(context, uri) { name, _ -> name == "meta.xml" }
-            ReflowableBook(OdtParser(zip, title).parse(true))
+            val zip = metaZip(context, uri) { name, _ -> name == "meta.xml" || name == "content.xml" || name.equals("Thumbnails/thumbnail.png", true) }
+            withCover(context, uri, zip, OdtParser(zip, title).parse(true))
         }
         BookFormat.CBZ -> {
             val names = metaZip(context, uri) { _, _ -> false }.entries

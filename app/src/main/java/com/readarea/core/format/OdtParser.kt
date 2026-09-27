@@ -8,9 +8,10 @@ class OdtParser(private val zip: ZipAccess, private val fallbackTitle: String) {
         val metaXml = zip.read("meta.xml")?.let { XmlNode.parse(TextDecoder.decode(it)) }
         val title = metaXml?.find("title")?.text?.trim()?.ifEmpty { null } ?: fallbackTitle
         val author = (metaXml?.find("creator") ?: metaXml?.find("initial-creator"))?.text?.trim().orEmpty()
-        val meta = BookMeta(title = title, author = author)
+        val content = zip.read("content.xml")?.let { TextDecoder.decode(it) }
+        val meta = BookMeta(title = title, author = author, coverRef = findCover(content))
         if (metadataOnly) return ParsedBook(meta, emptyList(), emptyList(), zip)
-        val content = zip.read("content.xml")?.let { TextDecoder.decode(it) } ?: throw BookParseException(ParseError.INVALID, "Invalid ODT document")
+        if (content == null) throw BookParseException(ParseError.INVALID, "Invalid ODT document")
         val styles = HashMap<String, Style>()
         zip.read("styles.xml")?.let { collectStyles(XmlNode.parse(TextDecoder.decode(it)), styles) }
         val root = XmlNode.parse(content)
@@ -20,6 +21,18 @@ class OdtParser(private val zip: ZipAccess, private val fallbackTitle: String) {
         body.children.forEach { emit(it, sb, styles) }
         val blocks = HtmlConverter("content.xml").convert(sb.toString())
         return ParsedBook(meta, listOf(Chapter(title, "content.xml", blocks)), emptyList(), zip)
+    }
+
+    private fun findCover(content: String?): String? {
+        if (content != null) {
+            val body = content.indexOf("<office:body").coerceAtLeast(0)
+            val m = CoverImages.ODT_IMAGE.find(content, body)
+            if (m != null) {
+                val href = PathUtil.normalize(PathUtil.decode(m.groupValues[1]))
+                if (CoverImages.textLength(content.substring(body, m.range.first)) < 150 && CoverImages.isRaster(href)) return href
+            }
+        }
+        return zip.entries.firstOrNull { it.equals("Thumbnails/thumbnail.png", true) }
     }
 
     private fun collectStyles(root: XmlNode, out: MutableMap<String, Style>) {

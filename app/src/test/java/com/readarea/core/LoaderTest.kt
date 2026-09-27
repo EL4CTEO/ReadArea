@@ -14,6 +14,7 @@ import com.readarea.reader.engine.Decorations
 import com.readarea.reader.engine.FixedEngine
 import com.readarea.reader.engine.PagePos
 import com.readarea.reader.engine.PageSetup
+import com.readarea.ui.CoverArt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -52,6 +53,32 @@ class LoaderTest {
         assertNotNull(opened.book.coverBytes())
         val full = BookLoader.open(ctx, Uri.fromFile(f).toString(), BookFormat.EPUB, f.name, "k1") as ReflowableBook
         assertEquals(4, full.book.chapters.size)
+        full.close()
+    }
+
+    @Test
+    fun officeDocumentsUseEmbeddedCovers() {
+        val art = CoverArt.make("Field Notes", "Kim Park", 0xFF2E4057.toInt(), 0xFF1B2838.toInt(), Color.WHITE, 0)
+        fun meta(bytes: ByteArray, format: BookFormat, name: String): ReflowableBook {
+            val f = File(ctx.filesDir, name).apply { writeBytes(bytes) }
+            return BookLoader.open(ctx, Uri.fromFile(f).toString(), format, name, name, metadataOnly = true) as ReflowableBook
+        }
+        val lead = meta(TestBooks.docx("Field Notes", "Kim Park", thumbnail = CoverArt.make("x", "y", Color.RED, Color.RED, Color.WHITE, 3, jpeg = true), leadingImage = art), BookFormat.DOCX, "lead.docx")
+        assertEquals("Field Notes", lead.meta.title)
+        assertEquals("word/media/image1.png", lead.meta.coverRef)
+        assertNotNull(lead.book.coverBytes())
+        val thumb = meta(TestBooks.docx("Memo", "Kim Park", thumbnail = art), BookFormat.DOCX, "thumb.docx")
+        assertEquals("docProps/thumbnail.jpeg", thumb.meta.coverRef)
+        assertNotNull(thumb.book.coverBytes())
+        val plain = meta(TestBooks.docx("Plain", "Kim Park"), BookFormat.DOCX, "plain.docx")
+        assertEquals(null, plain.meta.coverRef)
+        val odt = meta(TestBooks.odt("Essay", "Lee Moss", thumbnail = art), BookFormat.ODT, "essay.odt")
+        assertEquals("Essay", odt.meta.title)
+        assertEquals("Thumbnails/thumbnail.png", odt.meta.coverRef)
+        assertNotNull(odt.book.coverBytes())
+        val full = BookLoader.open(ctx, Uri.fromFile(File(ctx.filesDir, "lead.docx")).toString(), BookFormat.DOCX, "lead.docx", "lead2") as ReflowableBook
+        assertEquals("word/media/image1.png", full.meta.coverRef)
+        assertTrue(full.book.chapters[0].blocks.size > 5)
         full.close()
     }
 

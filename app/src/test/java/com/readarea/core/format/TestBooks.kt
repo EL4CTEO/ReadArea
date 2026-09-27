@@ -39,7 +39,7 @@ object TestBooks {
         return sb.toString()
     }
 
-    fun epub(chapters: Int = 3, paragraphs: Int = 8, withCover: Boolean = true, epub3: Boolean = true, title: String = "The Test Book", author: String = "Ada Writer"): ByteArray {
+    fun epub(chapters: Int = 3, paragraphs: Int = 8, withCover: Boolean = true, epub3: Boolean = true, title: String = "The Test Book", author: String = "Ada Writer", coverImage: ByteArray? = null): ByteArray {
         val files = LinkedHashMap<String, ByteArray>()
         files["mimetype"] = "application/epub+zip".toByteArray()
         files["META-INF/container.xml"] = """<?xml version="1.0"?>
@@ -77,7 +77,7 @@ object TestBooks {
         files["OEBPS/styles/book.css"] = """p.first { text-indent: 0; } h1 { text-align: center; } .hidden { display:none }""".toByteArray()
         if (withCover) {
             manifest.append("""<item id="cover-img" href="images/pic.png" media-type="image/png" ${if (epub3) "properties=\"cover-image\"" else ""}/>""")
-            files["OEBPS/images/pic.png"] = PNG_1x1
+            files["OEBPS/images/pic.png"] = coverImage ?: PNG_1x1
         }
         if (epub3) {
             manifest.append("""<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>""")
@@ -100,6 +100,36 @@ object TestBooks {
   <manifest>$manifest</manifest>
   <spine${if (!epub3) " toc=\"ncx\"" else ""}>$spine</spine>
 </package>""".toByteArray()
+        return zip(files)
+    }
+
+    fun docx(title: String, author: String, thumbnail: ByteArray? = null, leadingImage: ByteArray? = null): ByteArray {
+        val files = LinkedHashMap<String, ByteArray>()
+        files["[Content_Types].xml"] = "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"/>".toByteArray()
+        files["docProps/core.xml"] = """<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>$title</dc:title><dc:creator>$author</dc:creator></cp:coreProperties>""".toByteArray()
+        if (thumbnail != null) files["docProps/thumbnail.jpeg"] = thumbnail
+        val rels = StringBuilder()
+        val body = StringBuilder()
+        if (leadingImage != null) {
+            files["word/media/image1.png"] = leadingImage
+            rels.append("""<Relationship Id="rId7" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>""")
+            body.append("""<w:p><w:r><w:drawing><wp:inline><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rId7"/></pic:blipFill></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>""")
+        }
+        body.append("""<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>$title</w:t></w:r></w:p>""")
+        repeat(6) { body.append("<w:p><w:r><w:t>").append(lorem(60, it + 11)).append("</w:t></w:r></w:p>") }
+        files["word/_rels/document.xml.rels"] = """<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">$rels</Relationships>""".toByteArray()
+        files["word/document.xml"] = """<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><w:body>$body</w:body></w:document>""".toByteArray()
+        return zip(files)
+    }
+
+    fun odt(title: String, author: String, thumbnail: ByteArray? = null): ByteArray {
+        val files = LinkedHashMap<String, ByteArray>()
+        files["mimetype"] = "application/vnd.oasis.opendocument.text".toByteArray()
+        files["meta.xml"] = """<office:document-meta xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0"><office:meta><dc:title>$title</dc:title><meta:initial-creator>$author</meta:initial-creator></office:meta></office:document-meta>""".toByteArray()
+        val body = StringBuilder("<text:h text:outline-level=\"1\">$title</text:h>")
+        repeat(6) { body.append("<text:p>").append(lorem(60, it + 21)).append("</text:p>") }
+        files["content.xml"] = """<office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"><office:body><office:text>$body</office:text></office:body></office:document-content>""".toByteArray()
+        if (thumbnail != null) files["Thumbnails/thumbnail.png"] = thumbnail
         return zip(files)
     }
 

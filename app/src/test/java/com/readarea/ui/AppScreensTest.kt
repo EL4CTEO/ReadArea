@@ -31,6 +31,7 @@ import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 import java.io.File
+import org.junit.Assert.assertTrue
 import java.time.LocalDate
 
 @OptIn(ExperimentalTestApi::class)
@@ -124,6 +125,49 @@ class AppScreensTest {
             waitText("Make your first shelf")
             settle()
             shot("app_shelves.png")
+        }
+    }
+
+    @Test
+    fun libraryShowsEmbeddedCovers() {
+        val app = ApplicationProvider.getApplicationContext<ReadAreaApp>()
+        val white = 0xFFF7F1E6.toInt()
+        runBlocking {
+            for (i in seed.indices) {
+                val b = app.database.books().get(firstId + i) ?: continue
+                val (title, author) = seed[i].first to seed[i].second
+                val (ext, format, bytes) = when (i) {
+                    1 -> Triple("docx", "DOCX", TestBooks.docx(title, author, thumbnail = CoverArt.make(title, author, 0xFF3F6E8C.toInt(), 0xFF16293A.toInt(), white, 1, jpeg = true)))
+                    3 -> Triple("txt", "TXT", TestBooks.lorem(400).toByteArray())
+                    5 -> Triple("odt", "ODT", TestBooks.odt(title, author, thumbnail = CoverArt.make(title, author, 0xFFE9DFCC.toInt(), 0xFFCDBB98.toInt(), 0xFF3A2E22.toInt(), 2)))
+                    6 -> Triple("cbz", "CBZ", TestBooks.zip(linkedMapOf("001.png" to CoverArt.make(title, author, 0xFF1F1F24.toInt(), 0xFF3A2D5C.toInt(), 0xFFF5B971.toInt(), 3), "002.png" to TestBooks.PNG_1x1)))
+                    else -> {
+                        val palette = listOf(
+                            Triple(0xFF2E4057.toInt(), 0xFF0F1A26.toInt(), 0xFFF2C14E.toInt()),
+                            Triple(0xFFB0463C.toInt(), 0xFF5A1D18.toInt(), white),
+                            Triple(0xFF4F7A5A.toInt(), 0xFF1E3326.toInt(), white),
+                            Triple(0xFF9A5B34.toInt(), 0xFF3E2211.toInt(), 0xFFF3C27A.toInt()),
+                        )[i % 4]
+                        Triple("epub", "EPUB", TestBooks.epub(chapters = 2, paragraphs = 6, withCover = true, title = title, author = author, coverImage = CoverArt.make(title, author, palette.first, palette.second, palette.third, i % 4)))
+                    }
+                }
+                val f = File(app.filesDir, "cover$i.$ext").apply { writeBytes(bytes) }
+                val updated = b.copy(uri = Uri.fromFile(f).toString(), fileName = if (format == "CBZ" || format == "TXT") "$title.$ext" else f.name, format = format, size = f.length(), metaLoaded = false)
+                app.database.books().update(updated)
+                app.library.loadMetadata(updated)
+            }
+            val covers = app.database.books().all().mapNotNull { it.coverPath }
+            assertTrue(covers.size == 7)
+            covers.forEach { com.readarea.ui.components.CoverCache.load(it) }
+        }
+        ActivityScenario.launch(MainActivity::class.java).use {
+            waitText("Continue reading")
+            settle()
+            shot("app_home_covers.png")
+            compose.onAllNodesWithText("Library")[0].performClick()
+            waitText("8 books")
+            settle()
+            shot("app_library_covers.png")
         }
     }
 

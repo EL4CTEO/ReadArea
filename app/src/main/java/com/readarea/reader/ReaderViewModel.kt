@@ -73,6 +73,7 @@ data class ReaderUi(
     val loading: Boolean = true,
     val error: String? = null,
     val title: String = "",
+    val book: BookEntity? = null,
     val author: String = "",
     val format: BookFormat = BookFormat.EPUB,
     val fixed: Boolean = false,
@@ -206,7 +207,7 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
             }
             book = b
             deco.bookTitle = b.title
-            _ui.update { it.copy(title = b.title, author = b.author, format = BookFormat.byName(b.format)) }
+            _ui.update { it.copy(title = b.title, author = b.author, format = BookFormat.byName(b.format), book = b) }
             val result = withContext(Dispatchers.IO) {
                 runCatching {
                     val format = BookFormat.byName(b.format)

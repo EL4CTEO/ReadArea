@@ -12,14 +12,26 @@ class DocxParser(private val zip: ZipAccess, private val fallbackTitle: String) 
             val target = r["target"] ?: return@forEach
             rels[id] = if (r["targetmode"].equals("external", true)) target else PathUtil.resolve("word/document.xml", target)
         }
-        val firstImage = rels.values.firstOrNull { it.startsWith("word/media/") }
-        val meta = BookMeta(title = title, author = author, coverRef = null)
+        val xml = zip.read("word/document.xml")?.let { TextDecoder.decode(it) }
+        val meta = BookMeta(title = title, author = author, coverRef = findCover(xml, rels))
         if (metadataOnly) return ParsedBook(meta, emptyList(), emptyList(), zip)
+        if (xml == null) throw BookParseException(ParseError.INVALID, "Invalid DOCX document")
         val headingLevels = parseStyles()
-        val xml = zip.read("word/document.xml")?.let { TextDecoder.decode(it) } ?: throw BookParseException(ParseError.INVALID, "Invalid DOCX document")
         val html = toHtml(xml, rels, headingLevels)
         val blocks = HtmlConverter("word/document.xml").convert(html)
-        return ParsedBook(meta.copy(coverRef = if (blocks.firstOrNull()?.kind == BlockKind.IMAGE) firstImage else null), listOf(Chapter(title, "word/document.xml", blocks)), emptyList(), zip)
+        return ParsedBook(meta, listOf(Chapter(title, "word/document.xml", blocks)), emptyList(), zip)
+    }
+
+    private fun findCover(xml: String?, rels: Map<String, String>): String? {
+        if (xml != null) {
+            val m = CoverImages.DOCX_EMBED.find(xml)
+            if (m != null) {
+                val textBefore = CoverImages.DOCX_TEXT.findAll(xml.substring(0, m.range.first)).sumOf { it.groupValues[1].trim().length }
+                val target = rels[m.groupValues[1]]
+                if (textBefore < 150 && target != null && CoverImages.isRaster(target)) return target
+            }
+        }
+        return zip.entries.firstOrNull { it.startsWith("docProps/thumbnail", true) && CoverImages.isRaster(it) }
     }
 
     private fun parseStyles(): Map<String, Int> {

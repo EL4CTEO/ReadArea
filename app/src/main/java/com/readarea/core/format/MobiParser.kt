@@ -35,6 +35,7 @@ class MobiParser(private val data: ByteArray, private val fallbackTitle: String)
         var publisher: String? = null
         var language: String? = null
         var coverIndex = -1
+        var thumbIndex = -1
         var extraFlags = 0
         val hasMobi = r0.size > 20 && String(r0, 16, 4, Charsets.ISO_8859_1) == "MOBI"
         if (hasMobi) {
@@ -64,6 +65,7 @@ class MobiParser(private val data: ByteArray, private val fallbackTitle: String)
                             101 -> publisher = String(value, charset(encoding)).trim()
                             103 -> description = EpubParser.stripTags(String(value, charset(encoding)))
                             201 -> if (value.size >= 4) coverIndex = ByteBuffer.wrap(value).int
+                            202 -> if (value.size >= 4) thumbIndex = ByteBuffer.wrap(value).int
                             503 -> title = String(value, charset(encoding)).trim()
                             524 -> language = String(value, charset(encoding)).trim()
                         }
@@ -73,7 +75,8 @@ class MobiParser(private val data: ByteArray, private val fallbackTitle: String)
                 }
             }
         }
-        val coverRef = if (coverIndex >= 0 && firstImage > 0) "img:${firstImage + coverIndex}" else null
+        val coverIdx = if (coverIndex >= 0) coverIndex else thumbIndex
+        val coverRef = if (coverIdx >= 0 && firstImage > 0) "img:${firstImage + coverIdx}" else null
         val resources = ResourceProvider { path -> imageFor(path) }
         val meta = BookMeta(title = title.ifBlank { fallbackTitle }, author = author, language = language, description = description, publisher = publisher, coverRef = coverRef)
         if (metadataOnly) return ParsedBook(meta, emptyList(), emptyList(), resources)
