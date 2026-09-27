@@ -1050,7 +1050,6 @@ class ReaderViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     override fun onCleared() {
-        super.onCleared()
         tts?.shutdown()
         tts = null
         engine?.close()

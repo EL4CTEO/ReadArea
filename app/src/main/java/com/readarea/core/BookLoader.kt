@@ -20,6 +20,8 @@ import com.readarea.core.format.DocxParser
 import com.readarea.core.format.EpubParser
 import com.readarea.core.format.Fb2Parser
 import com.readarea.core.format.FileZipAccess
+import com.readarea.core.format.MemoryZipAccess
+import com.readarea.core.format.PathUtil
 import com.readarea.core.format.HtmlConverter
 import com.readarea.core.format.MarkdownParser
 import com.readarea.core.format.MobiParser
@@ -219,9 +221,49 @@ object ImageUtil {
 
 object BookLoader {
 
+    private fun metaZip(context: Context, uri: Uri, keep: (String, Long) -> Boolean): MemoryZipAccess {
+        val input = if (uri.scheme == "file") File(uri.path!!).inputStream() else context.contentResolver.openInputStream(uri) ?: throw FileNotFoundException("Unable to open file")
+        return input.use { MemoryZipAccess(it, keep) }
+    }
+
+    private fun isImage(name: String): Boolean {
+        val l = name.lowercase()
+        return l.endsWith(".jpg") || l.endsWith(".jpeg") || l.endsWith(".png") || l.endsWith(".webp") || l.endsWith(".gif") || l.endsWith(".bmp")
+    }
+
+    private fun openMetadata(context: Context, uri: Uri, format: BookFormat, title: String): OpenedBook? = when (format) {
+        BookFormat.EPUB -> {
+            val zip = metaZip(context, uri) { name, _ ->
+                val l = name.lowercase()
+                l.endsWith(".opf") || l.endsWith(".xml") || l.endsWith(".ncx") || ((l.endsWith("html") || l.endsWith(".htm")) && (l.contains("cover") || l.contains("title")))
+            }
+            val parsed = EpubParser(zip).parse(true)
+            val coverRef = parsed.meta.coverRef
+            val coverBytes = coverRef?.let { ref -> zip.read(ref) ?: metaZip(context, uri) { name, _ -> name.equals(ref, true) || PathUtil.decode(name).equals(ref, true) }.read(ref) }
+            val meta = if (parsed.meta.title.isBlank()) parsed.meta.copy(title = title) else parsed.meta
+            ReflowableBook(ParsedBook(meta, emptyList(), emptyList(), ResourceProvider { p -> if (p == coverRef) coverBytes else null }))
+        }
+        BookFormat.DOCX -> {
+            val zip = metaZip(context, uri) { name, _ -> name == "docProps/core.xml" }
+            ReflowableBook(DocxParser(zip, title).parse(true))
+        }
+        BookFormat.ODT -> {
+            val zip = metaZip(context, uri) { name, _ -> name == "meta.xml" }
+            ReflowableBook(OdtParser(zip, title).parse(true))
+        }
+        BookFormat.CBZ -> {
+            val names = metaZip(context, uri) { _, _ -> false }.entries
+            val best = names.filter { isImage(it) && !it.lowercase().startsWith("__macosx") }.minWithOrNull { a, b -> CbzSource.naturalCompare(a, b) }
+            val cover = best?.let { b -> metaZip(context, uri) { name, _ -> name == b }.read(b) }
+            ReflowableBook(ParsedBook(BookMeta(title = title, coverRef = best), emptyList(), emptyList(), ResourceProvider { p -> if (p == best) cover else null }))
+        }
+        else -> null
+    }
+
     fun open(context: Context, uriString: String, format: BookFormat, fileName: String, cacheKey: String, metadataOnly: Boolean = false): OpenedBook {
         val uri = uriString.toUri()
         val title = fileName.substringBeforeLast('.').let { if (it.endsWith(".fb2", true)) it.dropLast(4) else it }.replace('_', ' ').trim()
+        if (metadataOnly) openMetadata(context, uri, format, title)?.let { return it }
         return when (format) {
             BookFormat.PDF -> {
                 val pfd = openPfd(context, uri)

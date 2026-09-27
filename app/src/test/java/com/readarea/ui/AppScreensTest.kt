@@ -164,6 +164,44 @@ class AppScreensTest {
             sc.onActivity { it.vm.openPanel(com.readarea.reader.Panel.CONTENTS) }
             settle(1000)
             shot("reader_contents.png")
+            sc.onActivity {
+                it.vm.closePanel()
+                it.vm.toggleMenu(false)
+            }
+            settle(600)
+            sc.onActivity {
+                it.vm.onLongPress(300f, 900f)
+                it.vm.onSelectionDrag(1, 900f, 1100f)
+                it.vm.onSelectionDragEnd()
+            }
+            settle(800)
+            shot("reader_selection.png")
+            var selected = ""
+            sc.onActivity { selected = it.vm.ui.value.selection?.text.orEmpty() }
+            org.junit.Assert.assertTrue(selected.length > 20)
+            sc.onActivity { it.vm.highlightSelection(2, "A thought") }
+
+            compose.waitUntil(10_000) {
+                shadowOf(Looper.getMainLooper()).idle()
+                var n = 0
+                sc.onActivity { n = it.vm.ui.value.highlights.size }
+                n == 1
+            }
+            settle(600)
+            shot("reader_highlighted.png")
+            sc.onActivity { it.vm.updateSettings { s -> s.copy(fontSize = 24f, theme = "night") } }
+            compose.waitUntil(10_000) {
+                shadowOf(Looper.getMainLooper()).idle()
+                var ok = false
+                sc.onActivity { ok = it.vm.settings.value.fontSize == 24f && it.vm.ui.value.laidOut }
+                ok
+            }
+            settle(1500)
+            shot("reader_night_large.png")
+            sc.onActivity { it.vm.updateSettings { s -> s.copy(pageAnim = "scroll", theme = "sepia") } }
+            settle(2500)
+            shot("reader_scroll.png")
+
         }
     }
 }

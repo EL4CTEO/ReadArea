@@ -5,8 +5,9 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PointF
 import android.graphics.RectF
-import android.graphics.Typeface
 import android.graphics.text.LineBreaker
+import android.annotation.SuppressLint
+import android.graphics.Typeface
 import android.os.Build
 import android.text.Layout
 import android.text.SpannableStringBuilder
@@ -157,6 +158,7 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
         return anchorMaps[chapter] ?: emptyMap()
     }
 
+    @SuppressLint("InlinedApi")
     private fun build(g: Gen, chapter: Int): ChapterPages {
         val s = g.setup
         val st = s.settings

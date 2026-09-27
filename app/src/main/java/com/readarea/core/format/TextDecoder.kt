@@ -90,6 +90,37 @@ class FileZipAccess(file: File) : ZipAccess {
     }
 }
 
+class MemoryZipAccess(input: java.io.InputStream, keep: (String, Long) -> Boolean) : ZipAccess {
+    private val data = LinkedHashMap<String, ByteArray>()
+    private val index = HashMap<String, String>()
+    override val entries: List<String>
+
+    init {
+        val names = ArrayList<String>()
+        java.util.zip.ZipInputStream(input.buffered()).use { zin ->
+            while (true) {
+                val e = zin.nextEntry ?: break
+                if (e.isDirectory) continue
+                names.add(e.name)
+                if (keep(e.name, e.size)) {
+                    val bytes = zin.readBytes()
+                    if (bytes.size <= MAX_ENTRY) {
+                        data[e.name] = bytes
+                        index[e.name.lowercase()] = e.name
+                    }
+                }
+            }
+        }
+        entries = names
+    }
+
+    override fun read(path: String): ByteArray? = data[path] ?: index[path.lowercase()]?.let { data[it] } ?: index[PathUtil.decode(path).lowercase()]?.let { data[it] }
+
+    companion object {
+        const val MAX_ENTRY = 6 * 1024 * 1024
+    }
+}
+
 class MapResources(private val map: Map<String, () -> ByteArray?>) : ResourceProvider {
     override fun read(path: String): ByteArray? = (map[path] ?: map[path.removePrefix("#")])?.invoke()
 }

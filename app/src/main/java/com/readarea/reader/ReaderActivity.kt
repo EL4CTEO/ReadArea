@@ -25,6 +25,8 @@ import androidx.lifecycle.lifecycleScope
 import com.readarea.app
 import com.readarea.data.ReaderSettings
 import com.readarea.reader.ui.ReaderScreen
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.Date
 
@@ -34,6 +36,7 @@ class ReaderActivity : ComponentActivity() {
     private val releaseScreen = Runnable { window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     private var timeoutMin = 5
     private var lastAwake = 0L
+    private var openedId = 0L
 
     private val tickReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) = updateClock()
@@ -45,11 +48,25 @@ class ReaderActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
-        window.attributes = window.attributes.apply {
-            layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        if (android.os.Build.VERSION.SDK_INT >= 28) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
         }
         vm.activityListener = { keepAwake() }
-        handleIntent(intent, savedInstanceState == null)
+        val restored = savedInstanceState?.getLong(STATE_BOOK, 0L) ?: 0L
+        if (restored > 0) {
+            openedId = restored
+            vm.open(restored)
+        } else {
+            handleIntent(intent, savedInstanceState == null)
+        }
+        lifecycleScope.launch {
+            vm.ui.map { (it.speaking && !it.ttsPaused) || it.autoTurn }.distinctUntilChanged().collect {
+                lastAwake = 0L
+                keepAwake()
+            }
+        }
         setContent {
             ReaderScreen(
                 vm = vm,
@@ -58,6 +75,11 @@ class ReaderActivity : ComponentActivity() {
                 openExternal = { uri -> runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri)) } },
             )
         }
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        if (openedId > 0) outState.putLong(STATE_BOOK, openedId)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -69,6 +91,7 @@ class ReaderActivity : ComponentActivity() {
     private fun handleIntent(intent: Intent, fresh: Boolean) {
         val id = intent.getLongExtra(EXTRA_BOOK_ID, -1L)
         if (id > 0) {
+            openedId = id
             val chapter = intent.getIntExtra(EXTRA_CHAPTER, -1)
             val offset = intent.getIntExtra(EXTRA_OFFSET, 0)
             vm.open(id, if (chapter >= 0 && fresh) chapter to offset else null)
@@ -80,7 +103,7 @@ class ReaderActivity : ComponentActivity() {
             lifecycleScope.launch {
                 val newId = app.library.openExternal(data)
                 if (newId != null) {
-                    getIntent().putExtra(EXTRA_BOOK_ID, newId)
+                    openedId = newId
                     vm.open(newId)
                 } else {
                     finish()
@@ -167,21 +190,35 @@ class ReaderActivity : ComponentActivity() {
         vm.refreshChrome()
     }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
-        val code = event.keyCode
-        if (code == KeyEvent.KEYCODE_VOLUME_DOWN || code == KeyEvent.KEYCODE_VOLUME_UP) {
-            if (vm.settings.value.volumeKeys && !vm.ui.value.menu && vm.ui.value.panel == Panel.NONE && !vm.ui.value.speaking) {
-                if (event.action == KeyEvent.ACTION_DOWN) vm.volumeFlip(code == KeyEvent.KEYCODE_VOLUME_DOWN)
-                return true
+    private fun volumeHandled(code: Int): Boolean {
+        val ui = vm.ui.value
+        return (code == KeyEvent.KEYCODE_VOLUME_DOWN || code == KeyEvent.KEYCODE_VOLUME_UP) &&
+            vm.settings.value.volumeKeys && !ui.menu && ui.panel == Panel.NONE && !ui.speaking
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        if (volumeHandled(keyCode)) {
+            vm.volumeFlip(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)
+            return true
+        }
+        if (!vm.ui.value.menu) {
+            when (keyCode) {
+                KeyEvent.KEYCODE_PAGE_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_SPACE -> {
+                    vm.keyFlip(true)
+                    return true
+                }
+                KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_DPAD_LEFT -> {
+                    vm.keyFlip(false)
+                    return true
+                }
             }
         }
-        if (event.action == KeyEvent.ACTION_DOWN) {
-            when (code) {
-                KeyEvent.KEYCODE_PAGE_DOWN, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_SPACE -> if (!vm.ui.value.menu) { vm.keyFlip(true); return true }
-                KeyEvent.KEYCODE_PAGE_UP, KeyEvent.KEYCODE_DPAD_LEFT -> if (!vm.ui.value.menu) { vm.keyFlip(false); return true }
-            }
-        }
-        return super.dispatchKeyEvent(event)
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        if (volumeHandled(keyCode)) return true
+        return super.onKeyUp(keyCode, event)
     }
 
     companion object {
@@ -189,6 +226,7 @@ class ReaderActivity : ComponentActivity() {
         const val EXTRA_CHAPTER = "chapter"
         const val EXTRA_OFFSET = "offset"
         const val DIM_THRESHOLD = 0.15f
+        private const val STATE_BOOK = "opened_book"
 
         fun intent(context: Context, bookId: Long): Intent = Intent(context, ReaderActivity::class.java).putExtra(EXTRA_BOOK_ID, bookId)
 

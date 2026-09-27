@@ -44,7 +44,6 @@ import com.readarea.ui.components.StatTile
 import com.readarea.ui.components.formatDuration
 import java.time.LocalDate
 import java.time.format.TextStyle
-import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -53,6 +52,7 @@ fun StatsScreen(vm: LibraryViewModel, @Suppress("UNUSED_PARAMETER") actions: App
     val primary = MaterialTheme.colorScheme.primary
     val track = MaterialTheme.colorScheme.surfaceVariant
     val outline = MaterialTheme.colorScheme.outlineVariant
+    val locale = androidx.compose.ui.platform.LocalConfiguration.current.locales[0]
     Scaffold(topBar = { TopAppBar(title = { Text("Reading stats") }) }) { padding ->
         Box(Modifier.fillMaxSize().padding(top = padding.calculateTopPadding()), contentAlignment = Alignment.TopCenter) {
             Column(Modifier.widthIn(max = 840.dp).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 32.dp)) {
@@ -92,7 +92,7 @@ fun StatsScreen(vm: LibraryViewModel, @Suppress("UNUSED_PARAMETER") actions: App
                     Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
                         stats.week.forEach { (d, ms) ->
                             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(d.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()), style = MaterialTheme.typography.labelSmall)
+                                Text(d.dayOfWeek.getDisplayName(TextStyle.SHORT, locale), style = MaterialTheme.typography.labelSmall)
                                 Text(if (ms > 0) "${ms / 60_000}m" else "–", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }

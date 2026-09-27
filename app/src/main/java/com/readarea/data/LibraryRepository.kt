@@ -249,6 +249,7 @@ class LibraryRepository(
                 var pages = 0
                 when (opened) {
                     is ReflowableBook -> {
+                        if (format == BookFormat.CBZ) pages = 0
                         opened.book.coverBytes()?.let { bytes ->
                             ImageUtil.decodeSampled(bytes, 360, 540)?.let { bmp -> coverPath = saveCover(book.id, bmp) }
                         }

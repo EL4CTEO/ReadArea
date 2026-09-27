@@ -123,7 +123,7 @@ class PageFlipView(context: Context) : View(context) {
     override fun onDetachedFromWindow() {
         super.onDetachedFromWindow()
         animator?.cancel()
-        magnifier?.dismiss()
+        if (Build.VERSION.SDK_INT >= 29) magnifier?.dismiss()
         recycle()
     }
 
@@ -306,7 +306,7 @@ class PageFlipView(context: Context) : View(context) {
                 val vx = velocity?.xVelocity ?: 0f
                 velocity?.recycle()
                 velocity = null
-                magnifier?.dismiss()
+                if (Build.VERSION.SDK_INT >= 29) magnifier?.dismiss()
                 when (state) {
                     State.PRESSED -> {
                         state = State.IDLE
