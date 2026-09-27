@@ -15,8 +15,20 @@ android {
         applicationId = "com.readarea"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = System.getenv("READAREA_VERSION_CODE")?.toIntOrNull() ?: 1
+        versionName = System.getenv("READAREA_VERSION_NAME") ?: "1.0.0"
+    }
+
+    val releaseKeystore = System.getenv("READAREA_KEYSTORE")?.takeIf { it.isNotBlank() }
+    signingConfigs {
+        create("release") {
+            if (releaseKeystore != null) {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("READAREA_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("READAREA_KEY_ALIAS")
+                keyPassword = System.getenv("READAREA_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -24,7 +36,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (releaseKeystore != null) "release" else "debug")
         }
     }
 

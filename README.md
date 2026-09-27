@@ -65,11 +65,32 @@ Requirements: JDK 17+, Android SDK with platform 37.
 
 ```bash
 ./gradlew :app:assembleDebug        # debug APK
-./gradlew :app:assembleRelease      # minified release APK (signed with the debug key)
+./gradlew :app:assembleRelease      # minified release APK (debug key unless READAREA_KEYSTORE is set)
 ./gradlew :app:testDebugUnitTest    # parser, engine, rendering and UI screenshot tests
 ```
 
 Screenshot tests (Robolectric, native graphics) write PNGs to `app/build/screens`.
+
+## Releases
+
+Pushing a tag like `v1.2.0` runs `.github/workflows/release.yml`, which builds a signed release APK and publishes it as a GitHub Release (`ReadArea-1.2.0.apk`). The version name comes from the tag and the version code is `major * 10000 + minor * 100 + patch`, so every newer tag installs as an update.
+
+One-time setup, under Settings > Secrets and variables > Actions, add:
+
+| Secret | Value |
+| --- | --- |
+| `KEYSTORE_BASE64` | the release keystore, base64-encoded |
+| `KEYSTORE_PASSWORD` | keystore password |
+| `KEY_ALIAS` | key alias |
+| `KEY_PASSWORD` | key password |
+
+Keep a private backup of the keystore: Android only accepts updates signed with the same key.
+
+```bash
+git tag v1.2.0 && git push origin v1.2.0
+```
+
+The same build can be made locally by exporting `READAREA_KEYSTORE`, `READAREA_KEYSTORE_PASSWORD`, `READAREA_KEY_ALIAS`, `READAREA_KEY_PASSWORD`, `READAREA_VERSION_NAME` and `READAREA_VERSION_CODE` before `assembleRelease`.
 
 ## Tech
 
