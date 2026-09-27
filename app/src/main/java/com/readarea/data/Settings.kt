@@ -47,7 +47,7 @@ data class ReaderSettings(
     val brightnessSystem: Boolean = true,
     val brightness: Float = 0.5f,
     val warmth: Float = 0f,
-    val dim: Float = 0f,
+    val spread: String = "auto",
     val brightnessGesture: Boolean = true,
     val orientation: String = "auto",
     val ttsRate: Float = 1f,

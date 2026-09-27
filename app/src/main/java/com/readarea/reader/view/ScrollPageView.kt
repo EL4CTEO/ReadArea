@@ -113,6 +113,18 @@ class ScrollPageView(context: Context) : View(context) {
         if (pxPerSecond > 0f) Choreographer.getInstance().postFrameCallback(frameCallback)
     }
 
+    fun smoothScrollBy(dy: Float) {
+        scroller.forceFinished(true)
+        lastScrollY = 0
+        scroller.startScroll(0, 0, 0, (dy * scale).toInt(), 380)
+        postInvalidateOnAnimation()
+    }
+
+    fun setDetailFilter(filter: android.graphics.ColorFilter?) {
+        detailPaint.colorFilter = filter
+        invalidate()
+    }
+
     fun setPosition(pos: PagePos, fraction: Float) {
         anchor = pos
         val h = callback?.pageHeight(pos) ?: 0f

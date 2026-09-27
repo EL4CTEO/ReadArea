@@ -35,7 +35,7 @@ class PageFlipView(context: Context) : View(context) {
 
     interface Callback {
         fun canFlip(forward: Boolean): Boolean
-        fun drawPage(offset: Int, canvas: Canvas)
+        fun drawPage(offset: Int, canvas: Canvas): Boolean
         fun onFlipped(forward: Boolean)
         fun onTap(x: Float, y: Float)
         fun onLongPress(x: Float, y: Float)
@@ -147,9 +147,9 @@ class PageFlipView(context: Context) : View(context) {
     private fun ensure(offset: Int): Bitmap? {
         val cb = callback ?: return null
         return when (offset) {
-            0 -> bmCur?.also { if (!validCur) { cb.drawPage(0, Canvas(it)); validCur = true } }
-            1 -> bmNext?.also { if (!validNext) { cb.drawPage(1, Canvas(it)); validNext = true } }
-            else -> bmPrev?.also { if (!validPrev) { cb.drawPage(-1, Canvas(it)); validPrev = true } }
+            0 -> bmCur?.also { if (!validCur) validCur = cb.drawPage(0, Canvas(it)) }
+            1 -> bmNext?.also { if (!validNext) validNext = cb.drawPage(1, Canvas(it)) }
+            else -> bmPrev?.also { if (!validPrev) validPrev = cb.drawPage(-1, Canvas(it)) }
         }
     }
 
