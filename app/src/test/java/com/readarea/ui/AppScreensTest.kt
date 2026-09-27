@@ -57,8 +57,10 @@ class AppScreensTest {
 
     @Before
     fun setUp() {
+        com.readarea.TestIsolation.reset()
         val app = ApplicationProvider.getApplicationContext<ReadAreaApp>()
         runBlocking {
+            app.settings.updateApp { it.copy(askedDeviceScan = true) }
             seed.forEachIndexed { i, (title, author, progress) ->
                 val f = File(app.filesDir, "book$i.epub")
                 f.writeBytes(TestBooks.epub(chapters = 4, paragraphs = 12, withCover = false, title = title, author = author))

@@ -22,11 +22,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CreateNewFolder
+import androidx.compose.material.icons.rounded.TravelExplore
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material.icons.rounded.NoteAdd
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -99,12 +101,17 @@ fun HomeScreen(vm: LibraryViewModel, actions: AppActions) {
                 EmptyState(Illustration.BOOKS, stringResource(R.string.welcome_title), stringResource(R.string.welcome_body)) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         if (scan.running) LinearProgressIndicator(Modifier.fillMaxWidth().padding(bottom = 16.dp))
-                        Button(onClick = actions.addFolder, modifier = Modifier.fillMaxWidth()) {
+                        Button(onClick = actions.findBooks, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Rounded.TravelExplore, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(stringResource(R.string.find_books))
+                        }
+                        FilledTonalButton(onClick = actions.addFolder, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Rounded.CreateNewFolder, null)
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.add_folder))
                         }
-                        FilledTonalButton(onClick = actions.importFiles, modifier = Modifier.fillMaxWidth()) {
+                        TextButton(onClick = actions.importFiles, modifier = Modifier.fillMaxWidth()) {
                             Icon(Icons.Rounded.NoteAdd, null)
                             Spacer(Modifier.width(8.dp))
                             Text(stringResource(R.string.open_files))

@@ -357,7 +357,7 @@ class PageFlipView(context: Context) : View(context) {
     private fun lx(x: Float): Float = if (rtl) width - x else x
 
     private fun showMagnifier(x: Float, y: Float) {
-        if (Build.VERSION.SDK_INT < 29) return
+        if (Build.VERSION.SDK_INT < 29 || !isHardwareAccelerated) return
         val m = magnifier ?: Magnifier.Builder(this).build().also { magnifier = it }
         m.show(x, y)
     }

@@ -73,7 +73,6 @@ class RenderTest {
             val e = engine(ReaderSettings(theme = theme))
             val bmp = Bitmap.createBitmap(1080, 2340, Bitmap.Config.ARGB_8888)
             val deco = Decorations().apply {
-                clock = "21:45"
                 bookTitle = "The Test Book"
                 highlights = listOf(com.readarea.reader.engine.HighlightRange(0, 120, 220, ReadingThemes.highlightColors[0]))
             }
@@ -130,7 +129,7 @@ class RenderTest {
         assertTrue(pages >= 2)
         val bmp = Bitmap.createBitmap(1080, 2340, Bitmap.Config.ARGB_8888)
         for (p in 0 until minOf(pages, 3)) {
-            e.drawPage(Canvas(bmp), PagePos(0, p), Decorations().apply { clock = "8:15" })
+            e.drawPage(Canvas(bmp), PagePos(0, p), Decorations())
             save(bmp, "images_p$p.png")
         }
         val cp = e.pages(0)!!
@@ -141,7 +140,7 @@ class RenderTest {
     fun rendersTwoPageSpread() {
         val e = engine(w = 2176, h = 1812, columns = 2)
         val bmp = Bitmap.createBitmap(2176, 1812, Bitmap.Config.ARGB_8888)
-        e.drawPage(Canvas(bmp), PagePos(1, 0), Decorations().apply { bookTitle = "The Test Book"; clock = "9:30" })
+        e.drawPage(Canvas(bmp), PagePos(1, 0), Decorations().apply { bookTitle = "The Test Book" })
         save(bmp, "spread.png")
         assertEquals(PagePos(1, 2), e.next(PagePos(1, 0)))
     }
@@ -149,7 +148,7 @@ class RenderTest {
     private fun flipView(e: TextEngine, w: Int, h: Int, spread: Boolean, rtl: Boolean = false): PageFlipView {
         val ctx = ApplicationProvider.getApplicationContext<android.app.Application>()
         var pos = PagePos(0, 0)
-        val deco = Decorations().apply { bookTitle = "The Test Book"; clock = "9:30" }
+        val deco = Decorations().apply { bookTitle = "The Test Book" }
         val v = PageFlipView(ctx)
         v.mode = FlipMode.CURL
         v.spread = spread
@@ -240,7 +239,7 @@ class RenderTest {
         val sh = 1812
         val se = engine(w = sw, h = sh, columns = 2, rtl = true)
         val bmp = Bitmap.createBitmap(sw, sh, Bitmap.Config.ARGB_8888)
-        se.drawPage(Canvas(bmp), PagePos(1, 0), Decorations().apply { bookTitle = "The Test Book"; clock = "9:30" })
+        se.drawPage(Canvas(bmp), PagePos(1, 0), Decorations().apply { bookTitle = "The Test Book" })
         save(bmp, "rtl_spread.png")
         val sv = flipView(se, sw, sh, true, rtl = true)
         val t2 = t + 3000

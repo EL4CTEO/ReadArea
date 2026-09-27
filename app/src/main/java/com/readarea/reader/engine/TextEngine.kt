@@ -34,7 +34,97 @@ import java.text.BreakIterator
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicReferenceArray
 
-class ChapterPages(val text: Spanned, val layout: StaticLayout, val starts: IntArray) : PagedText {
+class ChapterPages(val text: Spanned, val layout: StaticLayout, val starts: IntArray, private val justified: Boolean = false) : PagedText {
+    private val justification = HashMap<Int, FloatArray?>()
+    private val scratch = Path()
+
+    private fun natural(a: Int, b: Int): Float {
+        if (b <= a) return 0f
+        var margin = 0
+        for (sp in text.getSpans(a, b, LeadingMarginSpan::class.java)) margin += sp.getLeadingMargin(true)
+        return Layout.getDesiredWidth(text, a, b, layout.paint) - margin
+    }
+
+    private fun spacesIn(a: Int, b: Int): Int {
+        var n = 0
+        for (i in a until b) if (text[i] == ' ') n++
+        return n
+    }
+
+    private fun justificationOf(line: Int): FloatArray? = synchronized(justification) {
+        if (justification.containsKey(line)) return justification[line]
+        val v = computeJustification(line)
+        justification[line] = v
+        v
+    }
+
+    private fun computeJustification(line: Int): FloatArray? {
+        if (!justified) return null
+        val start = layout.getLineStart(line)
+        val end = layout.getLineEnd(line)
+        if (end >= text.length || text[end - 1] == '\n') return null
+        var visible = end
+        while (visible > start && (text[visible - 1] == ' ' || text[visible - 1] == '\t' || text[visible - 1] == '\u3000')) visible--
+        val spaces = spacesIn(start, visible)
+        if (spaces == 0) return null
+        val dir = layout.getParagraphDirection(line).toFloat()
+        val startX = layout.getPrimaryHorizontal(start)
+        val last = text[end - 1]
+        val hyphen = last == '\u00AD' || last.isLetterOrDigit() && text[end].isLetterOrDigit()
+        val width = natural(start, visible) + if (hyphen) layout.paint.measureText("-") else 0f
+        val available = if (dir > 0) layout.width - startX else startX
+        return floatArrayOf(startX, (available - width) / spaces, dir, start.toFloat(), visible.toFloat())
+    }
+
+    fun x(line: Int, offset: Int): Float {
+        val j = justificationOf(line)
+        if (j == null) {
+            if (offset >= layout.getLineEnd(line) && line < layout.lineCount - 1) {
+                return if (layout.getParagraphDirection(line) < 0) layout.getLineLeft(line) else layout.getLineRight(line)
+            }
+            return layout.getPrimaryHorizontal(offset)
+        }
+        val start = j[3].toInt()
+        val o = offset.coerceIn(start, j[4].toInt())
+        return j[0] + j[2] * (natural(start, o) + j[1] * spacesIn(start, o))
+    }
+
+    fun offsetAt(line: Int, x: Float): Int {
+        val j = justificationOf(line) ?: return layout.getOffsetForHorizontal(line, x)
+        var lo = j[3].toInt()
+        var hi = j[4].toInt()
+        val dir = j[2]
+        while (hi - lo > 1) {
+            var mid = (lo + hi) / 2
+            if (Character.isLowSurrogate(text[mid]) && mid - 1 > lo) mid--
+            if (dir * (x(line, mid) - x) <= 0f) lo = mid else hi = mid
+        }
+        return if (kotlin.math.abs(x(line, lo) - x) <= kotlin.math.abs(x(line, hi) - x)) lo else hi
+    }
+
+    fun path(a: Int, b: Int, out: Path) {
+        if (b <= a) return
+        val first = layout.getLineForOffset(a)
+        val last = layout.getLineForOffset((b - 1).coerceAtLeast(a))
+        for (line in first..last) {
+            val ls = layout.getLineStart(line)
+            val le = layout.getLineEnd(line)
+            val s = maxOf(a, ls)
+            val e = minOf(b, le)
+            if (e <= s) continue
+            val j = justificationOf(line)
+            if (j == null) {
+                scratch.reset()
+                layout.getSelectionPath(s, e, scratch)
+                out.addPath(scratch)
+                continue
+            }
+            val x0 = x(line, s)
+            val x1 = if (e >= le && b > le) (if (j[2] > 0) layout.width.toFloat() else 0f) else x(line, e)
+            out.addRect(minOf(x0, x1), layout.getLineTop(line).toFloat(), maxOf(x0, x1), layout.getLineBottom(line).toFloat(), Path.Direction.CW)
+        }
+    }
+
     override val pageCount: Int get() = starts.size
     override fun startOffset(page: Int): Int = layout.getLineStart(starts[page.coerceIn(0, starts.size - 1)])
     override fun endOffset(page: Int): Int = if (page + 1 < starts.size) layout.getLineStart(starts[page + 1]) else text.length
@@ -314,15 +404,16 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
             }
         }
         if (sb.isEmpty()) sb.append(" \n")
+        val justify = st.justify && st.letterSpacing == 0f
         val layout = StaticLayout.Builder.obtain(sb, 0, sb.length, g.paint, s.contentWidth)
             .setLineSpacing(0f, st.lineSpacing)
             .setIncludePad(false)
-            .setBreakStrategy(if (st.justify || st.hyphenation) LineBreaker.BREAK_STRATEGY_HIGH_QUALITY else LineBreaker.BREAK_STRATEGY_SIMPLE)
+            .setBreakStrategy(if (justify || st.hyphenation) LineBreaker.BREAK_STRATEGY_HIGH_QUALITY else LineBreaker.BREAK_STRATEGY_SIMPLE)
             .setHyphenationFrequency(if (st.hyphenation) Layout.HYPHENATION_FREQUENCY_NORMAL else Layout.HYPHENATION_FREQUENCY_NONE)
-            .setJustificationMode(if (st.justify) LineBreaker.JUSTIFICATION_MODE_INTER_WORD else LineBreaker.JUSTIFICATION_MODE_NONE)
+            .setJustificationMode(if (justify) LineBreaker.JUSTIFICATION_MODE_INTER_WORD else LineBreaker.JUSTIFICATION_MODE_NONE)
             .apply { if (Build.VERSION.SDK_INT >= 28) setUseLineSpacingFromFallbacks(true) }
             .build()
-        return ChapterPages(sb, layout, paginate(layout, sb, s.contentHeight))
+        return ChapterPages(sb, layout, paginate(layout, sb, s.contentHeight), justify)
     }
 
     private fun paginate(layout: StaticLayout, text: Spanned, height: Int): IntArray {
@@ -373,7 +464,7 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
                     canvas.save()
                     canvas.translate(left, s.contentTop - top)
                     canvas.clipRect(-s.marginH, top.toFloat(), s.contentWidth + s.marginH, bottom.toFloat())
-                    drawHighlights(canvas, pos.chapter, pt.startOffset(page), pt.endOffset(page), deco, th) { a, b, out -> pt.layout.getSelectionPath(a, b, out) }
+                    drawHighlights(canvas, pos.chapter, pt.startOffset(page), pt.endOffset(page), deco, th) { a, b, out -> pt.path(a, b, out) }
                     pt.layout.draw(canvas)
                     canvas.restore()
                 }
@@ -407,7 +498,7 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
                 canvas.save()
                 canvas.translate(s.contentLeft, -top.toFloat())
                 canvas.clipRect(-s.marginH, top.toFloat(), s.contentWidth + s.marginH, bottom.toFloat())
-                drawHighlights(canvas, pos.chapter, pt.startOffset(pos.page), pt.endOffset(pos.page), deco, th) { a, b, out -> pt.layout.getSelectionPath(a, b, out) }
+                drawHighlights(canvas, pos.chapter, pt.startOffset(pos.page), pt.endOffset(pos.page), deco, th) { a, b, out -> pt.path(a, b, out) }
                 pt.layout.draw(canvas)
                 canvas.restore()
             }
@@ -455,7 +546,7 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
         val top = cp.top(page)
         val ly = (y - s.contentTop + top).toInt().coerceIn(top, (cp.bottom(page) - 1).coerceAtLeast(top))
         val line = cp.layout.getLineForVertical(ly)
-        return cp.layout.getOffsetForHorizontal(line, x - left)
+        return cp.offsetAt(line, x - left)
     }
 
     fun wordAt(pos: PagePos, x: Float, y: Float): IntRange? {
@@ -490,7 +581,7 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
         val line = cp.layout.getLineForVertical(ly)
         val lx = x - left
         if (lx < cp.layout.getLineLeft(line) - 12 * s.density || lx > cp.layout.getLineRight(line) + 12 * s.density) return null
-        val off = cp.layout.getOffsetForHorizontal(line, lx)
+        val off = cp.offsetAt(line, lx)
         val tol = 2
         val spans = cp.text.getSpans((off - tol).coerceAtLeast(0), (off + tol).coerceAtMost(cp.text.length), LinkSpan::class.java)
         if (spans.isEmpty()) return null
@@ -511,7 +602,7 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
             path.reset()
             when (pt) {
                 is ChapterPages -> {
-                    pt.layout.getSelectionPath(a, b, path)
+                    pt.path(a, b, path)
                     path.offset(s.columnLeft(col), s.contentTop - pt.top(page))
                 }
                 is VerticalPages -> pt.path(page, a, b, s.columnLeft(col), s.contentTop, path)
@@ -541,7 +632,7 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
         val cp = pt as ChapterPages
         var line = cp.layout.getLineForOffset(offset)
         if (isEnd && offset > 0 && line > 0 && cp.layout.getLineStart(line) == offset) line--
-        val x = if (isEnd && cp.layout.getLineEnd(line) <= offset) cp.layout.getLineRight(line) else cp.layout.getPrimaryHorizontal(offset)
+        val x = cp.x(line, offset)
         val y = cp.layout.getLineBaseline(line) + cp.layout.getLineDescent(line).coerceAtMost((s.fontPx * 0.3f).toInt())
         return PointF(x + left, y + s.contentTop - cp.top(page))
     }
@@ -603,21 +694,61 @@ class TextEngine(val book: ParsedBook, maxImageBytes: Int) : PageEngine() {
         return sb.toString()
     }
 
+    private class Folded(val text: String, val map: IntArray)
+
+    private val folded = arrayOfNulls<Folded>(chapterCount)
+
+    private fun fold(src: String): Folded {
+        val sb = StringBuilder(src.length)
+        val map = IntArray(src.length * 2 + 8)
+        var n = 0
+        fun put(c: Char, from: Int) {
+            if (n == map.size) return
+            sb.append(c)
+            map[n++] = from
+        }
+        for (i in src.indices) {
+            val c = src[i]
+            when (c) {
+                '\u00AD', '\u200B', '\u2060', '\uFEFF' -> continue
+                '\u2018', '\u2019', '\u02BC', '\u2032' -> put('\'', i)
+                '\u201C', '\u201D', '\u201E', '\u00AB', '\u00BB' -> put('"', i)
+                '\u00A0', '\u2007', '\u202F' -> put(' ', i)
+                '\u2010', '\u2011' -> put('-', i)
+                else -> {
+                    if (c.code < 0x80) {
+                        put(c.lowercaseChar(), i)
+                    } else {
+                        val d = java.text.Normalizer.normalize(c.toString(), java.text.Normalizer.Form.NFD)
+                        for (k in d) if (Character.getType(k) != Character.NON_SPACING_MARK.toInt()) put(k.lowercaseChar(), i)
+                    }
+                }
+            }
+        }
+        return Folded(sb.toString(), map.copyOf(n))
+    }
+
+    private fun folded(chapter: Int): Folded = folded[chapter] ?: fold(plainText(chapter)).also { folded[chapter] = it }
+
     fun search(query: String, limit: Int = 500): List<SearchHit> {
-        val q = query.trim()
+        val q = fold(query.trim()).text
         if (q.length < 2) return emptyList()
         val out = ArrayList<SearchHit>()
         for (c in 0 until chapterCount) {
             val t = plainText(c)
-            var i = t.indexOf(q, 0, ignoreCase = true)
-            while (i >= 0) {
+            val f = folded(c)
+            var k = f.text.indexOf(q)
+            while (k >= 0) {
+                val i = f.map[k]
+                val e = f.map[k + q.length - 1] + 1
                 val s = (i - 40).coerceAtLeast(0)
-                val e = (i + q.length + 60).coerceAtMost(t.length)
-                val snippet = t.substring(s, e).replace('\n', ' ').replace(OBJ.toString(), "")
-                val prefixLen = t.substring(s, i).replace('\n', ' ').replace(OBJ.toString(), "").length
-                out.add(SearchHit(c, i, i + q.length, (if (s > 0) "…" else "") + snippet + (if (e < t.length) "…" else ""), prefixLen + (if (s > 0) 1 else 0), prefixLen + (if (s > 0) 1 else 0) + q.length))
+                val se = (e + 60).coerceAtMost(t.length)
+                val clean: (String) -> String = { it.replace('\n', ' ').replace(OBJ.toString(), "").replace("\u00AD", "") }
+                val prefix = clean(t.substring(s, i)).length + if (s > 0) 1 else 0
+                val match = clean(t.substring(i, e)).length
+                out.add(SearchHit(c, i, e, (if (s > 0) "…" else "") + clean(t.substring(s, se)) + (if (se < t.length) "…" else ""), prefix, prefix + match))
                 if (out.size >= limit) return out
-                i = t.indexOf(q, i + q.length, ignoreCase = true)
+                k = f.text.indexOf(q, k + q.length)
             }
         }
         return out

@@ -80,6 +80,7 @@ fun SettingsScreen(vm: LibraryViewModel, actions: AppActions) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var removing by remember { mutableStateOf<String?>(null) }
+    var stopDevice by remember { mutableStateOf(false) }
     var cache by remember { mutableLongStateOf(0L) }
     LaunchedEffect(Unit) { cache = withContext(Dispatchers.IO) { vm.cacheSize() } }
     Scaffold(
@@ -160,6 +161,8 @@ fun SettingsScreen(vm: LibraryViewModel, actions: AppActions) {
                 Group(stringResource(R.string.library_folders))
                 Text(stringResource(R.string.library_folders_body), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Spacer(Modifier.height(8.dp))
+                val deviceOn = s.deviceScan && com.readarea.data.DeviceStorage.hasAccess(context)
+                Toggle(stringResource(R.string.device_scan), stringResource(R.string.device_scan_hint), deviceOn) { on -> if (on) actions.findBooks() else stopDevice = true }
                 s.folders.forEach { f ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Folder, null, tint = MaterialTheme.colorScheme.primary)
@@ -174,7 +177,7 @@ fun SettingsScreen(vm: LibraryViewModel, actions: AppActions) {
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(R.string.add_folder))
                     }
-                    OutlinedButton(onClick = vm::rescan, enabled = !scan.running && s.folders.isNotEmpty()) {
+                    OutlinedButton(onClick = vm::rescan, enabled = !scan.running && (s.folders.isNotEmpty() || s.deviceScan)) {
                         Icon(Icons.Rounded.Refresh, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(if (scan.running) R.string.scanning else R.string.rescan))
@@ -182,6 +185,7 @@ fun SettingsScreen(vm: LibraryViewModel, actions: AppActions) {
                 }
 
                 Group(stringResource(R.string.reading))
+                Toggle(stringResource(R.string.reopen_last), stringResource(R.string.reopen_last_hint), s.reopenLastBook) { v -> vm.updateSettings { it.copy(reopenLastBook = v) } }
                 Text(stringResource(R.string.reading_settings_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(onClick = { scope.launch { context.app.settings.updateReader { ReaderSettings() } } }) { Text(stringResource(R.string.reset_reading_settings)) }
 
@@ -199,6 +203,15 @@ fun SettingsScreen(vm: LibraryViewModel, actions: AppActions) {
                 Text(stringResource(R.string.about_privacy), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+    }
+    if (stopDevice) {
+        AlertDialog(
+            onDismissRequest = { stopDevice = false },
+            title = { Text(stringResource(R.string.device_scan)) },
+            text = { Text(stringResource(R.string.remove_folder_body, stringResource(R.string.this_device))) },
+            confirmButton = { TextButton(onClick = { vm.setDeviceScan(false, true); stopDevice = false }) { Text(stringResource(R.string.remove_books_too)) } },
+            dismissButton = { TextButton(onClick = { vm.setDeviceScan(false, false); stopDevice = false }) { Text(stringResource(R.string.keep_books)) } },
+        )
     }
     removing?.let { f ->
         AlertDialog(

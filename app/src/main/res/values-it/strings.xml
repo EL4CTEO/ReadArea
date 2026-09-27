@@ -44,10 +44,10 @@
     <string name="chapter_title_top">Titolo del capitolo in alto</string>
     <string name="clear">Cancella</string>
     <string name="clear_selection">Annulla selezione</string>
-    <string name="clock">Orologio</string>
     <string name="close">Chiudi</string>
     <string name="close_search">Chiudi ricerca</string>
     <string name="contents_notes">Indice e note</string>
+    <string name="continue_label">Continua</string>
     <string name="continue_percent">Continua · %d%%</string>
     <string name="continue_reading">Continua a leggere</string>
     <string name="copy">Copia</string>
@@ -65,6 +65,8 @@
     <string name="delete_shelf_body">I libri restano nella tua libreria.</string>
     <string name="delete_shelf_title">Eliminare «%s»?</string>
     <string name="details">Dettagli</string>
+    <string name="device_scan">Trova i libri automaticamente</string>
+    <string name="device_scan_hint">Cerca libri in questo dispositivo e nella scheda SD</string>
     <string name="dim">Attenuata</string>
     <string name="dim_hint">Scorri tutto a sinistra per scurire sotto il minimo dello schermo: perfetto per leggere a letto.</string>
     <string name="duration_hours_minutes">%1$d h %2$d min</string>
@@ -86,6 +88,9 @@
     <string name="filter_all">Tutti</string>
     <string name="filter_favorites">Preferiti</string>
     <string name="find">Trova</string>
+    <string name="find_books">Trova i miei libri</string>
+    <string name="find_books_body">ReadArea può cercare i libri nel telefono e nella scheda SD e tenere aggiornata la tua libreria da sola. Android ti chiederà di consentire l\'accesso a tutti i file. ReadArea legge solo i tuoi libri: non carica nulla e l\'app non ha accesso a internet.</string>
+    <string name="find_books_title">Trovare tutti i tuoi libri?</string>
     <string name="finished_this_year">Finiti quest\'anno</string>
     <string name="first_line_indent">Rientro prima riga</string>
     <string name="follow_system_dark">Segui la modalità scura del sistema</string>
@@ -117,6 +122,11 @@
     <string name="greeting_night">Lettura notturna</string>
     <string name="hero_empty_body">Il libro che stai leggendo apparirà qui, così potrai riprenderlo subito.</string>
     <string name="hero_empty_title">Scegli cosa leggere</string>
+    <string name="highlight_blue">Evidenziazione blu</string>
+    <string name="highlight_green">Evidenziazione verde</string>
+    <string name="highlight_orange">Evidenziazione arancione</string>
+    <string name="highlight_pink">Evidenziazione rosa</string>
+    <string name="highlight_yellow">Evidenziazione gialla</string>
     <string name="home_also_reading">Stai leggendo anche</string>
     <string name="home_recently_added">Aggiunti di recente</string>
     <string name="hyphenation">Sillabazione</string>
@@ -143,10 +153,10 @@
     <string name="left_aligned">Allineato a sinistra</string>
     <string name="left_to_right">Sinistra → destra</string>
     <string name="letter_spacing">Spaziatura lettere</string>
-    <string name="library_empty_body">Aggiungi una cartella e ReadArea troverà tutti i libri al suo interno, sottocartelle comprese.</string>
+    <string name="library_empty_body">Lascia che ReadArea trovi i tuoi libri, oppure aggiungi una cartella. Sono incluse anche le sottocartelle.</string>
     <string name="library_empty_title">La tua libreria è vuota</string>
     <string name="library_folders">Cartelle della libreria</string>
-    <string name="library_folders_body">ReadArea controlla queste cartelle e aggiunge automaticamente i nuovi libri. Può accedere solo alle cartelle scelte, senza permessi di archiviazione estesi.</string>
+    <string name="library_folders_body">ReadArea tiene sincronizzata la libreria e aggiunge automaticamente i nuovi libri.</string>
     <string name="line_spacing">Interlinea</string>
     <string name="look_inside">Sfoglia un\'anteprima</string>
     <string name="look_up">Cerca significato</string>
@@ -178,6 +188,7 @@
     <string name="no_highlights_short">Tieni premuta una parola, trascina le maniglie e scegli un colore.</string>
     <string name="no_matches_body">Prova un\'altra ricerca o un altro filtro.</string>
     <string name="no_matches_title">Nessun risultato</string>
+    <string name="not_now">Non ora</string>
     <string name="note">Nota</string>
     <string name="notes_subject">Note · %s</string>
     <string name="off">Disattivato</string>
@@ -234,6 +245,8 @@
     <string name="remove_from_shelf">Rimuovi dallo scaffale</string>
     <string name="rename">Rinomina</string>
     <string name="rename_shelf">Rinomina scaffale</string>
+    <string name="reopen_last">Riapri l\'ultimo libro</string>
+    <string name="reopen_last_hint">Quando torni in ReadArea, riprendi dalla pagina in cui eri rimasto</string>
     <string name="rescan">Ricerca di nuovo</string>
     <string name="rescan_folders">Cerca di nuovo nelle cartelle</string>
     <string name="reset">Ripristina</string>
@@ -312,6 +325,7 @@
     <string name="theme_sepia">Seppia</string>
     <string name="theme_sky">Cielo</string>
     <string name="theme_system">Sistema</string>
+    <string name="this_device">Questo dispositivo</string>
     <string name="time_left">Mancano %s</string>
     <string name="time_spent">%s di lettura</string>
     <string name="today">Oggi</string>
@@ -337,7 +351,7 @@
     <string name="wallpaper_colors_hint">Colori dinamici di Material You</string>
     <string name="warm_light">Luce calda</string>
     <string name="weight">Spessore</string>
-    <string name="welcome_body">Aggiungi una cartella con i tuoi libri e ReadArea la terrà sincronizzata. Supporta EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML e fumetti.</string>
+    <string name="welcome_body">ReadArea può trovare da sola tutti i libri del dispositivo, oppure puoi scegliere tu le cartelle. Supporta EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML e fumetti.</string>
     <string name="welcome_title">Benvenuto in ReadArea</string>
     <string name="writing_horizontal">Orizzontale</string>
     <string name="writing_mode">Direzione di scrittura</string>

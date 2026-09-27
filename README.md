@@ -23,9 +23,10 @@ Needs Android 8.0 or newer.
 
 ## Getting started
 
-1. Tap **Add a folder** and choose where your books are (for example *Download* or *Books*). New books you put there later show up by themselves.
-2. Or tap **Open files** to add single books, or open a book from any file manager with **Open with → ReadArea**.
+1. Tap **Find my books** and allow access. ReadArea lists every book on your phone, including downloads and files people sent you, and keeps the list up to date.
+2. Prefer to choose? Tap **Add a folder** or **Open files** instead, or open a book from any file manager with **Open with → ReadArea**.
 3. Tap a book to start reading. Tap the middle of a page to open the menu.
+4. Close the app while reading and it opens straight back to your page next time.
 
 ## What it can do
 
@@ -69,7 +70,7 @@ Needs Android 8.0 or newer.
 
 ## Privacy
 
-ReadArea has no internet access at all. There are no ads, no tracking and no accounts. It can only see the folders you choose, and everything you read, highlight or write stays on your phone.
+ReadArea has no internet access at all. There are no ads, no tracking and no accounts. It only reads files: it sees your whole storage if you use **Find my books**, or just the folders you choose otherwise, and you can turn that off in Settings. Removing a book from the library never deletes the file unless you ask. Everything you read, highlight or write stays on your phone.
 
 ## Questions
 

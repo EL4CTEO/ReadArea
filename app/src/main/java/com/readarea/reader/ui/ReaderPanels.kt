@@ -119,7 +119,7 @@ import androidx.compose.ui.res.pluralStringResource
 import com.readarea.R
 
 @Composable
-fun PanelHost(vm: ReaderViewModel, ui: ReaderUi, s: ReaderSettings, theme: ReadingTheme) {
+fun PanelHost(vm: ReaderViewModel, ui: ReaderUi, s: ReaderSettings, theme: ReadingTheme, night: Boolean) {
     if (ui.panel == Panel.NONE) return
     val tall = ui.panel == Panel.CONTENTS || ui.panel == Panel.SEARCH
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -135,7 +135,7 @@ fun PanelHost(vm: ReaderViewModel, ui: ReaderUi, s: ReaderSettings, theme: Readi
             when (ui.panel) {
                 Panel.CONTENTS -> ContentsPanel(vm, ui)
                 Panel.TYPOGRAPHY -> TypographyPanel(vm, s, ui)
-                Panel.THEME -> ThemePanel(vm, s, theme)
+                Panel.THEME -> ThemePanel(vm, s, theme, night)
                 Panel.LIGHT -> LightPanel(vm, s)
                 Panel.PAGING -> PagingPanel(vm, s, ui)
                 Panel.SEARCH -> SearchPanel(vm, ui)
@@ -478,14 +478,25 @@ private val inkTones = listOf(0xFF000000, 0xFF1F1F1F, 0xFF2D2A26, 0xFF4A3928, 0x
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ThemePanel(vm: ReaderViewModel, s: ReaderSettings, current: ReadingTheme) {
+private fun ThemePanel(vm: ReaderViewModel, s: ReaderSettings, current: ReadingTheme, night: Boolean) {
+    val nightActive = night && s.autoNight
+    val pick: (String) -> Unit = { id ->
+        vm.updateSettings { cur ->
+            val dark = ReadingThemes.all.firstOrNull { it.id == id }?.dark == true
+            when {
+                nightActive && dark -> cur.copy(nightTheme = id)
+                nightActive -> cur.copy(theme = id, autoNight = false)
+                else -> cur.copy(theme = id)
+            }
+        }
+    }
     PanelBody {
         SectionTitle(stringResource(R.string.reading_theme))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ReadingThemes.all.forEach { t -> ThemeSwatch(stringResource(themeLabel(t.id)), t.background, t.text, s.theme == t.id) { vm.updateSettings { it.copy(theme = t.id) } } }
-            ThemeSwatch(stringResource(R.string.theme_custom), s.customBg, s.customFg, s.theme == "custom") { vm.updateSettings { it.copy(theme = "custom") } }
+            ReadingThemes.all.forEach { t -> ThemeSwatch(stringResource(themeLabel(t.id)), t.background, t.text, current.id == t.id) { pick(t.id) } }
+            ThemeSwatch(stringResource(R.string.theme_custom), s.customBg, s.customFg, current.id == "custom") { pick("custom") }
         }
-        if (s.theme == "custom") {
+        if (current.id == "custom") {
             SectionTitle(stringResource(R.string.page_color))
             ColorRow(paperTones, s.customBg) { c -> vm.updateSettings { it.copy(customBg = c) } }
             SectionTitle(stringResource(R.string.text_color))
@@ -612,7 +623,6 @@ private fun PagingPanel(vm: ReaderViewModel, s: ReaderSettings, ui: ReaderUi) {
         SwitchRow(stringResource(R.string.chapter_title_top), null, s.showHeader) { v -> vm.updateSettings { it.copy(showHeader = v) } }
         SwitchRow(stringResource(R.string.page_info_bottom), null, s.showFooter) { v -> vm.updateSettings { it.copy(showFooter = v) } }
         if (s.showFooter) {
-            SwitchRow(stringResource(R.string.clock), null, s.showClock) { v -> vm.updateSettings { it.copy(showClock = v) } }
             SwitchRow(stringResource(R.string.progress_line), null, s.showProgressLine) { v -> vm.updateSettings { it.copy(showProgressLine = v) } }
         }
         SectionTitle(stringResource(R.string.orientation))

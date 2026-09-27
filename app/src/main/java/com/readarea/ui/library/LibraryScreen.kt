@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.CreateNewFolder
+import androidx.compose.material.icons.rounded.TravelExplore
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.GridView
@@ -49,6 +50,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Button
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
@@ -201,6 +207,7 @@ fun LibraryScreen(vm: LibraryViewModel, actions: AppActions) {
                 Box {
                     ExtendedFloatingActionButton(onClick = { addMenu = true }, icon = { Icon(Icons.Rounded.Add, null) }, text = { Text(stringResource(R.string.add_books)) })
                     DropdownMenu(addMenu, { addMenu = false }) {
+                        DropdownMenuItem(text = { Text(stringResource(R.string.find_books)) }, leadingIcon = { Icon(Icons.Rounded.TravelExplore, null) }, onClick = { addMenu = false; actions.findBooks() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.add_folder)) }, leadingIcon = { Icon(Icons.Rounded.CreateNewFolder, null) }, onClick = { addMenu = false; actions.addFolder() })
                         DropdownMenuItem(text = { Text(stringResource(R.string.open_files)) }, leadingIcon = { Icon(Icons.Rounded.NoteAdd, null) }, onClick = { addMenu = false; actions.importFiles() })
                     }
@@ -228,6 +235,7 @@ fun LibraryScreen(vm: LibraryViewModel, actions: AppActions) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         if (all.isNullOrEmpty()) {
                             EmptyState(Illustration.BOOKS, stringResource(R.string.library_empty_title), stringResource(R.string.library_empty_body)) {
+                                Button(onClick = actions.findBooks) { Text(stringResource(R.string.find_books)) }
                                 TextButton(onClick = actions.addFolder) { Text(stringResource(R.string.add_folder)) }
                             }
                         } else {
@@ -331,8 +339,11 @@ fun RemoveDialog(count: Int, onDismiss: () -> Unit, onConfirm: (Boolean) -> Unit
         text = {
             Column {
                 Text(pluralStringResource(R.plurals.remove_books_body, count, count))
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 12.dp)) {
-                    androidx.compose.material3.Checkbox(checked = deleteFiles, onCheckedChange = { deleteFiles = it })
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 12.dp).clip(RoundedCornerShape(12.dp)).toggleable(deleteFiles, role = Role.Checkbox) { deleteFiles = it }.padding(end = 8.dp),
+                ) {
+                    androidx.compose.material3.Checkbox(checked = deleteFiles, onCheckedChange = null)
                     Text(pluralStringResource(R.plurals.delete_files_too, count, count))
                 }
             }

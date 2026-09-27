@@ -1,23 +1,20 @@
 package com.readarea.reader
 
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.format.DateFormat
 import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.addCallback
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -28,7 +25,6 @@ import com.readarea.reader.ui.ReaderScreen
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import java.util.Date
 
 class ReaderActivity : ComponentActivity() {
     internal val vm: ReaderViewModel by viewModels()
@@ -37,10 +33,6 @@ class ReaderActivity : ComponentActivity() {
     private var timeoutMin = 5
     private var lastAwake = 0L
     private var openedId = 0L
-
-    private val tickReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) = updateClock()
-    }
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(com.readarea.AppLanguage.wrap(newBase))
@@ -58,6 +50,7 @@ class ReaderActivity : ComponentActivity() {
             }
         }
         vm.activityListener = { keepAwake() }
+        onBackPressedDispatcher.addCallback(this) { leaveReader() }
         val restored = savedInstanceState?.getLong(STATE_BOOK, 0L) ?: 0L
         if (restored > 0) {
             openedId = restored
@@ -74,11 +67,16 @@ class ReaderActivity : ComponentActivity() {
         setContent {
             ReaderScreen(
                 vm = vm,
-                onBack = { finish() },
+                onBack = { leaveReader() },
                 applyWindow = { s, preview, menu -> applyWindow(s, preview, menu) },
                 openExternal = { uri -> runCatching { startActivity(Intent(Intent.ACTION_VIEW, uri)) } },
             )
         }
+    }
+
+    private fun leaveReader() {
+        app.library.setResumeBook(0)
+        finish()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -108,6 +106,7 @@ class ReaderActivity : ComponentActivity() {
                 val newId = app.library.openExternal(data)
                 if (newId != null) {
                     openedId = newId
+                    app.library.setResumeBook(newId)
                     vm.open(newId)
                 } else {
                     finish()
@@ -175,8 +174,7 @@ class ReaderActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         vm.onSessionStart()
-        ContextCompat.registerReceiver(this, tickReceiver, IntentFilter(Intent.ACTION_TIME_TICK), ContextCompat.RECEIVER_NOT_EXPORTED)
-        updateClock()
+        if (openedId > 0) app.library.setResumeBook(openedId)
         lastAwake = 0L
         keepAwake()
     }
@@ -184,14 +182,8 @@ class ReaderActivity : ComponentActivity() {
     override fun onPause() {
         super.onPause()
         vm.onSessionEnd()
-        runCatching { unregisterReceiver(tickReceiver) }
         handler.removeCallbacksAndMessages(null)
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-    }
-
-    private fun updateClock() {
-        vm.deco.clock = DateFormat.getTimeFormat(this).format(Date())
-        vm.refreshChrome()
     }
 
     private fun volumeHandled(code: Int): Boolean {

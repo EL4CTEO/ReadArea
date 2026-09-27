@@ -83,10 +83,34 @@ class LibraryRepository(
         scope.launch { scanAll() }
     }
 
+    fun setDeviceScan(enabled: Boolean, removeBooks: Boolean = false) {
+        scope.launch {
+            settings.updateApp { it.copy(deviceScan = enabled, askedDeviceScan = true) }
+            if (enabled) scanAll() else if (removeBooks) db.books().deleteFolder(DeviceStorage.DEVICE)
+        }
+    }
+
+    fun setResumeBook(id: Long) {
+        scope.launch { settings.updateApp { if (it.resumeBookId == id) it else it.copy(resumeBookId = id) } }
+    }
+
+    suspend fun resumeTarget(): Long? {
+        val s = settings.appNow()
+        if (!s.reopenLastBook || s.resumeBookId <= 0) return null
+        val b = db.books().get(s.resumeBookId) ?: return null
+        return if (b.missing) null else b.id
+    }
+
+    fun markDeviceScanAsked() {
+        scope.launch { settings.updateApp { it.copy(askedDeviceScan = true) } }
+    }
+
     suspend fun scanAll() {
         if (scanMutex.isLocked) return
         scanMutex.withLock {
-            val folders = settings.appNow().folders
+            val app = settings.appNow()
+            val folders = app.folders
+            val ignored = app.ignored.toHashSet()
             _scan.value = ScanState(running = true, phase = ScanPhase.FOLDERS)
             var found = 0
             for (folder in folders) {
@@ -94,12 +118,17 @@ class LibraryRepository(
                 val files = runCatching { walkTree(tree) }.getOrElse { emptyList() }
                 found += files.size
                 _scan.value = _scan.value.copy(found = found)
-                val existing = db.books().all().filter { it.folderUri == folder }.associateBy { it.uri }
+                val all = db.books().all()
+                val existing = all.filter { it.folderUri == folder }.associateBy { it.uri }
+                val deviceUris = all.filter { it.folderUri == DeviceStorage.DEVICE }.map { it.uri }.toHashSet()
                 val seen = HashSet<String>()
                 for (f in files) {
                     seen.add(f.uri)
+                    if (f.uri in ignored) continue
                     val old = existing[f.uri]
                     if (old == null) {
+                        val real = DeviceStorage.realPath(f.uri)
+                        if (real != null && DeviceStorage.fileUri(File(real)) in deviceUris) continue
                         db.books().insert(
                             BookEntity(
                                 uri = f.uri, fileName = f.name, folderUri = folder, format = f.format.name, size = f.size,
@@ -113,10 +142,45 @@ class LibraryRepository(
                 val gone = existing.values.filter { it.uri !in seen && !it.missing }.map { it.id }
                 if (gone.isNotEmpty() && files.isNotEmpty()) db.books().setMissing(gone, true)
             }
+            if (app.deviceScan && DeviceStorage.hasAccess(context)) found += scanDevice(found, ignored)
             _scan.value = ScanState(running = true, found = found, phase = ScanPhase.DETAILS)
             metaMutex.withLock { loadPendingMetadata() }
             _scan.value = ScanState(running = false, found = found)
         }
+    }
+
+    private suspend fun scanDevice(base: Int, ignored: Set<String>): Int {
+        val roots = DeviceStorage.roots(context)
+        if (roots.isEmpty()) return 0
+        val found = ArrayList<DeviceStorage.Found>()
+        DeviceStorage.walk(roots) { f ->
+            found.add(f)
+            if (found.size % 20 == 0) _scan.value = _scan.value.copy(found = base + found.size)
+        }
+        _scan.value = _scan.value.copy(found = base + found.size)
+        val all = db.books().all()
+        val existing = all.filter { it.folderUri == DeviceStorage.DEVICE }.associateBy { it.uri }
+        val otherPaths = all.filter { it.folderUri != DeviceStorage.DEVICE }.mapNotNull { DeviceStorage.realPath(it.uri) }.toHashSet()
+        val seen = HashSet<String>()
+        for (f in found) {
+            val uri = DeviceStorage.fileUri(f.file)
+            seen.add(uri)
+            if (uri in ignored || f.file.absolutePath in otherPaths) continue
+            val old = existing[uri]
+            if (old == null) {
+                db.books().insert(
+                    BookEntity(
+                        uri = uri, fileName = f.file.name, folderUri = DeviceStorage.DEVICE, format = f.format.name, size = f.file.length(),
+                        title = cleanTitle(f.file.name), fileModified = f.file.lastModified(),
+                    ),
+                )
+            } else if (old.missing) {
+                db.books().setMissing(listOf(old.id), false)
+            }
+        }
+        val gone = existing.values.filter { it.uri !in seen && !it.missing }.map { it.id }
+        if (gone.isNotEmpty()) db.books().setMissing(gone, true)
+        return found.size
     }
 
     private data class FoundFile(val uri: String, val name: String, val size: Long, val modified: Long, val format: BookFormat)
@@ -311,20 +375,24 @@ class LibraryRepository(
     suspend fun get(id: Long) = db.books().get(id)
 
     suspend fun removeBooks(ids: List<Long>, deleteFiles: Boolean) = withContext(Dispatchers.IO) {
+        val keepOut = ArrayList<String>()
+        val imported = File(context.filesDir, "imported").canonicalPath + File.separator
         for (id in ids) {
             val b = db.books().get(id) ?: continue
             b.coverPath?.let { File(it).delete() }
-            if (deleteFiles) {
-                val uri = b.uri.toUri()
+            val uri = b.uri.toUri()
+            val ownCopy = uri.scheme == "file" && runCatching { File(uri.path!!).canonicalPath.startsWith(imported) }.getOrDefault(false)
+            if (deleteFiles || ownCopy) {
                 runCatching {
                     if (uri.scheme == "file") File(uri.path!!).delete() else DocumentsContract.deleteDocument(context.contentResolver, uri)
                 }
-            } else if (b.uri.startsWith("file:")) {
-                runCatching { File(b.uri.toUri().path!!).delete() }
+            } else if (b.folderUri != null) {
+                keepOut.add(b.uri)
             }
             File(File(context.cacheDir, "books"), "b$id.${BookFormat.byName(b.format).extensions.first()}").delete()
         }
         db.books().delete(ids)
+        if (keepOut.isNotEmpty()) settings.updateApp { s -> s.copy(ignored = (s.ignored + keepOut).distinct().takeLast(5000)) }
     }
 
     suspend fun createCollection(name: String, color: Int = 0): Long = db.collections().insert(CollectionEntity(name = name.trim(), color = color))

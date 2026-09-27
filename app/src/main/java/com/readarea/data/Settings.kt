@@ -41,7 +41,6 @@ data class ReaderSettings(
     val fullscreen: Boolean = true,
     val showHeader: Boolean = true,
     val showFooter: Boolean = true,
-    val showClock: Boolean = true,
     val showProgressLine: Boolean = true,
     val brightnessSystem: Boolean = true,
     val brightness: Float = 0.5f,
@@ -71,6 +70,11 @@ data class AppSettings(
     val onboardingDone: Boolean = false,
     val customFonts: List<String> = emptyList(),
     val showFormatBadges: Boolean = true,
+    val deviceScan: Boolean = false,
+    val askedDeviceScan: Boolean = false,
+    val ignored: List<String> = emptyList(),
+    val reopenLastBook: Boolean = true,
+    val resumeBookId: Long = 0,
 )
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")

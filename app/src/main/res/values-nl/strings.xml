@@ -44,10 +44,10 @@
     <string name="chapter_title_top">Hoofdstuktitel bovenaan</string>
     <string name="clear">Wissen</string>
     <string name="clear_selection">Selectie wissen</string>
-    <string name="clock">Klok</string>
     <string name="close">Sluiten</string>
     <string name="close_search">Zoeken sluiten</string>
     <string name="contents_notes">Inhoud en notities</string>
+    <string name="continue_label">Doorgaan</string>
     <string name="continue_percent">Verder · %d%%</string>
     <string name="continue_reading">Verder lezen</string>
     <string name="copy">Kopiëren</string>
@@ -65,6 +65,8 @@
     <string name="delete_shelf_body">De boeken blijven in je bibliotheek.</string>
     <string name="delete_shelf_title">“%s” verwijderen?</string>
     <string name="details">Details</string>
+    <string name="device_scan">Boeken automatisch vinden</string>
+    <string name="device_scan_hint">Dit apparaat en de SD-kaart doorzoeken op boeken</string>
     <string name="dim">Dimmen</string>
     <string name="dim_hint">Schuif helemaal naar links om onder het minimum van je scherm te dimmen — ideaal om in bed te lezen.</string>
     <string name="duration_hours_minutes">%1$d u %2$d m</string>
@@ -86,6 +88,9 @@
     <string name="filter_all">Alles</string>
     <string name="filter_favorites">Favorieten</string>
     <string name="find">Zoeken</string>
+    <string name="find_books">Mijn boeken zoeken</string>
+    <string name="find_books_body">ReadArea kan je telefoon en SD-kaart doorzoeken op boeken en je bibliotheek zelf up-to-date houden. Android vraagt je om toegang tot alle bestanden toe te staan. ReadArea leest alleen je boeken: er wordt niets geüpload en de app heeft geen internettoegang.</string>
+    <string name="find_books_title">Al je boeken vinden?</string>
     <string name="finished_this_year">Dit jaar uitgelezen</string>
     <string name="first_line_indent">Inspringing eerste regel</string>
     <string name="follow_system_dark">Donkere modus van systeem volgen</string>
@@ -117,6 +122,11 @@
     <string name="greeting_night">Laat nog aan het lezen</string>
     <string name="hero_empty_body">Je huidige boek verschijnt hier, zodat je meteen verder kunt lezen.</string>
     <string name="hero_empty_title">Kies iets om te lezen</string>
+    <string name="highlight_blue">Blauwe markering</string>
+    <string name="highlight_green">Groene markering</string>
+    <string name="highlight_orange">Oranje markering</string>
+    <string name="highlight_pink">Roze markering</string>
+    <string name="highlight_yellow">Gele markering</string>
     <string name="home_also_reading">Ook bezig met</string>
     <string name="home_recently_added">Onlangs toegevoegd</string>
     <string name="hyphenation">Woordafbreking</string>
@@ -143,10 +153,10 @@
     <string name="left_aligned">Links uitgelijnd</string>
     <string name="left_to_right">Links → rechts</string>
     <string name="letter_spacing">Letterafstand</string>
-    <string name="library_empty_body">Voeg een map toe en ReadArea vindt elk boek erin, ook in submappen.</string>
+    <string name="library_empty_body">Laat ReadArea je boeken zoeken of voeg een map toe. Submappen worden ook meegenomen.</string>
     <string name="library_empty_title">Je bibliotheek is leeg</string>
     <string name="library_folders">Bibliotheekmappen</string>
-    <string name="library_folders_body">ReadArea houdt deze mappen in de gaten en voegt nieuwe boeken automatisch toe. Alleen de mappen die je kiest zijn toegankelijk — geen brede opslagtoestemming nodig.</string>
+    <string name="library_folders_body">ReadArea houdt je bibliotheek bij en voegt nieuwe boeken automatisch toe.</string>
     <string name="line_spacing">Regelafstand</string>
     <string name="look_inside">Blik naar binnen</string>
     <string name="look_up">Opzoeken</string>
@@ -178,6 +188,7 @@
     <string name="no_highlights_short">Houd een woord ingedrukt, sleep de grepen en kies een kleur.</string>
     <string name="no_matches_body">Probeer een andere zoekopdracht of filter.</string>
     <string name="no_matches_title">Niets gevonden</string>
+    <string name="not_now">Niet nu</string>
     <string name="note">Notitie</string>
     <string name="notes_subject">Notities · %s</string>
     <string name="off">Uit</string>
@@ -234,6 +245,8 @@
     <string name="remove_from_shelf">Van plank halen</string>
     <string name="rename">Naam wijzigen</string>
     <string name="rename_shelf">Plank hernoemen</string>
+    <string name="reopen_last">Laatste boek opnieuw openen</string>
+    <string name="reopen_last_hint">Als je terugkomt in ReadArea, lees je verder op de pagina waar je was gebleven</string>
     <string name="rescan">Opnieuw scannen</string>
     <string name="rescan_folders">Mappen opnieuw scannen</string>
     <string name="reset">Resetten</string>
@@ -312,6 +325,7 @@
     <string name="theme_sepia">Sepia</string>
     <string name="theme_sky">Lucht</string>
     <string name="theme_system">Systeem</string>
+    <string name="this_device">Dit apparaat</string>
     <string name="time_left">Nog %s</string>
     <string name="time_spent">%s besteed</string>
     <string name="today">Vandaag</string>
@@ -337,7 +351,7 @@
     <string name="wallpaper_colors_hint">Dynamische kleuren van Material You</string>
     <string name="warm_light">Warm licht</string>
     <string name="weight">Dikte</string>
-    <string name="welcome_body">Voeg een map met je boeken toe en ReadArea houdt die automatisch bij. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML en strips worden ondersteund.</string>
+    <string name="welcome_body">ReadArea kan zelf alle boeken op je apparaat vinden, of je kiest zelf mappen. EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML en strips worden ondersteund.</string>
     <string name="welcome_title">Welkom bij ReadArea</string>
     <string name="writing_horizontal">Horizontaal</string>
     <string name="writing_mode">Schrijfrichting</string>

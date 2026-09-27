@@ -44,10 +44,10 @@
     <string name="chapter_title_top">顶部显示章节标题</string>
     <string name="clear">清除</string>
     <string name="clear_selection">清除选择</string>
-    <string name="clock">时钟</string>
     <string name="close">关闭</string>
     <string name="close_search">关闭搜索</string>
     <string name="contents_notes">目录和笔记</string>
+    <string name="continue_label">继续</string>
     <string name="continue_percent">继续 · %d%%</string>
     <string name="continue_reading">继续阅读</string>
     <string name="copy">复制</string>
@@ -65,6 +65,8 @@
     <string name="delete_shelf_body">图书仍会保留在书库中。</string>
     <string name="delete_shelf_title">删除“%s”？</string>
     <string name="details">详情</string>
+    <string name="device_scan">自动查找图书</string>
+    <string name="device_scan_hint">在本设备和 SD 卡中查找图书</string>
     <string name="dim">调暗</string>
     <string name="dim_hint">滑到最左侧可以调得比屏幕最低亮度还暗——非常适合睡前阅读。</string>
     <string name="duration_hours_minutes">%1$d 小时 %2$d 分钟</string>
@@ -86,6 +88,9 @@
     <string name="filter_all">全部</string>
     <string name="filter_favorites">收藏</string>
     <string name="find">查找</string>
+    <string name="find_books">查找我的书</string>
+    <string name="find_books_body">ReadArea 可以在手机和 SD 卡中查找图书，并自动保持书库最新。Android 会请你允许访问所有文件。ReadArea 只读取你的图书：不会上传任何内容，而且应用没有联网权限。</string>
+    <string name="find_books_title">要查找你所有的书吗？</string>
     <string name="finished_this_year">今年读完</string>
     <string name="first_line_indent">首行缩进</string>
     <string name="follow_system_dark">跟随系统深色模式</string>
@@ -117,6 +122,11 @@
     <string name="greeting_night">深夜阅读</string>
     <string name="hero_empty_body">当前在读的书会显示在这里，方便你随时接着读。</string>
     <string name="hero_empty_title">挑一本书来读吧</string>
+    <string name="highlight_blue">蓝色高亮</string>
+    <string name="highlight_green">绿色高亮</string>
+    <string name="highlight_orange">橙色高亮</string>
+    <string name="highlight_pink">粉色高亮</string>
+    <string name="highlight_yellow">黄色高亮</string>
     <string name="home_also_reading">还在读</string>
     <string name="home_recently_added">最近添加</string>
     <string name="hyphenation">断字</string>
@@ -143,10 +153,10 @@
     <string name="left_aligned">左对齐</string>
     <string name="left_to_right">从左 → 右</string>
     <string name="letter_spacing">字距</string>
-    <string name="library_empty_body">添加一个文件夹，ReadArea 会找到其中的每一本书，包括子文件夹。</string>
+    <string name="library_empty_body">让 ReadArea 查找你的图书，或添加一个文件夹。子文件夹也会包含在内。</string>
     <string name="library_empty_title">书库是空的</string>
     <string name="library_folders">书库文件夹</string>
-    <string name="library_folders_body">ReadArea 会监视这些文件夹并自动添加新书。只能访问你选择的文件夹——无需宽泛的存储权限。</string>
+    <string name="library_folders_body">ReadArea 会同步你的书库并自动添加新书。</string>
     <string name="line_spacing">行距</string>
     <string name="look_inside">试读</string>
     <string name="look_up">查词</string>
@@ -178,6 +188,7 @@
     <string name="no_highlights_short">长按一个词，拖动手柄，然后选择颜色。</string>
     <string name="no_matches_body">试试其他搜索词或筛选条件。</string>
     <string name="no_matches_title">没有匹配项</string>
+    <string name="not_now">暂不</string>
     <string name="note">笔记</string>
     <string name="notes_subject">笔记 · %s</string>
     <string name="off">关闭</string>
@@ -234,6 +245,8 @@
     <string name="remove_from_shelf">从书架移除</string>
     <string name="rename">重命名</string>
     <string name="rename_shelf">重命名书架</string>
+    <string name="reopen_last">重新打开上次的书</string>
+    <string name="reopen_last_hint">回到 ReadArea 时，从上次离开的页面继续阅读</string>
     <string name="rescan">重新扫描</string>
     <string name="rescan_folders">重新扫描文件夹</string>
     <string name="reset">重置</string>
@@ -312,6 +325,7 @@
     <string name="theme_sepia">复古</string>
     <string name="theme_sky">天空</string>
     <string name="theme_system">跟随系统</string>
+    <string name="this_device">本设备</string>
     <string name="time_left">剩余 %s</string>
     <string name="time_spent">用时 %s</string>
     <string name="today">今天</string>
@@ -337,7 +351,7 @@
     <string name="wallpaper_colors_hint">Material You 动态配色</string>
     <string name="warm_light">暖光</string>
     <string name="weight">粗细</string>
-    <string name="welcome_body">添加存放图书的文件夹，ReadArea 会自动保持同步。支持 EPUB、PDF、MOBI、FB2、DOCX、TXT、Markdown、RTF、ODT、HTML 和漫画。</string>
+    <string name="welcome_body">ReadArea 可以自动找到设备上的所有图书，你也可以自己选择文件夹。支持 EPUB、PDF、MOBI、FB2、DOCX、TXT、Markdown、RTF、ODT、HTML 和漫画。</string>
     <string name="welcome_title">欢迎使用 ReadArea</string>
     <string name="writing_horizontal">横排</string>
     <string name="writing_mode">文字方向</string>

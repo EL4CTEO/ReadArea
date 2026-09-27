@@ -44,10 +44,10 @@
     <string name="chapter_title_top">Título do capítulo no topo</string>
     <string name="clear">Limpar</string>
     <string name="clear_selection">Limpar seleção</string>
-    <string name="clock">Relógio</string>
     <string name="close">Fechar</string>
     <string name="close_search">Fechar pesquisa</string>
     <string name="contents_notes">Sumário e anotações</string>
+    <string name="continue_label">Continuar</string>
     <string name="continue_percent">Continuar · %d%%</string>
     <string name="continue_reading">Continuar lendo</string>
     <string name="copy">Copiar</string>
@@ -65,6 +65,8 @@
     <string name="delete_shelf_body">Os livros continuam na sua biblioteca.</string>
     <string name="delete_shelf_title">Excluir “%s”?</string>
     <string name="details">Detalhes</string>
+    <string name="device_scan">Encontrar livros automaticamente</string>
+    <string name="device_scan_hint">Procurar livros neste dispositivo e no cartão SD</string>
     <string name="dim">Esmaecido</string>
     <string name="dim_hint">Deslize até o fim à esquerda para escurecer abaixo do mínimo da tela, ótimo para ler na cama.</string>
     <string name="duration_hours_minutes">%1$d h %2$d min</string>
@@ -86,6 +88,9 @@
     <string name="filter_all">Todos</string>
     <string name="filter_favorites">Favoritos</string>
     <string name="find">Localizar</string>
+    <string name="find_books">Encontrar meus livros</string>
+    <string name="find_books_body">O ReadArea pode procurar livros no seu celular e no cartão SD e manter sua biblioteca atualizada sozinho. O Android vai pedir que você permita o acesso a todos os arquivos. O ReadArea só lê seus livros: nada é enviado, e o app não tem acesso à internet.</string>
+    <string name="find_books_title">Encontrar todos os seus livros?</string>
     <string name="finished_this_year">Concluídos este ano</string>
     <string name="first_line_indent">Recuo da primeira linha</string>
     <string name="follow_system_dark">Seguir o modo escuro do sistema</string>
@@ -117,6 +122,11 @@
     <string name="greeting_night">Leitura noturna</string>
     <string name="hero_empty_body">Seu livro atual vai aparecer aqui para você voltar direto a ele.</string>
     <string name="hero_empty_title">Escolha algo para ler</string>
+    <string name="highlight_blue">Destaque azul</string>
+    <string name="highlight_green">Destaque verde</string>
+    <string name="highlight_orange">Destaque laranja</string>
+    <string name="highlight_pink">Destaque rosa</string>
+    <string name="highlight_yellow">Destaque amarelo</string>
     <string name="home_also_reading">Também lendo</string>
     <string name="home_recently_added">Adicionados recentemente</string>
     <string name="hyphenation">Hifenização</string>
@@ -143,10 +153,10 @@
     <string name="left_aligned">Alinhado à esquerda</string>
     <string name="left_to_right">Esquerda → direita</string>
     <string name="letter_spacing">Espaçamento entre letras</string>
-    <string name="library_empty_body">Adicione uma pasta e o ReadArea vai encontrar todos os livros nela, inclusive em subpastas.</string>
+    <string name="library_empty_body">Deixe o ReadArea encontrar seus livros ou adicione uma pasta. As subpastas também são incluídas.</string>
     <string name="library_empty_title">Sua biblioteca está vazia</string>
     <string name="library_folders">Pastas da biblioteca</string>
-    <string name="library_folders_body">O ReadArea monitora estas pastas e adiciona livros novos automaticamente. Só as pastas escolhidas ficam acessíveis, sem permissão ampla de armazenamento.</string>
+    <string name="library_folders_body">O ReadArea mantém sua biblioteca sincronizada e adiciona livros novos automaticamente.</string>
     <string name="line_spacing">Espaçamento entre linhas</string>
     <string name="look_inside">Dê uma olhada</string>
     <string name="look_up">Consultar</string>
@@ -178,6 +188,7 @@
     <string name="no_highlights_short">Toque e segure uma palavra, arraste as alças e escolha uma cor.</string>
     <string name="no_matches_body">Tente outra pesquisa ou outro filtro.</string>
     <string name="no_matches_title">Nenhum resultado</string>
+    <string name="not_now">Agora não</string>
     <string name="note">Anotação</string>
     <string name="notes_subject">Anotações · %s</string>
     <string name="off">Desativado</string>
@@ -234,6 +245,8 @@
     <string name="remove_from_shelf">Remover da estante</string>
     <string name="rename">Renomear</string>
     <string name="rename_shelf">Renomear estante</string>
+    <string name="reopen_last">Reabrir o último livro</string>
+    <string name="reopen_last_hint">Ao voltar ao ReadArea, continue na página onde parou</string>
     <string name="rescan">Verificar de novo</string>
     <string name="rescan_folders">Verificar pastas de novo</string>
     <string name="reset">Redefinir</string>
@@ -312,6 +325,7 @@
     <string name="theme_sepia">Sépia</string>
     <string name="theme_sky">Céu</string>
     <string name="theme_system">Sistema</string>
+    <string name="this_device">Este dispositivo</string>
     <string name="time_left">Faltam %s</string>
     <string name="time_spent">%s de leitura</string>
     <string name="today">Hoje</string>
@@ -337,7 +351,7 @@
     <string name="wallpaper_colors_hint">Cores dinâmicas do Material You</string>
     <string name="warm_light">Luz quente</string>
     <string name="weight">Peso</string>
-    <string name="welcome_body">Adicione uma pasta com seus livros e o ReadArea a manterá sincronizada. Compatível com EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML e quadrinhos.</string>
+    <string name="welcome_body">O ReadArea pode encontrar sozinho todos os livros do seu dispositivo, ou você pode escolher pastas. Compatível com EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML e quadrinhos.</string>
     <string name="welcome_title">Boas-vindas ao ReadArea</string>
     <string name="writing_horizontal">Horizontal</string>
     <string name="writing_mode">Direção da escrita</string>

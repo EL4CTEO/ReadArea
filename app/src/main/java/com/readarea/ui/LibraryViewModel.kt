@@ -66,7 +66,8 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
 
     init {
         viewModelScope.launch {
-            if (settingsRepo.appNow().folders.isNotEmpty()) repo.scanAll()
+            val app = settingsRepo.appNow()
+            if (app.folders.isNotEmpty() || app.deviceScan) repo.scanAll()
         }
     }
 
@@ -142,6 +143,17 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
     fun addFolder(uri: Uri) = repo.addFolder(uri)
     fun removeFolder(uri: String, removeBooks: Boolean) = repo.removeFolder(uri, removeBooks)
     fun rescan() = repo.rescan()
+
+    fun setDeviceScan(enabled: Boolean, removeBooks: Boolean = false) = repo.setDeviceScan(enabled, removeBooks)
+
+    fun markDeviceScanAsked() = repo.markDeviceScanAsked()
+
+    suspend fun resumeTarget(): Long? = repo.resumeTarget()
+
+    suspend fun shouldOfferDeviceScan(): Boolean {
+        val s = settingsRepo.appNow()
+        return !s.askedDeviceScan && !s.deviceScan
+    }
 
     fun importFiles(uris: List<Uri>, onDone: (List<Long>) -> Unit = {}) {
         viewModelScope.launch { onDone(repo.importFiles(uris)) }

@@ -11,6 +11,12 @@ import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.TravelExplore
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
+import com.readarea.data.DeviceStorage
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
@@ -69,6 +75,7 @@ class AppActions(
     val back: () -> Unit,
     val addFolder: () -> Unit,
     val importFiles: () -> Unit,
+    val findBooks: () -> Unit = {},
 )
 
 val bookMimeTypes = arrayOf(
@@ -92,6 +99,34 @@ fun ReadAreaRoot(vm: LibraryViewModel) {
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris: List<Uri> ->
         if (uris.isNotEmpty()) vm.importFiles(uris) { ids -> if (ids.size == 1) openReader(context, ids[0]) }
     }
+    var findDialog by rememberSaveable { mutableStateOf(false) }
+    val accessSettings = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        if (DeviceStorage.hasAccess(context)) vm.setDeviceScan(true) else vm.markDeviceScanAsked()
+    }
+    val accessPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) vm.setDeviceScan(true) else vm.markDeviceScanAsked()
+    }
+    LaunchedEffect(Unit) {
+        if (vm.shouldOfferDeviceScan()) {
+            if (DeviceStorage.hasAccess(context)) vm.setDeviceScan(true) else findDialog = true
+        }
+    }
+    if (findDialog) {
+        AlertDialog(
+            onDismissRequest = { findDialog = false; vm.markDeviceScanAsked() },
+            icon = { Icon(Icons.Rounded.TravelExplore, null) },
+            title = { Text(stringResource(R.string.find_books_title)) },
+            text = { Text(stringResource(R.string.find_books_body)) },
+            confirmButton = {
+                Button(onClick = {
+                    findDialog = false
+                    if (DeviceStorage.needsSettingsScreen) accessSettings.launch(DeviceStorage.accessIntent(context))
+                    else accessPermission.launch(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                }) { Text(stringResource(R.string.continue_label)) }
+            },
+            dismissButton = { TextButton(onClick = { findDialog = false; vm.markDeviceScanAsked() }) { Text(stringResource(R.string.not_now)) } },
+        )
+    }
     val actions = remember(backStack) {
         AppActions(
             openBook = { openReader(context, it) },
@@ -106,6 +141,7 @@ fun ReadAreaRoot(vm: LibraryViewModel) {
             back = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) },
             addFolder = { folderPicker.launch(null) },
             importFiles = { filePicker.launch(bookMimeTypes) },
+            findBooks = { if (DeviceStorage.hasAccess(context)) vm.setDeviceScan(true) else findDialog = true },
         )
     }
     val top = backStack.lastOrNull()

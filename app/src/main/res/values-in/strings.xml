@@ -44,10 +44,10 @@
     <string name="chapter_title_top">Judul bab di atas</string>
     <string name="clear">Hapus</string>
     <string name="clear_selection">Hapus pilihan</string>
-    <string name="clock">Jam</string>
     <string name="close">Tutup</string>
     <string name="close_search">Tutup penelusuran</string>
     <string name="contents_notes">Daftar isi &amp; catatan</string>
+    <string name="continue_label">Lanjutkan</string>
     <string name="continue_percent">Lanjutkan · %d%%</string>
     <string name="continue_reading">Lanjutkan membaca</string>
     <string name="copy">Salin</string>
@@ -65,6 +65,8 @@
     <string name="delete_shelf_body">Buku tetap ada di pustaka Anda.</string>
     <string name="delete_shelf_title">Hapus “%s”?</string>
     <string name="details">Detail</string>
+    <string name="device_scan">Temukan buku secara otomatis</string>
+    <string name="device_scan_hint">Cari buku di perangkat ini dan kartu SD</string>
     <string name="dim">Redupkan</string>
     <string name="dim_hint">Geser ke paling kiri untuk meredupkan di bawah batas minimum layar — cocok untuk membaca di tempat tidur.</string>
     <string name="duration_hours_minutes">%1$d j %2$d m</string>
@@ -86,6 +88,9 @@
     <string name="filter_all">Semua</string>
     <string name="filter_favorites">Favorit</string>
     <string name="find">Cari</string>
+    <string name="find_books">Temukan bukuku</string>
+    <string name="find_books_body">ReadArea dapat mencari buku di ponsel dan kartu SD Anda serta menjaga pustaka tetap terbaru dengan sendirinya. Android akan meminta Anda mengizinkan akses ke semua file. ReadArea hanya membaca buku Anda: tidak ada yang diunggah, dan aplikasi ini tidak punya akses internet.</string>
+    <string name="find_books_title">Temukan semua buku Anda?</string>
     <string name="finished_this_year">Selesai tahun ini</string>
     <string name="first_line_indent">Indentasi baris pertama</string>
     <string name="follow_system_dark">Ikuti mode gelap sistem</string>
@@ -117,6 +122,11 @@
     <string name="greeting_night">Membaca larut malam</string>
     <string name="hero_empty_body">Buku yang sedang Anda baca akan muncul di sini agar bisa langsung dilanjutkan.</string>
     <string name="hero_empty_title">Pilih bacaan</string>
+    <string name="highlight_blue">Sorotan biru</string>
+    <string name="highlight_green">Sorotan hijau</string>
+    <string name="highlight_orange">Sorotan oranye</string>
+    <string name="highlight_pink">Sorotan merah muda</string>
+    <string name="highlight_yellow">Sorotan kuning</string>
     <string name="home_also_reading">Juga sedang dibaca</string>
     <string name="home_recently_added">Baru ditambahkan</string>
     <string name="hyphenation">Pemenggalan kata</string>
@@ -143,10 +153,10 @@
     <string name="left_aligned">Rata kiri</string>
     <string name="left_to_right">Kiri → kanan</string>
     <string name="letter_spacing">Jarak huruf</string>
-    <string name="library_empty_body">Tambahkan folder dan ReadArea akan menemukan setiap buku di dalamnya, termasuk subfolder.</string>
+    <string name="library_empty_body">Biarkan ReadArea menemukan buku Anda, atau tambahkan folder. Subfolder juga disertakan.</string>
     <string name="library_empty_title">Pustaka Anda kosong</string>
     <string name="library_folders">Folder pustaka</string>
-    <string name="library_folders_body">ReadArea memantau folder ini dan menambahkan buku baru secara otomatis. Hanya folder yang Anda pilih yang dapat diakses — tidak perlu izin penyimpanan luas.</string>
+    <string name="library_folders_body">ReadArea menjaga pustaka tetap sinkron dan menambahkan buku baru secara otomatis.</string>
     <string name="line_spacing">Jarak baris</string>
     <string name="look_inside">Intip isinya</string>
     <string name="look_up">Cari arti</string>
@@ -178,6 +188,7 @@
     <string name="no_highlights_short">Tekan lama sebuah kata, seret tuas, lalu pilih warna.</string>
     <string name="no_matches_body">Coba penelusuran atau filter lain.</string>
     <string name="no_matches_title">Tidak ada yang cocok</string>
+    <string name="not_now">Nanti saja</string>
     <string name="note">Catatan</string>
     <string name="notes_subject">Catatan · %s</string>
     <string name="off">Nonaktif</string>
@@ -234,6 +245,8 @@
     <string name="remove_from_shelf">Hapus dari rak</string>
     <string name="rename">Ganti nama</string>
     <string name="rename_shelf">Ganti nama rak</string>
+    <string name="reopen_last">Buka lagi buku terakhir</string>
+    <string name="reopen_last_hint">Saat kembali ke ReadArea, lanjutkan dari halaman terakhir yang Anda baca</string>
     <string name="rescan">Pindai ulang</string>
     <string name="rescan_folders">Pindai ulang folder</string>
     <string name="reset">Reset</string>
@@ -312,6 +325,7 @@
     <string name="theme_sepia">Sepia</string>
     <string name="theme_sky">Langit</string>
     <string name="theme_system">Sistem</string>
+    <string name="this_device">Perangkat ini</string>
     <string name="time_left">Sisa %s</string>
     <string name="time_spent">%s dihabiskan</string>
     <string name="today">Hari ini</string>
@@ -337,7 +351,7 @@
     <string name="wallpaper_colors_hint">Warna dinamis Material You</string>
     <string name="warm_light">Cahaya hangat</string>
     <string name="weight">Ketebalan</string>
-    <string name="welcome_body">Tambahkan folder berisi buku Anda dan ReadArea akan terus menyinkronkannya. Mendukung EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML, dan komik.</string>
+    <string name="welcome_body">ReadArea dapat menemukan semua buku di perangkat Anda dengan sendirinya, atau Anda bisa memilih folder. Mendukung EPUB, PDF, MOBI, FB2, DOCX, TXT, Markdown, RTF, ODT, HTML, dan komik.</string>
     <string name="welcome_title">Selamat datang di ReadArea</string>
     <string name="writing_horizontal">Horizontal</string>
     <string name="writing_mode">Arah tulisan</string>
