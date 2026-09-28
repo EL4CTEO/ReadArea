@@ -69,6 +69,9 @@ class EpubParser(private val zip: ZipAccess) {
         val tocRaw = parseNav(manifest) ?: parseNcx(spine?.get("toc"), manifest) ?: emptyList()
         // Chapters and stylesheets together may only expand to so much, so a small archive of highly
         // compressible entries can't tie up the reader or fill its memory.
+        // Refused before any parsing when the archive admits to being too large; one that understates its sizes is
+        // still stopped by the running count below.
+        if (spineItems.sumOf { zip.declaredSize(it.href) ?: 0L } > Limits.MARKUP) throw BookParseException(ParseError.TOO_LARGE, "This book is too large to open")
         var markup = 0L
         val readMarkup: (String) -> ByteArray? = { path ->
             zip.read(path)?.also {
@@ -79,6 +82,9 @@ class EpubParser(private val zip: ZipAccess) {
         val cssCache = HashMap<String, String?>()
         val loadCss: (String) -> String? = { path -> cssCache.getOrPut(path) { readMarkup(path)?.let { TextDecoder.decode(it) } } }
 
+        // The first table-of-contents title for each document, looked up per chapter instead of searched for.
+        val tocTitles = HashMap<String, String>()
+        for ((href, title, _) in tocRaw) tocTitles.putIfAbsent(href.substringBefore('#'), title)
         val chapterIndex = HashMap<String, Int>()
         val chapters = ArrayList<Chapter>()
         var verticalVotes = 0
@@ -89,7 +95,7 @@ class EpubParser(private val zip: ZipAccess) {
             val converter = HtmlConverter(item.href, Stylesheet(), loadCss)
             val blocks = converter.convert(html)
             if (converter.vertical) verticalVotes++ else if (converter.horizontalDeclared) horizontalVotes++
-            val tocTitle = tocRaw.firstOrNull { it.first.substringBefore('#') == item.href }?.second
+            val tocTitle = tocTitles[item.href]
             val chapterTitle = tocTitle ?: converter.firstHeading ?: converter.docTitle?.takeIf { it != meta.title } ?: ""
             chapters.add(Chapter(chapterTitle, item.href, blocks))
         }

@@ -21,13 +21,18 @@ object BookPostProcessor {
             result.addAll(splitBySize(c))
             mapping.add(start until result.size)
         }
+        // Where each anchor landed in a chapter that was split, indexed once per chapter: a table of contents
+        // with thousands of entries into one long chapter would otherwise search all of it for each entry.
+        val anchorsIn = HashMap<Int, Map<String, Int>>()
+        fun anchorIndex(range: IntRange): Map<String, Int> = anchorsIn.getOrPut(range.first) {
+            val index = HashMap<String, Int>()
+            for (idx in range) for (b in result[idx].blocks) for (a in b.anchors) index.putIfAbsent(a.id, idx)
+            index
+        }
         toc = if (toc.isEmpty()) buildToc(result) else toc.map { item ->
             val range = mapping.getOrNull(item.chapter) ?: return@map item
             if (range.first == range.last || item.anchor == null) item.copy(chapter = range.first)
-            else {
-                val target = range.firstOrNull { idx -> result[idx].blocks.any { b -> b.anchors.any { it.id == item.anchor } } } ?: range.first
-                item.copy(chapter = target)
-            }
+            else item.copy(chapter = anchorIndex(range)[item.anchor] ?: range.first)
         }
         var meta = book.meta
         if (meta.language == null) TextDirection.guessCjkLanguage(sample(result))?.let { meta = meta.copy(language = it) }
@@ -52,13 +57,18 @@ object BookPostProcessor {
         val level = (1..3).firstOrNull { lvl -> blocks.count { it.kind == BlockKind.HEADING && it.level == lvl } >= 2 } ?: return listOf(chapter)
         val out = ArrayList<Chapter>()
         var cur = ArrayList<Block>()
+        // Whether the current section has anything but its headings yet; tracked rather than searched for at
+        // each heading, which was quadratic in a run of consecutive headings.
+        var hasBody = false
         var title = chapter.title
         for (b in blocks) {
-            if (b.kind == BlockKind.HEADING && b.level <= level && cur.any { it.kind != BlockKind.HEADING || it.level > level }) {
+            val splits = b.kind == BlockKind.HEADING && b.level <= level
+            if (splits && hasBody) {
                 out.add(Chapter(title, "${chapter.href}#${out.size}", cur))
                 cur = ArrayList()
+                hasBody = false
             }
-            if (b.kind == BlockKind.HEADING && b.level <= level) title = b.text.replace('\n', ' ').trim()
+            if (splits) title = b.text.replace('\n', ' ').trim() else hasBody = true
             cur.add(b)
         }
         if (cur.isNotEmpty()) out.add(Chapter(title, "${chapter.href}#${out.size}", cur))

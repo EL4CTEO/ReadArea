@@ -212,8 +212,11 @@ object Entities {
                 i++
                 continue
             }
-            val semi = s.indexOf(';', i + 1)
-            if (semi > i + 1 && semi - i <= 12) {
+            // Entities are short: look for the ';' only as far as one could be, not to the end of the text for
+            // every '&' (quadratic on text full of them).
+            var semi = -1
+            for (k in i + 1 until minOf(n, i + 13)) if (s[k] == ';') { semi = k; break }
+            if (semi > i + 1) {
                 val ent = s.substring(i + 1, semi)
                 val rep = resolve(ent)
                 if (rep != null) {

@@ -104,6 +104,10 @@ object TextDecoder {
 
 interface ZipAccess : ResourceProvider {
     val entries: List<String>
+
+    /** The uncompressed size the archive declares for [path], if known. A crafted archive can understate it. */
+    fun declaredSize(path: String): Long? = null
+
     fun close() {}
 }
 
@@ -123,8 +127,12 @@ class FileZipAccess(file: File) : ZipAccess {
         index = names.associateBy { it.lowercase() }
     }
 
+    private fun resolve(path: String): String? = if (zip.getEntry(path) != null) path else index[path.lowercase()] ?: index[PathUtil.decode(path).lowercase()]
+
+    override fun declaredSize(path: String): Long? = resolve(path)?.let { zip.getEntry(it)?.size }?.takeIf { it >= 0 }
+
     override fun read(path: String): ByteArray? {
-        val name = if (zip.getEntry(path) != null) path else index[path.lowercase()] ?: index[PathUtil.decode(path).lowercase()] ?: return null
+        val name = resolve(path) ?: return null
         return synchronized(zip) {
             val entry = zip.getEntry(name) ?: return null
             zip.getInputStream(entry).use { it.readCapped(Limits.ENTRY) }

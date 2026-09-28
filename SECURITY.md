@@ -37,8 +37,9 @@ get an answer, and credit in the release notes if you'd like it.
 - metadata (titles, authors, descriptions) bounded in length and cleared of control characters and
   text-direction overrides before it's stored or shown.
 
-These are tested: `core/src/test/.../security` holds an exploit test for each attack and a mutation fuzzer
-that runs thousands of damaged books in every format; `desktop/src/test/.../security` does the same for PDFs,
+These are tested: `core/src/test/.../security` holds an exploit test for each attack, a mutation fuzzer
+that runs thousands of damaged books in every format, and a complexity fuzzer that repeats random patterns
+of each format's syntax into large books and fails if opening them takes more than linear time; `desktop/src/test/.../security` does the same for PDFs,
 comics and the desktop app's own surface.
 
 **Nothing leaves the book.** Pictures come only from inside the book (or, for Markdown and HTML files, from
