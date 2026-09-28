@@ -4,7 +4,9 @@
 /local.properties
 /.idea/
 .DS_Store
-build/
+# Build output of the root project and each module; not source folders that happen to be called build.
+/build/
+/*/build/
 /captures/
 .externalNativeBuild/
 .cxx/
