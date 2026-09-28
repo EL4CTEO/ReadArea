@@ -394,4 +394,7 @@
     <plurals name="selected_count">
         <item quantity="other">已选择 %d 项</item>
     </plurals>
+    <string name="choose_folder_again">选择文件夹</string>
+    <string name="folder_access_lost_body">ReadArea 已无法打开“%s”中的书。重新选择该文件夹即可找回这些书。</string>
+    <string name="folder_access_lost_title">要再次允许访问吗？</string>
 </resources>

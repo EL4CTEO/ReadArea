@@ -414,4 +414,7 @@
         <item quantity="many">%d selecionados</item>
         <item quantity="other">%d selecionados</item>
     </plurals>
+    <string name="choose_folder_again">Escolher pasta</string>
+    <string name="folder_access_lost_body">O ReadArea não consegue mais abrir os livros em “%s”. Escolha essa pasta de novo para recuperá-los.</string>
+    <string name="folder_access_lost_title">Permitir o acesso de novo?</string>
 </resources>

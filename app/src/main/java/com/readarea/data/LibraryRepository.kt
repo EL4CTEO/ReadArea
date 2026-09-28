@@ -47,6 +47,11 @@ class LibraryRepository(
     private val _scan = MutableStateFlow(ScanState())
     val scan: StateFlow<ScanState> = _scan.asStateFlow()
 
+    private val _lostFolders = MutableStateFlow<List<String>>(emptyList())
+
+    /** Library folders Android no longer lets ReadArea read, whose books are set aside until it's granted again. */
+    val lostFolders: StateFlow<List<String>> = _lostFolders.asStateFlow()
+
     val books = db.books().observeAll()
     val collections = db.collections().observe()
     val highlights = db.notes().allHighlights()
@@ -98,7 +103,17 @@ class LibraryRepository(
         val s = settings.appNow()
         if (!s.reopenLastBook || s.resumeBookId <= 0) return null
         val b = db.books().get(s.resumeBookId) ?: return null
-        return if (b.missing) null else b.id
+        // Starting on an error page instead of the library helps nobody: only reopen a book that can be read.
+        return if (b.missing || !canRead(b.uri)) null else b.id
+    }
+
+    /** Whether a book's file can be opened right now, checked without reading it. */
+    private suspend fun canRead(uri: String): Boolean = withContext(Dispatchers.IO) {
+        val u = uri.toUri()
+        runCatching {
+            if (u.scheme == "file") File(u.path!!).canRead()
+            else context.contentResolver.openFileDescriptor(u, "r")?.use { true } ?: false
+        }.getOrDefault(false)
     }
 
     suspend fun adoptGrantedAccess(): Boolean {
@@ -121,9 +136,19 @@ class LibraryRepository(
             val ignored = app.ignored.toHashSet()
             _scan.value = ScanState(running = true, phase = ScanPhase.FOLDERS)
             var found = 0
+            val lost = ArrayList<String>()
             for (folder in folders) {
                 val tree = folder.toUri()
-                val files = runCatching { walkTree(tree) }.getOrElse { emptyList() }
+                val walked = runCatching { walkTree(tree) }
+                if (walked.exceptionOrNull() is SecurityException) {
+                    // Android took back access to this folder (a reinstall restored from backup, or access withdrawn):
+                    // its books can't be opened, so they are set aside until the folder is chosen again.
+                    lost.add(folder)
+                    val stranded = db.books().all().filter { it.folderUri == folder && !it.missing }.map { it.id }
+                    setMissing(stranded, true)
+                    continue
+                }
+                val files = walked.getOrElse { emptyList() }
                 found += files.size
                 _scan.value = _scan.value.copy(found = found)
                 val all = db.books().all()
@@ -150,7 +175,16 @@ class LibraryRepository(
                 val gone = existing.values.filter { it.uri !in seen && !it.missing }.map { it.id }
                 if (gone.isNotEmpty() && files.isNotEmpty()) db.books().setMissing(gone, true)
             }
-            if (app.deviceScan && DeviceStorage.hasAccess(context)) found += scanDevice(found, ignored)
+            _lostFolders.value = lost
+            if (DeviceStorage.hasAccess(context)) {
+                if (app.deviceScan) found += scanDevice(found, ignored)
+            } else {
+                // Books found on the device can only be read with access to all files; without it they'd fail when opened.
+                val stranded = db.books().all().filter { it.folderUri == DeviceStorage.DEVICE && !it.missing }.map { it.id }
+                setMissing(stranded, true)
+            }
+            checkImportedAccess()
+            forgetLostCovers()
             _scan.value = ScanState(running = true, found = found, phase = ScanPhase.DETAILS)
             metaMutex.withLock { loadPendingMetadata() }
             _scan.value = ScanState(running = false, found = found)
@@ -190,6 +224,32 @@ class LibraryRepository(
         if (gone.isNotEmpty()) db.books().setMissing(gone, true)
         return found.size
     }
+
+    /**
+     * Books added one by one keep a permission per file, which Android can take back (a reinstall, or its limit on
+     * how many it keeps). Those that can't be opened are set aside, and come back once they can be.
+     */
+    private suspend fun checkImportedAccess() = withContext(Dispatchers.IO) {
+        val held = context.contentResolver.persistedUriPermissions.filter { it.isReadPermission }.map { it.uri.toString() }.toHashSet()
+        val imported = db.books().all().filter { it.folderUri == null && it.uri.toUri().scheme == "content" }
+        val lost = ArrayList<Long>()
+        val back = ArrayList<Long>()
+        for (b in imported) {
+            val readable = b.uri in held || canRead(b.uri)
+            if (!readable && !b.missing) lost.add(b.id) else if (readable && b.missing) back.add(b.id)
+        }
+        setMissing(lost, true)
+        setMissing(back, false)
+    }
+
+    /** Covers live in app storage, which a restore from backup doesn't bring back: read the ones that are gone again. */
+    private suspend fun forgetLostCovers() = withContext(Dispatchers.IO) {
+        val gone = db.books().all().filter { b -> b.coverPath?.let { !File(it).exists() } == true }.map { it.id }
+        gone.chunked(500).forEach { db.books().forgetCovers(it) }
+    }
+
+    /** Android's SQLite takes at most 999 values in one statement, and these lists can be a whole library. */
+    private suspend fun setMissing(ids: List<Long>, missing: Boolean) = ids.chunked(500).forEach { db.books().setMissing(it, missing) }
 
     private data class FoundFile(val uri: String, val name: String, val size: Long, val modified: Long, val format: BookFormat)
 
@@ -357,13 +417,18 @@ class LibraryRepository(
             } finally {
                 opened.close()
             }
-        }.getOrElse { book.copy(metaLoaded = true) }
+        }
+        // A file that can't be opened right now (not reachable, or access not granted yet) is tried again on the next
+        // scan; only one that opened but couldn't be read is settled without details.
+        val error = updated.exceptionOrNull()
+        if (error is java.io.FileNotFoundException || error is SecurityException) return
+        val details = updated.getOrElse { book.copy(metaLoaded = true) }
         val current = db.books().get(book.id) ?: return
         db.books().update(
             current.copy(
-                title = updated.title, author = updated.author, description = updated.description, language = updated.language,
-                series = updated.series, seriesIndex = updated.seriesIndex, publisher = updated.publisher, coverPath = updated.coverPath,
-                metaLoaded = true, pageCount = updated.pageCount,
+                title = details.title, author = details.author, description = details.description, language = details.language,
+                series = details.series, seriesIndex = details.seriesIndex, publisher = details.publisher, coverPath = details.coverPath,
+                metaLoaded = true, pageCount = details.pageCount,
             ),
         )
     }

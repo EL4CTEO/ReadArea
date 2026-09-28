@@ -424,4 +424,7 @@
         <item quantity="many">Zaznaczono %d</item>
         <item quantity="other">Zaznaczono %d</item>
     </plurals>
+    <string name="choose_folder_again">Wybierz folder</string>
+    <string name="folder_access_lost_body">ReadArea nie może już otworzyć książek w „%s”. Wybierz ten folder ponownie, aby je odzyskać.</string>
+    <string name="folder_access_lost_title">Zezwolić ponownie na dostęp?</string>
 </resources>

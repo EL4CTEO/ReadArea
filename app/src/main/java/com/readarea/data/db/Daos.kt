@@ -60,6 +60,10 @@ interface BookDao {
     @Query("UPDATE books SET missing = :missing WHERE id IN (:ids)")
     suspend fun setMissing(ids: List<Long>, missing: Boolean)
 
+    /** Forgets covers whose image is gone, so their details are read again. */
+    @Query("UPDATE books SET coverPath = NULL, metaLoaded = 0 WHERE id IN (:ids)")
+    suspend fun forgetCovers(ids: List<Long>)
+
     @Query("DELETE FROM books WHERE id IN (:ids)")
     suspend fun delete(ids: List<Long>)
 

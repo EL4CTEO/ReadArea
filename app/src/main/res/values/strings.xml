@@ -406,4 +406,7 @@
         <item quantity="one">%d selected</item>
         <item quantity="other">%d selected</item>
     </plurals>
+    <string name="choose_folder_again">Choose folder</string>
+    <string name="folder_access_lost_body">ReadArea can no longer open the books in “%s”. Choose that folder again to bring them back.</string>
+    <string name="folder_access_lost_title">Allow access again?</string>
 </resources>

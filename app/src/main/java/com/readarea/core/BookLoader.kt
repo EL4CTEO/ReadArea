@@ -227,10 +227,14 @@ object ImageUtil {
 
 object BookLoader {
 
-    private fun metaZip(context: Context, uri: Uri, keep: (String, Long) -> Boolean): MemoryZipAccess {
+    private fun metaZip(context: Context, uri: Uri, maxEntry: Int = MemoryZipAccess.MAX_ENTRY, keep: (String, Long) -> Boolean): MemoryZipAccess {
         val input = if (uri.scheme == "file") File(uri.path!!).inputStream() else context.contentResolver.openInputStream(uri) ?: throw FileNotFoundException("Unable to open file")
-        return input.use { MemoryZipAccess(it, keep) }
+        return input.use { MemoryZipAccess(it, maxEntry, keep) }
     }
+
+    /** Reads one image from a book for its cover; high-resolution covers can be larger than other entries read for details. */
+    private fun coverEntry(context: Context, uri: Uri, ref: String): ByteArray? =
+        metaZip(context, uri, Limits.ENTRY) { name, _ -> name.equals(ref, true) || PathUtil.decode(name).equals(ref, true) }.read(ref)
 
     private fun isImage(name: String): Boolean {
         val l = name.lowercase()
@@ -239,7 +243,7 @@ object BookLoader {
 
     private fun withCover(context: Context, uri: Uri, zip: ZipAccess, parsed: ParsedBook): ReflowableBook {
         val ref = parsed.meta.coverRef
-        val bytes = ref?.let { r -> zip.read(r) ?: metaZip(context, uri) { name, _ -> name.equals(r, true) || PathUtil.decode(name).equals(r, true) }.read(r) }
+        val bytes = ref?.let { r -> zip.read(r) ?: coverEntry(context, uri, r) }
         return ReflowableBook(ParsedBook(parsed.meta, emptyList(), emptyList(), ResourceProvider { p -> if (p == ref) bytes else null }))
     }
 
@@ -255,7 +259,7 @@ object BookLoader {
                 val docZip = metaZip(context, uri) { name, _ -> name.equals(doc, true) || PathUtil.decode(name).equals(doc, true) }
                 EpubParser(docZip).firstImageIn(doc)
             }
-            val coverBytes = coverRef?.let { ref -> zip.read(ref) ?: metaZip(context, uri) { name, _ -> name.equals(ref, true) || PathUtil.decode(name).equals(ref, true) }.read(ref) }
+            val coverBytes = coverRef?.let { ref -> zip.read(ref) ?: coverEntry(context, uri, ref) }
             val meta = (if (parsed.meta.title.isBlank()) parsed.meta.copy(title = title) else parsed.meta).copy(coverRef = coverRef)
             ReflowableBook(ParsedBook(meta, emptyList(), emptyList(), ResourceProvider { p -> if (p == coverRef) coverBytes else null }))
         }
@@ -270,7 +274,7 @@ object BookLoader {
         BookFormat.CBZ -> {
             val names = metaZip(context, uri) { _, _ -> false }.entries
             val best = names.filter { isImage(it) && !it.lowercase().startsWith("__macosx") }.minWithOrNull { a, b -> CbzSource.naturalCompare(a, b) }
-            val cover = best?.let { b -> metaZip(context, uri) { name, _ -> name == b }.read(b) }
+            val cover = best?.let { b -> metaZip(context, uri, Limits.ENTRY) { name, _ -> name == b }.read(b) }
             ReflowableBook(ParsedBook(BookMeta(title = title, coverRef = best), emptyList(), emptyList(), ResourceProvider { p -> if (p == best) cover else null }))
         }
         else -> null

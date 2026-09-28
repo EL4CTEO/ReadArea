@@ -404,4 +404,7 @@
         <item quantity="one">%d geselecteerd</item>
         <item quantity="other">%d geselecteerd</item>
     </plurals>
+    <string name="choose_folder_again">Map kiezen</string>
+    <string name="folder_access_lost_body">ReadArea kan de boeken in ‘%s’ niet meer openen. Kies die map opnieuw om ze terug te halen.</string>
+    <string name="folder_access_lost_title">Opnieuw toegang geven?</string>
 </resources>
