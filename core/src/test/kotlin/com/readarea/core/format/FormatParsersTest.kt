@@ -38,6 +38,12 @@ class FormatParsersTest {
         assertEquals("bold", css.compute("p", null, null, "font-weight: bold !important")["font-weight"])
         assertNull(css.compute("p", null, null, null)["color"])
         assertEquals(1.5f, Stylesheet.fontScale("150%")!!, 0.001f)
+        // Media queries nested a few levels still apply; an unclosed comment hides the rest of the sheet.
+        val nested = Stylesheet()
+        nested.add("@media screen { @media (min-width: 1px) { h2 { text-align: center } } } h3 /* { */ { font-style: italic } /* h4 { color: red }")
+        assertEquals("center", nested.compute("h2", null, null, null)["text-align"])
+        assertEquals("italic", nested.compute("h3", null, null, null)["font-style"])
+        assertNull(nested.compute("h4", null, null, null)["color"])
     }
 
     @Test

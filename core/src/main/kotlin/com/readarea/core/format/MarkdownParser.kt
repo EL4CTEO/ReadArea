@@ -12,16 +12,17 @@ class MarkdownParser(private val source: String, private val fallbackTitle: Stri
 
     companion object {
         private val HEADING = Regex("^(#{1,6})\\s+(.*)$")
-        private val HR = Regex("^\\s{0,3}([-*_])(\\s*\\1){2,}\\s*$")
         private val UL = Regex("^(\\s*)[-*+]\\s+(.*)$")
         private val OL = Regex("^(\\s*)\\d+[.)]\\s+(.*)$")
-        private val IMAGE = Regex("!\\[([^\\]\\n]{0,500}+)]\\(([^)\\s]{1,2000}+)(?:\\s++\"[^\"\\n]{0,500}+\")?\\)")
-        private val LINK = Regex("\\[([^\\]\\n]{1,500}+)]\\(([^)\\s]{1,2000}+)(?:\\s++\"[^\"\\n]{0,500}+\")?\\)")
-        private val AUTOLINK = Regex("<(https?://[^>\\s]{1,2000}+)>")
+        // Link text and targets stop at any bracket (and autolinks at any '<'), so a scan started at one bracket
+        // never runs through the next: each character is looked at a bounded number of times.
+        private val IMAGE = Regex("!\\[([^\\[\\]\\n]{0,500}+)]\\(([^)\\[\\]\\s]{1,2000}+)(?:\\s++\"[^\"\\n]{0,500}+\")?\\)")
+        private val LINK = Regex("\\[([^\\[\\]\\n]{1,500}+)]\\(([^)\\[\\]\\s]{1,2000}+)(?:\\s++\"[^\"\\n]{0,500}+\")?\\)")
+        private val AUTOLINK = Regex("<(https?://[^<>\\s]{1,2000}+)>")
         private val CODE = Regex("`([^`]+)`")
-        private val BOLD = Regex("(\\*\\*|__)(?=\\S)(.+?)(?<=\\S)\\1")
-        private val ITALIC = Regex("(\\*|_)(?=\\S)(.+?)(?<=\\S)\\1")
-        private val STRIKE = Regex("~~(.+?)~~")
+        private val BOLD = listOf("**", "__")
+        private val ITALIC = listOf("*", "_")
+        private val STRIKE = listOf("~~")
 
         fun toHtml(md: String): String {
             val lines = md.replace("\r\n", "\n").split('\n')
@@ -107,7 +108,7 @@ class MarkdownParser(private val source: String, private val fallbackTitle: Stri
                     i++
                     return@let
                 } ?: run {
-                    if (HR.matches(line)) {
+                    if (isRule(line)) {
                         flushPara()
                         closeLists()
                         out.append("<hr/>\n")
@@ -170,11 +171,68 @@ class MarkdownParser(private val source: String, private val fallbackTitle: Stri
             t = IMAGE.replace(t) { m -> hold("<img src=\"${attr(m.groupValues[2])}\" alt=\"${attr(m.groupValues[1])}\"/>") }
             t = LINK.replace(t) { m -> hold("<a href=\"${attr(m.groupValues[2])}\">") + m.groupValues[1] + "</a>" }
             t = t.replace("&lt;br&gt;", "<br/>").replace("&lt;br/&gt;", "<br/>")
-            t = BOLD.replace(t) { m -> "<b>${m.groupValues[2]}</b>" }
-            t = ITALIC.replace(t) { m -> "<i>${m.groupValues[2]}</i>" }
-            t = STRIKE.replace(t) { m -> "<s>${m.groupValues[1]}</s>" }
+            t = emphasis(t, BOLD, "b", flanking = true)
+            t = emphasis(t, ITALIC, "i", flanking = true)
+            t = emphasis(t, STRIKE, "s", flanking = false)
             t = Regex("\u0003(\\d+)\u0003").replace(t) { m -> tags[m.groupValues[1].toInt()] }
             return Regex("\u0001(\\d+)\u0001").replace(t) { m -> "<code>${esc(codes[m.groupValues[1].toInt()])}</code>" }
+        }
+
+        /**
+         * A thematic break: up to three spaces, then three or more of the same `-`, `*` or `_`, spaced as you
+         * like. Checked by hand because the regex for it recursed once per repetition and overflowed the stack
+         * on a long line of them.
+         */
+        internal fun isRule(line: String): Boolean {
+            val start = line.indexOfFirst { !it.isWhitespace() }
+            if (start !in 0..3) return false
+            val c = line[start]
+            if (c != '-' && c != '*' && c != '_') return false
+            var count = 0
+            for (k in start until line.length) {
+                val ch = line[k]
+                if (ch == c) count++ else if (!ch.isWhitespace()) return false
+            }
+            return count >= 3
+        }
+
+        /**
+         * Wraps text between a pair of [delims] in [tag], pairing each opener with the nearest closer after it the
+         * way the regex `(d)(?=\\S)(.+?)(?<=\\S)\\1` does (with [flanking]; without it, any delimiter closes).
+         * The regex retries every opener against the rest of the paragraph, so a paragraph with thousands of
+         * openers and no closer took quadratic time. Here, once an opener finds no closer, no later one can
+         * either (it would search a subset of the same text), so the delimiter is dropped from the scan.
+         */
+        internal fun emphasis(s: String, delims: List<String>, tag: String, flanking: Boolean): String {
+            val exhausted = BooleanArray(delims.size)
+            var out: StringBuilder? = null
+            var copied = 0
+            var i = 0
+            while (i < s.length) {
+                val k = delims.indexOfFirst { s.startsWith(it, i) }
+                if (k < 0 || exhausted[k]) {
+                    i++
+                    continue
+                }
+                val d = delims[k]
+                val from = i + d.length
+                if (from >= s.length || flanking && s[from].isWhitespace()) {
+                    i++
+                    continue
+                }
+                var close = s.indexOf(d, from + 1)
+                if (flanking) while (close >= 0 && s[close - 1].isWhitespace()) close = s.indexOf(d, close + 1)
+                if (close < 0) {
+                    exhausted[k] = true
+                    i++
+                    continue
+                }
+                val b = out ?: StringBuilder(s.length + 16).also { out = it }
+                b.append(s, copied, i).append('<').append(tag).append('>').append(s, from, close).append("</").append(tag).append('>')
+                i = close + d.length
+                copied = i
+            }
+            return out?.append(s, copied, s.length)?.toString() ?: s
         }
 
         private fun esc(s: String): String = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")

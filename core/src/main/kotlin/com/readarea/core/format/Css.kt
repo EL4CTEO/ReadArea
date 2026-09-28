@@ -11,8 +11,9 @@ class Stylesheet {
 
     val isEmpty: Boolean get() = rules.isEmpty()
 
-    fun add(css: String) {
-        val cleaned = css.replace(COMMENT, " ")
+    fun add(css: String) = add(stripComments(css), 0)
+
+    private fun add(cleaned: String, depth: Int) {
         var i = 0
         val n = cleaned.length
         while (i < n) {
@@ -21,9 +22,10 @@ class Stylesheet {
             val selectorText = cleaned.substring(i, open).trim()
             if (selectorText.startsWith("@")) {
                 val close = matchingBrace(cleaned, open)
-                if (selectorText.startsWith("@media", ignoreCase = true) && close > open) {
+                // Real stylesheets nest media queries a level or two; a crafted one could nest them until the stack runs out.
+                if (selectorText.startsWith("@media", ignoreCase = true) && close > open && depth < MAX_MEDIA_DEPTH) {
                     val inner = cleaned.substring(open + 1, close)
-                    if (!selectorText.contains("print", ignoreCase = true) || selectorText.contains("screen", ignoreCase = true)) add(inner)
+                    if (!selectorText.contains("print", ignoreCase = true) || selectorText.contains("screen", ignoreCase = true)) add(inner, depth + 1)
                 }
                 i = if (close < 0) n else close + 1
                 continue
@@ -102,10 +104,30 @@ class Stylesheet {
     }
 
     companion object {
-        private val COMMENT = Regex("/\\*.*?\\*/", RegexOption.DOT_MATCHES_ALL)
+        private const val MAX_MEDIA_DEPTH = 8
         private val SPLIT = Regex("[\\s>+~]+")
         private val PART = Regex("[.#]?[A-Za-z0-9_\\-]+|\\*")
         private val WS = Regex("\\s+")
+
+        /**
+         * Replaces each comment with a space. A lazy regex would do this in quadratic time on a stylesheet full of
+         * unclosed comments, retrying each one against the rest of the text; an unclosed comment runs to the end,
+         * as it does in browsers.
+         */
+        fun stripComments(css: String): String {
+            var open = css.indexOf("/*")
+            if (open < 0) return css
+            val out = StringBuilder(css.length)
+            var copied = 0
+            while (open >= 0) {
+                out.append(css, copied, open).append(' ')
+                val close = css.indexOf("*/", open + 2)
+                if (close < 0) return out.toString()
+                copied = close + 2
+                open = css.indexOf("/*", copied)
+            }
+            return out.append(css, copied, css.length).toString()
+        }
 
         fun parseDeclarations(text: String): Map<String, String> {
             val out = HashMap<String, String>()
