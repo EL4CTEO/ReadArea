@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -43,6 +44,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -61,6 +63,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,6 +72,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.readarea.core.format.BookFormat
@@ -102,7 +106,14 @@ fun LibraryScreen(vm: LibraryViewModel, actions: AppActions) {
     var addMenu by remember { mutableStateOf(false) }
     var shelfDialog by remember { mutableStateOf(false) }
     var removeDialog by remember { mutableStateOf(false) }
-    var statusMenu by remember { mutableStateOf(false) }
+    // A filter or a rescan can take selected books off the screen. They must not stay selected unseen: the bar would
+    // still count them and "Remove" would still reach them.
+    LaunchedEffect(books) {
+        if (selection.isNotEmpty()) {
+            val shown = books.mapTo(HashSet()) { it.id }
+            if (!shown.containsAll(selection)) selection = selection.filterTo(HashSet()) { it in shown }
+        }
+    }
     BackHandler(enabled = selection.isNotEmpty() || searching) {
         if (selection.isNotEmpty()) selection = emptySet() else {
             searching = false
@@ -114,36 +125,25 @@ fun LibraryScreen(vm: LibraryViewModel, actions: AppActions) {
     Scaffold(
         topBar = {
             if (selection.isNotEmpty()) {
-                TopAppBar(
-                    navigationIcon = { IconButton(onClick = { selection = emptySet() }) { Icon(Icons.Rounded.Close, stringResource(R.string.clear_selection)) } },
-                    title = { Text(pluralStringResource(R.plurals.selected_count, selection.size, selection.size)) },
-                    actions = {
-                        if (selection.size == 1) IconButton(onClick = { actions.showDetails(selection.first()); selection = emptySet() }) { Icon(Icons.Rounded.Info, stringResource(R.string.details)) }
-                        IconButton(onClick = { selection = books.map { it.id }.toSet() }) { Icon(Icons.Rounded.SelectAll, stringResource(R.string.select_all)) }
-                        IconButton(onClick = {
-                            val allFav = books.filter { it.id in selection }.all { it.favorite }
-                            vm.setFavorite(selection.toList(), !allFav)
-                        }) { Icon(Icons.Rounded.Favorite, stringResource(R.string.favorite)) }
-                        IconButton(onClick = { shelfDialog = true }) { Icon(Icons.Rounded.CollectionsBookmark, stringResource(R.string.add_to_shelf)) }
-                        Box {
-                            IconButton(onClick = { statusMenu = true }) { Icon(Icons.Rounded.Check, stringResource(R.string.mark_as)) }
-                            DropdownMenu(statusMenu, { statusMenu = false }) {
-                                listOf(BookStatus.WANT to R.string.mark_want, BookStatus.READING to R.string.mark_reading, BookStatus.FINISHED to R.string.mark_finished).forEach { (st, label) ->
-                                    DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = {
-                                        vm.setStatus(selection.toList(), st)
-                                        statusMenu = false
-                                        selection = emptySet()
-                                    })
-                                }
-                                DropdownMenuItem(text = { Text(stringResource(R.string.reset_progress)) }, onClick = {
-                                    vm.resetProgress(selection.toList())
-                                    statusMenu = false
-                                    selection = emptySet()
-                                })
-                            }
-                        }
-                        IconButton(onClick = { removeDialog = true }) { Icon(Icons.Rounded.Delete, stringResource(R.string.remove)) }
+                SelectionBar(
+                    count = selection.size,
+                    onClear = { selection = emptySet() },
+                    onSelectAll = { selection = books.map { it.id }.toSet() },
+                    onDetails = if (selection.size == 1) ({ actions.showDetails(selection.first()); selection = emptySet() }) else null,
+                    onFavorite = {
+                        val allFav = books.filter { it.id in selection }.all { it.favorite }
+                        vm.setFavorite(selection.toList(), !allFav)
                     },
+                    onShelf = { shelfDialog = true },
+                    onStatus = { status ->
+                        vm.setStatus(selection.toList(), status)
+                        selection = emptySet()
+                    },
+                    onResetProgress = {
+                        vm.resetProgress(selection.toList())
+                        selection = emptySet()
+                    },
+                    onRemove = { removeDialog = true },
                 )
             } else if (searching) {
                 TopAppBar(
@@ -294,6 +294,77 @@ fun LibraryScreen(vm: LibraryViewModel, actions: AppActions) {
             selection = emptySet()
         }
     }
+}
+
+/** Bars narrower than this keep two actions in view and move the rest into the menu, so the count stays readable. */
+private val selectionWideMinWidth = 560.dp
+
+/**
+ * The bar shown while books are selected. Every icon button takes 48dp, and a phone is only 320 to 430dp wide: with a
+ * close button and six actions the count was left a few dp and wrapped letter by letter. So a narrow bar shows
+ * select all and add to shelf, and keeps the other actions in the ⋮ menu; a wide one shows them all.
+ */
+@Composable
+private fun SelectionBar(
+    count: Int,
+    onClear: () -> Unit,
+    onSelectAll: () -> Unit,
+    onDetails: (() -> Unit)?,
+    onFavorite: () -> Unit,
+    onShelf: () -> Unit,
+    onStatus: (Int) -> Unit,
+    onResetProgress: () -> Unit,
+    onRemove: () -> Unit,
+) {
+    var markMenu by remember { mutableStateOf(false) }
+    var moreMenu by remember { mutableStateOf(false) }
+    BoxWithConstraints {
+        val wide = maxWidth >= selectionWideMinWidth
+        TopAppBar(
+            navigationIcon = { IconButton(onClick = onClear) { Icon(Icons.Rounded.Close, stringResource(R.string.clear_selection)) } },
+            // One line whatever the language: a count too long for the room is cut short, not wrapped.
+            title = { Text(pluralStringResource(R.plurals.selected_count, count, count), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            actions = {
+                if (wide && onDetails != null) IconButton(onClick = onDetails) { Icon(Icons.Rounded.Info, stringResource(R.string.details)) }
+                IconButton(onClick = onSelectAll) { Icon(Icons.Rounded.SelectAll, stringResource(R.string.select_all)) }
+                if (wide) IconButton(onClick = onFavorite) { Icon(Icons.Rounded.Favorite, stringResource(R.string.favorite)) }
+                IconButton(onClick = onShelf) { Icon(Icons.Rounded.CollectionsBookmark, stringResource(R.string.add_to_shelf)) }
+                if (wide) {
+                    Box {
+                        IconButton(onClick = { markMenu = true }) { Icon(Icons.Rounded.Check, stringResource(R.string.mark_as)) }
+                        DropdownMenu(markMenu, { markMenu = false }) {
+                            MarkAsItems(onStatus = { markMenu = false; onStatus(it) }, onResetProgress = { markMenu = false; onResetProgress() })
+                        }
+                    }
+                    IconButton(onClick = onRemove) { Icon(Icons.Rounded.Delete, stringResource(R.string.remove)) }
+                } else {
+                    Box {
+                        IconButton(onClick = { moreMenu = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.more)) }
+                        DropdownMenu(moreMenu, { moreMenu = false }) {
+                            if (onDetails != null) DropdownMenuItem(text = { Text(stringResource(R.string.details)) }, leadingIcon = { Icon(Icons.Rounded.Info, null) }, onClick = { moreMenu = false; onDetails() })
+                            DropdownMenuItem(text = { Text(stringResource(R.string.favorite)) }, leadingIcon = { Icon(Icons.Rounded.Favorite, null) }, onClick = { moreMenu = false; onFavorite() })
+                            HorizontalDivider()
+                            MarkAsItems(onStatus = { moreMenu = false; onStatus(it) }, onResetProgress = { moreMenu = false; onResetProgress() })
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.remove), color = MaterialTheme.colorScheme.error) },
+                                leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                onClick = { moreMenu = false; onRemove() },
+                            )
+                        }
+                    }
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun MarkAsItems(onStatus: (Int) -> Unit, onResetProgress: () -> Unit) {
+    listOf(BookStatus.WANT to R.string.mark_want, BookStatus.READING to R.string.mark_reading, BookStatus.FINISHED to R.string.mark_finished).forEach { (status, label) ->
+        DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = { onStatus(status) })
+    }
+    DropdownMenuItem(text = { Text(stringResource(R.string.reset_progress)) }, onClick = onResetProgress)
 }
 
 @Composable
