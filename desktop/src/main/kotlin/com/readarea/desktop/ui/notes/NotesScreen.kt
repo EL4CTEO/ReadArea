@@ -17,6 +17,7 @@ import com.readarea.desktop.ui.components.Card
 import com.readarea.desktop.ui.components.Dialogs
 import com.readarea.desktop.ui.components.IconButton
 import com.readarea.desktop.ui.components.PillButton
+import com.readarea.desktop.ui.components.ScreenHeader
 import com.readarea.desktop.ui.components.ScrollableColumn
 import com.readarea.desktop.ui.components.Segmented
 import com.readarea.desktop.ui.components.Transparent
@@ -59,12 +60,11 @@ class NotesScreen(private val app: App, private val window: MainWindow) : Screen
         border = LeadingBorder(22, 28, 0, 28)
         val search = searchField(tr("search_notes")) { q -> query = q; shown = PAGE; render() }
         search.preferredSize = Dimension(260, 34)
+        search.minimumSize = Dimension(110, 34)
         search.maximumSize = Dimension(320, 34)
         val export = PillButton(tr("export_all"), "export", ButtonKind.TONAL, compact = true).apply { addActionListener { exportAll() } }
-        val header = Transparent(BorderLayout()).apply {
-            add(Ui.headline(tr("nav_notes")), BorderLayout.LINE_START)
-            add(Ui.hbox(search, Ui.gap(8), export), BorderLayout.LINE_END)
-        }
+        // The search field gives way before it can overlap the title.
+        val header = ScreenHeader(Ui.headline(tr("nav_notes")), search, export)
         tabs.maximumSize = Dimension(420, 34)
         add(Ui.vbox(header, Ui.gap(14), tabs, Ui.gap(12)), BorderLayout.NORTH)
         list.border = LeadingBorder(0, 0, 24, 8)

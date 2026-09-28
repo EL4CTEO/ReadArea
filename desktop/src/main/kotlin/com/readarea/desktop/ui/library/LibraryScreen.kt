@@ -12,8 +12,10 @@ import com.readarea.desktop.ui.components.ButtonKind
 import com.readarea.desktop.ui.components.Chip
 import com.readarea.desktop.ui.components.IconButton
 import com.readarea.desktop.ui.components.PillButton
+import com.readarea.desktop.ui.components.ScreenHeader
 import com.readarea.desktop.ui.components.Transparent
 import com.readarea.desktop.ui.components.Ui
+import com.readarea.desktop.ui.components.WrapLayout
 import com.readarea.desktop.ui.components.emptyState
 import com.readarea.desktop.ui.components.searchField
 import kotlinx.coroutines.flow.combine
@@ -75,7 +77,7 @@ class LibraryScreen(private val app: App, private val window: MainWindow) : Scre
     private val gridButton = IconButton("grid", tr("change_view"))
     private val listButton = IconButton("list", tr("change_view"))
     private val selectionLabel = Ui.label("", 13.5f, java.awt.Font.BOLD)
-    private val selectionBar = Transparent(FlowLayout(FlowLayout.LEADING, 8, 0))
+    private val selectionBar = Transparent(WrapLayout(FlowLayout.LEADING, 8, 4))
     private val body = JPanel(CardLayout())
     private var all: List<Book> = emptyList()
 
@@ -83,6 +85,7 @@ class LibraryScreen(private val app: App, private val window: MainWindow) : Scre
         border = LeadingBorder(22, 28, 0, 28)
         val title = Ui.hbox(Ui.headline(tr("nav_library")), Ui.gap(12), count)
         search.preferredSize = Dimension(260, 34)
+        search.minimumSize = Dimension(110, 34)
         search.maximumSize = Dimension(320, 34)
         val add = PillButton(tr("add_books"), "add", ButtonKind.PRIMARY, compact = true)
         add.addActionListener {
@@ -96,10 +99,8 @@ class LibraryScreen(private val app: App, private val window: MainWindow) : Scre
         sortBox.addActionListener { app.settings.updateApp { s -> s.copy(sort = LibrarySort.keys[sortBox.selectedIndex.coerceAtLeast(0)]) } }
         gridButton.addActionListener { app.settings.updateApp { it.copy(libraryGrid = true) } }
         listButton.addActionListener { app.settings.updateApp { it.copy(libraryGrid = false) } }
-        val header = Transparent(BorderLayout()).apply {
-            add(title, BorderLayout.LINE_START)
-            add(Ui.hbox(search, Ui.gap(8), sortBox, Ui.gap(4), gridButton, listButton, Ui.gap(8), add), BorderLayout.LINE_END)
-        }
+        // Drops the search and sort under the title when the window is too narrow to fit them beside it.
+        val header = ScreenHeader(title, Ui.hbox(search, Ui.gap(8), sortBox, Ui.gap(4), gridButton, listButton), add)
         val group = ButtonGroup()
         chips.forEachIndexed { i, c ->
             group.add(c)
@@ -110,12 +111,13 @@ class LibraryScreen(private val app: App, private val window: MainWindow) : Scre
             update(query.copy(format = if (i <= 0) null else formats.getOrNull(i - 1)))
         }
         formatBox.toolTipText = tr("formats")
-        val filters = Transparent(FlowLayout(FlowLayout.LEADING, 8, 0)).apply {
+        // Wraps onto a second line rather than hiding the chips that don't fit.
+        val filters = Transparent(WrapLayout(FlowLayout.LEADING, 8, 4)).apply {
             chips.forEach { add(it) }
             add(formatBox)
         }
         buildSelectionBar()
-        val top = Ui.vbox(header, Ui.gap(14), filters, Ui.gap(10), selectionBar)
+        val top = Ui.vbox(header, Ui.gap(10), filters, Ui.gap(6), selectionBar)
         add(top, BorderLayout.NORTH)
         val scroll = Ui.scroll(grid)
         scroll.border = LeadingBorder(6, 0, 0, 0)

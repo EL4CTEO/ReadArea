@@ -55,6 +55,73 @@ class WrapLayout(align: Int = LEFT, hgap: Int = 16, vgap: Int = 16) : FlowLayout
     }
 }
 
+/**
+ * The heading row of a screen: the title at the leading edge, its main action at the trailing edge and the tools
+ * (search, sort, view switches) between them. When they don't fit on one line, as in a narrow window or with a long
+ * translation, the tools drop to a second row under the title, so nothing is printed over anything else or cut off.
+ */
+class ScreenHeader(private val title: Component, private val tools: Component, private val action: Component? = null, private val gap: Int = 12) : Transparent(null) {
+    /** Whether the last preferred height was worked out for two rows; the height depends on the width it is given. */
+    private var assumedStacked = false
+
+    init {
+        add(title)
+        add(tools)
+        action?.let { add(it) }
+    }
+
+    private fun room(): Int = width - insets.left - insets.right
+
+    /** The tools may shrink (a search field gives way) but the title and the action keep their size. */
+    private fun fitsOnOneLine(room: Int): Boolean =
+        title.preferredSize.width + gap + tools.minimumSize.width + (action?.let { gap + it.preferredSize.width } ?: 0) <= room
+
+    override fun getPreferredSize(): Dimension {
+        val t = title.preferredSize
+        val tl = tools.preferredSize
+        val a = action?.preferredSize ?: Dimension()
+        val stacked = width > 0 && !fitsOnOneLine(room())
+        assumedStacked = stacked
+        val natural = t.width + gap + tl.width + (if (action != null) gap + a.width else 0)
+        val h = if (stacked) maxOf(t.height, a.height) + gap + tl.height else maxOf(t.height, tl.height, a.height)
+        return Dimension(natural + insets.left + insets.right, h + insets.top + insets.bottom)
+    }
+
+    override fun getMinimumSize(): Dimension {
+        val stackedWidth = maxOf(title.preferredSize.width + (action?.let { gap + it.preferredSize.width } ?: 0), tools.minimumSize.width)
+        return Dimension(stackedWidth + insets.left + insets.right, preferredSize.height)
+    }
+
+    override fun getMaximumSize(): Dimension = Dimension(Int.MAX_VALUE, preferredSize.height)
+
+    override fun doLayout() {
+        val ins = insets
+        val w = room()
+        val ltr = componentOrientation.isLeftToRight
+        val t = title.preferredSize
+        val tl = tools.preferredSize
+        val a = action?.preferredSize ?: Dimension()
+        val stacked = !fitsOnOneLine(w)
+        // Positions run from the leading edge, so a right-to-left window is the mirror image.
+        fun put(c: Component, x: Int, y: Int, cw: Int, ch: Int) = c.setBounds(if (ltr) ins.left + x else width - ins.right - x - cw, ins.top + y, cw, ch)
+        val firstRow = if (stacked) maxOf(t.height, a.height) else maxOf(t.height, tl.height, a.height)
+        put(title, 0, (firstRow - t.height) / 2, t.width, t.height)
+        var right = w
+        if (action != null) {
+            put(action, w - a.width, (firstRow - a.height) / 2, a.width, a.height)
+            right = w - a.width - gap
+        }
+        if (stacked) {
+            put(tools, 0, firstRow + gap, minOf(tl.width, w), tl.height)
+        } else {
+            val tw = minOf(tl.width, right - t.width - gap).coerceAtLeast(0)
+            put(tools, right - tw, (firstRow - tl.height) / 2, tw, tl.height)
+        }
+        // The height changes with the mode: ask the parent to lay this out again with the right one.
+        if (stacked != assumedStacked) SwingUtilities.invokeLater { revalidate() }
+    }
+}
+
 /** A short message floating at the bottom of a window for a few seconds. */
 class Toast : Widget() {
     private var text = ""
