@@ -91,7 +91,12 @@ class Library(private val db: Database, private val settings: SettingsStore, pri
 
     fun removeFolder(path: String, removeBooks: Boolean) {
         settings.updateApp { s -> s.copy(folders = s.folders - path) }
-        if (removeBooks) scope.launch { write { deleteFolderBooks(path) } }
+        if (removeBooks) scope.launch {
+            // Their cover images go too: nothing else would ever clean those up.
+            val covers = read { books(onlyPresent = false).filter { it.folder == path }.mapNotNull { it.coverPath } }
+            write { deleteFolderBooks(path) }
+            withContext(Dispatchers.IO) { covers.forEach { p -> File(p).takeIf { AppDirs.isInside(dirs.covers, it) }?.delete() } }
+        }
     }
 
     fun rescan(force: Boolean = true) {
