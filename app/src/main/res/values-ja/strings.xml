@@ -394,4 +394,7 @@
     <plurals name="selected_count">
         <item quantity="other">%d件選択</item>
     </plurals>
+    <string name="choose_folder_again">フォルダを選択</string>
+    <string name="folder_access_lost_body">ReadArea は「%s」の本を開けなくなりました。そのフォルダをもう一度選ぶと元に戻ります。</string>
+    <string name="folder_access_lost_title">もう一度アクセスを許可しますか？</string>
 </resources>

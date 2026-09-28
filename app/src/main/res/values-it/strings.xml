@@ -414,4 +414,7 @@
         <item quantity="many">%d selezionati</item>
         <item quantity="other">%d selezionati</item>
     </plurals>
+    <string name="choose_folder_again">Scegli cartella</string>
+    <string name="folder_access_lost_body">ReadArea non può più aprire i libri in “%s”. Scegli di nuovo quella cartella per riaverli.</string>
+    <string name="folder_access_lost_title">Consentire di nuovo l\'accesso?</string>
 </resources>

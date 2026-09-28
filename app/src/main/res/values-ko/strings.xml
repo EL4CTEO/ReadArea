@@ -394,4 +394,7 @@
     <plurals name="selected_count">
         <item quantity="other">%d개 선택됨</item>
     </plurals>
+    <string name="choose_folder_again">폴더 선택</string>
+    <string name="folder_access_lost_body">ReadArea에서 더 이상 “%s”의 책을 열 수 없습니다. 해당 폴더를 다시 선택하면 책이 돌아옵니다.</string>
+    <string name="folder_access_lost_title">다시 접근을 허용할까요?</string>
 </resources>

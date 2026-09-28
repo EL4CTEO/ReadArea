@@ -424,4 +424,7 @@
         <item quantity="many">Вибрано: %d</item>
         <item quantity="other">Вибрано: %d</item>
     </plurals>
+    <string name="choose_folder_again">Вибрати теку</string>
+    <string name="folder_access_lost_body">ReadArea більше не може відкрити книжки в «%s». Виберіть цю теку ще раз, щоб повернути їх.</string>
+    <string name="folder_access_lost_title">Знову дозволити доступ?</string>
 </resources>

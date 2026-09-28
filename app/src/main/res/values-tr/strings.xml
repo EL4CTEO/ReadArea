@@ -404,4 +404,7 @@
         <item quantity="one">%d seçildi</item>
         <item quantity="other">%d seçildi</item>
     </plurals>
+    <string name="choose_folder_again">Klasör seç</string>
+    <string name="folder_access_lost_body">ReadArea artık “%s” içindeki kitapları açamıyor. Onları geri getirmek için o klasörü yeniden seçin.</string>
+    <string name="folder_access_lost_title">Erişime yeniden izin verilsin mi?</string>
 </resources>

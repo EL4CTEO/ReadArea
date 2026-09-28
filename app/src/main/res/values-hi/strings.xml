@@ -404,4 +404,7 @@
         <item quantity="one">%d चुनी गई</item>
         <item quantity="other">%d चुनी गईं</item>
     </plurals>
+    <string name="choose_folder_again">फ़ोल्डर चुनें</string>
+    <string name="folder_access_lost_body">ReadArea अब “%s” में मौजूद किताबें नहीं खोल सकता। उन्हें वापस पाने के लिए वह फ़ोल्डर फिर से चुनें।</string>
+    <string name="folder_access_lost_title">फिर से एक्सेस की अनुमति दें?</string>
 </resources>

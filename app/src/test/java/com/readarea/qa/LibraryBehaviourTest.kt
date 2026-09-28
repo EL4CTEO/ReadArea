@@ -59,6 +59,9 @@ class LibraryBehaviourTest {
     @Before
     fun setUp() {
         TestIsolation.reset()
+        // The books below were found on the device, which takes access to all files; without it they'd be set aside.
+        val ops = app.getSystemService(android.app.AppOpsManager::class.java)
+        shadowOf(ops).setMode("android:manage_external_storage", android.os.Process.myUid(), app.packageName, android.app.AppOpsManager.MODE_ALLOWED)
         runBlocking {
             app.settings.updateApp { AppSettings(askedDeviceScan = true, reopenLastBook = false) }
             app.settings.updateReader { ReaderSettings() }

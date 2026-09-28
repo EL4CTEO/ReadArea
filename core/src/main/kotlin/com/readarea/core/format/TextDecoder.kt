@@ -144,7 +144,8 @@ class FileZipAccess(file: File) : ZipAccess {
     }
 }
 
-class MemoryZipAccess(input: java.io.InputStream, keep: (String, Long) -> Boolean) : ZipAccess {
+/** Reads the entries of a zip stream that [keep] asks for, each up to [maxEntry] bytes, into memory. */
+class MemoryZipAccess(input: java.io.InputStream, private val maxEntry: Int = MAX_ENTRY, keep: (String, Long) -> Boolean) : ZipAccess {
     private val data = LinkedHashMap<String, ByteArray>()
     private val index = HashMap<String, String>()
     override val entries: List<String>
@@ -167,9 +168,9 @@ class MemoryZipAccess(input: java.io.InputStream, keep: (String, Long) -> Boolea
                         size += n
                         total += n
                         if (total > Limits.ARCHIVE) throw BookParseException(ParseError.TOO_LARGE, "Archive expands beyond the limit")
-                        if (size <= MAX_ENTRY) out.write(buf, 0, n)
+                        if (size <= maxEntry) out.write(buf, 0, n)
                     }
-                    if (size <= MAX_ENTRY) {
+                    if (size <= maxEntry) {
                         data[e.name] = out.toByteArray()
                         index[e.name.lowercase()] = e.name
                     }

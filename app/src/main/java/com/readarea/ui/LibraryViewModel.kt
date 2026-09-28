@@ -154,10 +154,13 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
 
     suspend fun resumeTarget(): Long? = repo.resumeTarget()
 
-    suspend fun shouldOfferDeviceScan(): Boolean {
+    /** Whether to offer finding books on the device: the first time, or when it's on but Android took back the access it needs. */
+    suspend fun shouldOfferDeviceScan(hasAccess: Boolean): Boolean {
         val s = settingsRepo.appNow()
-        return !s.askedDeviceScan && !s.deviceScan
+        return (!s.askedDeviceScan && !s.deviceScan) || (s.deviceScan && !hasAccess)
     }
+
+    val lostFolders = repo.lostFolders
 
     fun importFiles(uris: List<Uri>, onDone: (List<Long>) -> Unit = {}) {
         viewModelScope.launch { onDone(repo.importFiles(uris)) }

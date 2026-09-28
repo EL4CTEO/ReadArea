@@ -194,4 +194,68 @@ class LibraryFlowTest {
         }
         assertFalse(runBlocking { app.settings.app.first() }.deviceScan)
     }
+
+    private fun coveredEpub(title: String) = TestBooks.epub(
+        chapters = 1, paragraphs = 3, withCover = true, title = title,
+        coverImage = com.readarea.ui.CoverArt.make(title, "Ann", 0xFF2E4A6B.toInt(), 0xFF101A26.toInt(), 0xFFFFFFFF.toInt(), 0),
+    )
+
+    private fun book(id: Long) = runBlocking { app.database.books().get(id) }!!
+
+    @Test
+    fun aBookThatCantBeReadYetGetsItsCoverLater() {
+        // Not readable at first (moved, or access not granted yet): its details must be tried again, not given up on.
+        val file = File(root, "Novels/later.epub")
+        val id = runBlocking { app.database.books().insert(com.readarea.data.db.BookEntity(uri = android.net.Uri.fromFile(file).toString(), fileName = file.name, format = "EPUB", title = "later")) }
+        runBlocking { app.library.loadMetadata(book(id)) }
+        assertFalse("an unreadable file is not settled without a cover", book(id).metaLoaded)
+        put("Novels/later.epub", coveredEpub("Later Novel"))
+        runBlocking { app.library.loadMetadata(book(id)) }
+        assertTrue(book(id).metaLoaded)
+        assertTrue("the cover is read once the file can be", book(id).coverPath?.let { File(it).exists() } == true)
+        assertEquals("Later Novel", book(id).title)
+    }
+
+    @Test
+    fun coversLostFromAppStorageAreReadAgain() {
+        // What a restore from backup leaves: the library, but none of the cover images kept in app storage.
+        val file = put("Novels/restored.epub", coveredEpub("Restored Novel"))
+        val id = runBlocking {
+            app.database.books().insert(
+                com.readarea.data.db.BookEntity(
+                    uri = android.net.Uri.fromFile(file).toString(), fileName = file.name, format = "EPUB", title = "Restored Novel",
+                    metaLoaded = true, coverPath = File(app.filesDir, "covers/cover_gone.jpg").absolutePath,
+                ),
+            )
+        }
+        runBlocking { app.library.scanAll() }
+        assertTrue("the cover is made again", book(id).coverPath?.let { File(it).exists() } == true)
+    }
+
+    @Test
+    fun deviceBooksAreSetAsideWhileAccessIsGoneAndComeBack() {
+        grantAllFiles()
+        put("Books/kept.epub", coveredEpub("Kept"))
+        runBlocking {
+            app.settings.updateApp { it.copy(deviceScan = true) }
+            app.library.scanAll()
+        }
+        assertTrue("kept.epub" in names())
+        denyAllFiles()
+        runBlocking { app.library.scanAll() }
+        assertFalse("a book that can't be opened without access isn't offered", "kept.epub" in names())
+        grantAllFiles()
+        runBlocking { app.library.scanAll() }
+        assertTrue("it comes back with access", "kept.epub" in names())
+    }
+
+    @Test
+    fun anUnreadableLastBookIsNotReopenedAtStart() {
+        val file = File(root, "Novels/last.epub")
+        val id = runBlocking { app.database.books().insert(com.readarea.data.db.BookEntity(uri = android.net.Uri.fromFile(file).toString(), fileName = file.name, format = "EPUB", title = "Last")) }
+        runBlocking { app.settings.updateApp { it.copy(reopenLastBook = true, resumeBookId = id) } }
+        assertEquals("the library opens instead of an error", null, runBlocking { app.library.resumeTarget() })
+        put("Novels/last.epub", coveredEpub("Last"))
+        assertEquals(id, runBlocking { app.library.resumeTarget() })
+    }
 }

@@ -444,4 +444,7 @@
         <item quantity="many">تم تحديد %d عنصرًا</item>
         <item quantity="other">تم تحديد %d عنصر</item>
     </plurals>
+    <string name="choose_folder_again">اختيار المجلد</string>
+    <string name="folder_access_lost_body">لم يعد بإمكان ReadArea فتح الكتب في «%s». اختر ذلك المجلد مجددًا لاستعادتها.</string>
+    <string name="folder_access_lost_title">هل تسمح بالوصول مجددًا؟</string>
 </resources>

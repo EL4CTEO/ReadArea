@@ -26,6 +26,8 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -108,13 +110,30 @@ fun ReadAreaRoot(vm: LibraryViewModel) {
         if (granted) vm.setDeviceScan(true) else vm.markDeviceScanAsked()
     }
     LaunchedEffect(Unit) {
-        if (vm.shouldOfferDeviceScan()) {
+        if (vm.shouldOfferDeviceScan(DeviceStorage.hasAccess(context))) {
             if (DeviceStorage.hasAccess(context)) vm.setDeviceScan(true) else findDialog = true
         }
     }
     LifecycleResumeEffect(Unit) {
         vm.adoptGrantedAccess()
         onPauseOrDispose {}
+    }
+    val lostFolders by vm.lostFolders.collectAsStateWithLifecycle()
+    var dismissedFolders by rememberSaveable { mutableStateOf(listOf<String>()) }
+    lostFolders.firstOrNull { it !in dismissedFolders }?.let { folder ->
+        AlertDialog(
+            onDismissRequest = { dismissedFolders = dismissedFolders + folder },
+            icon = { Icon(Icons.Rounded.TravelExplore, null) },
+            title = { Text(stringResource(R.string.folder_access_lost_title)) },
+            text = { Text(stringResource(R.string.folder_access_lost_body, folderLabel(context, folder))) },
+            confirmButton = {
+                Button(onClick = {
+                    dismissedFolders = dismissedFolders + folder
+                    runCatching { folderPicker.launch(folder.toUri()) }
+                }) { Text(stringResource(R.string.choose_folder_again)) }
+            },
+            dismissButton = { TextButton(onClick = { dismissedFolders = dismissedFolders + folder }) { Text(stringResource(R.string.not_now)) } },
+        )
     }
     if (findDialog) {
         AlertDialog(
@@ -191,3 +210,11 @@ fun ReadAreaRoot(vm: LibraryViewModel) {
     }
     details?.let { id -> BookDetailsSheet(vm, actions, id) { details = null } }
 }
+
+/** A library folder as people know it, e.g. "Internal storage › Books", from its tree address. */
+private fun folderLabel(context: android.content.Context, uri: String): String = runCatching {
+    val id = android.provider.DocumentsContract.getTreeDocumentId(uri.toUri())
+    val path = id.substringAfter(':', id)
+    val root = id.substringBefore(':')
+    (if (root.equals("primary", true)) context.getString(R.string.internal_storage) else root) + if (path.isNotEmpty()) " › " + path.replace("/", " › ") else ""
+}.getOrElse { Uri.decode(uri) }
