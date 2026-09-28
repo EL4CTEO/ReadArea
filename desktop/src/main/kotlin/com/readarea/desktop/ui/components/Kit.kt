@@ -34,7 +34,6 @@ import javax.swing.JTextField
 import javax.swing.JToggleButton
 import javax.swing.ScrollPaneConstants
 import javax.swing.SwingConstants
-import javax.swing.border.EmptyBorder
 
 /**
  * Antialiased shapes and smooth image scaling. Text hints are left to the look and feel, which follows
@@ -61,7 +60,7 @@ object Ui {
     }
 
     fun hbox(vararg items: Component, gap: Int = 0): JPanel = Transparent().apply {
-        layout = BoxLayout(this, BoxLayout.X_AXIS)
+        layout = BoxLayout(this, BoxLayout.LINE_AXIS)
         items.forEachIndexed { i, c ->
             if (i > 0 && gap > 0) add(Box.createHorizontalStrut(gap))
             (c as? JComponent)?.alignmentY = Component.CENTER_ALIGNMENT
@@ -69,7 +68,7 @@ object Ui {
         }
     }
 
-    fun flow(vararg items: Component, gap: Int = 8, align: Int = FlowLayout.LEFT): JPanel = Transparent(FlowLayout(align, gap, gap / 2)).apply {
+    fun flow(vararg items: Component, gap: Int = 8, align: Int = FlowLayout.LEADING): JPanel = Transparent(FlowLayout(align, gap, gap / 2)).apply {
         items.forEach { add(it) }
     }
 
@@ -95,9 +94,9 @@ object Ui {
         val p = object : Transparent(BorderLayout(16, 0)) {
             override fun getMaximumSize() = Dimension(Int.MAX_VALUE, preferredSize.height)
         }
-        p.border = EmptyBorder(6, 0, 6, 0)
+        p.border = LeadingBorder(6, 0, 6, 0)
         p.add(left, BorderLayout.CENTER)
-        p.add(Transparent(java.awt.GridBagLayout()).apply { add(control) }, BorderLayout.EAST)
+        p.add(Transparent(java.awt.GridBagLayout()).apply { add(control) }, BorderLayout.LINE_END)
         p.alignmentX = Component.LEFT_ALIGNMENT
         return p
     }
@@ -115,7 +114,7 @@ object Ui {
     }
 
     fun padded(c: Component, top: Int, left: Int, bottom: Int, right: Int): JPanel = Transparent(BorderLayout()).apply {
-        border = EmptyBorder(top, left, bottom, right)
+        border = LeadingBorder(top, left, bottom, right)
         add(c)
     }
 }
@@ -189,7 +188,7 @@ fun JComponent.onActivate(action: () -> Unit) {
  */
 open class VBox(private val align: Float = Component.LEFT_ALIGNMENT) : Transparent(null) {
     init {
-        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+        layout = BoxLayout(this, BoxLayout.PAGE_AXIS)
     }
 
     override fun addImpl(comp: Component, constraints: Any?, index: Int) {
@@ -311,12 +310,13 @@ class WrapText(
         for (l in lines) {
             y += l.ascent
             val adv = l.visibleAdvance
+            // Lines start at the leading edge of the layout, like a label's, whatever script they're in.
             val x = when {
                 center -> boxLeft + (avail - adv) / 2f
-                ltr == l.isLeftToRight -> if (ltr) boxLeft else boxLeft + avail - adv
-                else -> if (l.isLeftToRight) boxLeft else boxLeft + avail - adv
+                ltr -> boxLeft
+                else -> width - ins.right - adv
             }
-            l.draw(g, x, y)
+            l.drawAt(g, x, y)
             y += l.descent + l.leading
         }
         g.dispose()
@@ -356,7 +356,7 @@ class PillButton(text: String, icon: String? = null, private val kind: ButtonKin
         isRolloverEnabled = true
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         font = AppTheme.ui(if (compact) 12.5f else 13.5f, Font.BOLD)
-        border = EmptyBorder(if (compact) 5 else 9, if (compact) 12 else 18, if (compact) 5 else 9, if (compact) 14 else 20)
+        border = LeadingBorder(if (compact) 5 else 9, if (compact) 12 else 18, if (compact) 5 else 9, if (compact) 14 else 20)
         iconTextGap = 8
         if (icon != null) this.icon = VectorIcon(icon, if (compact) 16 else 18) { fg() }
         FocusRing.install(this)
@@ -437,7 +437,7 @@ class IconButton(icon: String, tooltip: String, size: Int = 20, private val tint
         isFocusPainted = false
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         val pad = (size * 0.45f).toInt()
-        border = EmptyBorder(pad, pad, pad, pad)
+        border = LeadingBorder(pad, pad, pad, pad)
         FocusRing.install(this)
         addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent) { hover = true; repaint() }
@@ -469,7 +469,7 @@ class Chip(text: String, selected: Boolean = false, icon: String? = null) : JTog
         isFocusPainted = false
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         font = AppTheme.ui(12.5f, Font.BOLD)
-        border = EmptyBorder(6, 13, 6, 13)
+        border = LeadingBorder(6, 13, 6, 13)
         FocusRing.install(this)
         if (icon != null) {
             this.icon = VectorIcon(icon, 15) { if (isSelected) pal.onAccentContainer else pal.onSurfaceVariant }
@@ -518,6 +518,7 @@ class Switch(on: Boolean = false) : JToggleButton() {
 
     override fun paintComponent(g: Graphics) {
         val g2 = g.create().smooth()
+        mirrorIfRtl(g2)
         val w = 40f
         val h = 22f
         val y = (height - h) / 2f
@@ -621,7 +622,9 @@ class Segmented(options: List<String>, selected: Int, private val onChange: (Int
     private fun index(x: Int): Int {
         if (options.isEmpty()) return -1
         val e = edges()
-        for (i in options.indices) if (x < e[i + 1]) return i
+        // The first option sits at the leading edge: on the right in right-to-left layouts.
+        val lx = if (componentOrientation.isLeftToRight) x else width - x
+        for (i in options.indices) if (lx < e[i + 1]) return i
         return options.size - 1
     }
 
@@ -642,8 +645,8 @@ class Segmented(options: List<String>, selected: Int, private val onChange: (Int
         val fm = g2.getFontMetrics(font)
         g2.font = font
         options.forEachIndexed { i, label ->
-            val x = e[i]
             val cw = e[i + 1] - e[i]
+            val x = if (componentOrientation.isLeftToRight) e[i] else width - e[i + 1]
             if (i == selected || i == hover) {
                 g2.color = if (i == selected) pal.accentContainer else pal.onSurface.alpha(12)
                 g2.fill(RoundRectangle2D.Float(x + 2f, 2.5f, cw - 4f, h - 4f, h - 4f, h - 4f))
@@ -656,6 +659,22 @@ class Segmented(options: List<String>, selected: Int, private val onChange: (Int
         }
         g2.dispose()
     }
+}
+
+/**
+ * Draws a line so its visible glyphs start at [visibleLeft]. A right-to-left line keeps its trailing space
+ * on its visual left, so drawing it at `right - visibleAdvance` would push the glyphs past the edge.
+ */
+fun java.awt.font.TextLayout.drawAt(g: Graphics2D, visibleLeft: Float, baseline: Float) {
+    val lead = if (isLeftToRight) 0f else advance - visibleAdvance
+    draw(g, visibleLeft - lead, baseline)
+}
+
+/** For purely graphical painting (no text): flips the drawing horizontally in right-to-left layouts. */
+fun java.awt.Component.mirrorIfRtl(g: Graphics2D) {
+    if (componentOrientation.isLeftToRight) return
+    g.translate(width.toDouble(), 0.0)
+    g.scale(-1.0, 1.0)
 }
 
 /** Shortens [text] with an ellipsis so it fits in [max] pixels. */
@@ -681,6 +700,7 @@ class ProgressLine(var value: Float = 0f, private val heightPx: Int = 4) : Widge
 
     override fun paintComponent(g: Graphics) {
         val g2 = g.create().smooth()
+        mirrorIfRtl(g2)
         val h = heightPx.toFloat()
         val y = (height - h) / 2f
         g2.color = pal.onSurface.alpha(28)
@@ -718,9 +738,9 @@ fun emptyState(icon: String, title: String, body: String, vararg actions: JCompo
 /** The section header used across screens: a title and optional trailing actions. */
 fun sectionHeader(title: String, vararg trailing: Component): JPanel {
     val row = Transparent(BorderLayout())
-    row.add(Ui.label(title, 16f, Font.BOLD), BorderLayout.WEST)
-    if (trailing.isNotEmpty()) row.add(Ui.hbox(*trailing, gap = 6), BorderLayout.EAST)
-    row.border = EmptyBorder(4, 0, 8, 0)
+    row.add(Ui.label(title, 16f, Font.BOLD), BorderLayout.LINE_START)
+    if (trailing.isNotEmpty()) row.add(Ui.hbox(*trailing, gap = 6), BorderLayout.LINE_END)
+    row.border = LeadingBorder(4, 0, 8, 0)
     row.maximumSize = Dimension(Int.MAX_VALUE, 44)
     return row
 }

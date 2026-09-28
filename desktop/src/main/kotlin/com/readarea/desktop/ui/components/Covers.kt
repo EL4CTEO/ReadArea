@@ -228,7 +228,7 @@ object CoverPainter {
         while (lbm.position < text.length && lines < maxLines) {
             val layout = lbm.nextLayout(width)
             yy += layout.ascent
-            layout.draw(g, x + (width - layout.visibleAdvance) / 2f, yy)
+            layout.drawAt(g, x + (width - layout.visibleAdvance) / 2f, yy)
             yy += layout.descent + layout.leading
             lines++
         }

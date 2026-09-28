@@ -102,7 +102,7 @@ object BookActions {
             I18n.plural("remove_books_body", n),
             tr("remove"),
             danger = true,
-            checkbox = if (app.library.canTrash) I18n.plural("trash_files_too", n) else null,
+            checkbox = if (app.library.canTrash) tr(if (n == 1) "trash_file_too" else "trash_files_too") else null,
         )
         if (!ok) return
         app.scope.launch {

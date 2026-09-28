@@ -104,6 +104,15 @@ open class ScrollableColumn(layout: java.awt.LayoutManager?) : Transparent(layou
     override fun getScrollableTracksViewportHeight() = false
 }
 
+/** A vertical stack (see [VBox]) that follows its scroll pane's width, for scrolling pages and panels. */
+class ScrollingStack : VBox(), javax.swing.Scrollable {
+    override fun getPreferredScrollableViewportSize(): Dimension = preferredSize
+    override fun getScrollableUnitIncrement(visibleRect: java.awt.Rectangle, orientation: Int, direction: Int) = 24
+    override fun getScrollableBlockIncrement(visibleRect: java.awt.Rectangle, orientation: Int, direction: Int) = visibleRect.height - 48
+    override fun getScrollableTracksViewportWidth() = true
+    override fun getScrollableTracksViewportHeight() = false
+}
+
 fun Component.maxWidth(w: Int): Component = apply { (this as? JComponent)?.maximumSize = Dimension(w, maximumSize.height) }
 
 /**

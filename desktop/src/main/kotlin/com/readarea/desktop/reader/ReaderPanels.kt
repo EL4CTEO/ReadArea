@@ -9,8 +9,11 @@ import com.readarea.desktop.i18n.I18n
 import com.readarea.desktop.i18n.tr
 import com.readarea.desktop.reader.engine.PageChrome
 import com.readarea.desktop.reader.engine.ReaderFonts
+import com.readarea.desktop.ui.components.ScrollingStack
 import com.readarea.desktop.ui.components.FocusRing
 import com.readarea.desktop.ui.components.onActivate
+import com.readarea.desktop.ui.components.drawAt
+import com.readarea.desktop.ui.components.leadingX
 import com.readarea.desktop.ui.components.ButtonKind
 import com.readarea.desktop.ui.components.Widget
 import com.readarea.desktop.ui.components.Dialogs
@@ -47,15 +50,15 @@ import javax.swing.JPanel
 import javax.swing.JSlider
 import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
-import javax.swing.border.EmptyBorder
+import com.readarea.desktop.ui.components.LeadingBorder
 
 /** The frame the side panels share: a title, a close button and a scrolling body. */
 abstract class SidePanel(title: String, onClose: () -> Unit) : JPanel(BorderLayout()) {
     init {
-        border = EmptyBorder(16, 18, 12, 14)
+        border = LeadingBorder(16, 18, 12, 14)
         val header = Transparent(BorderLayout())
-        header.add(Ui.label(title, 16f, Font.BOLD).apply { font = AppTheme.headline(18f) }, BorderLayout.WEST)
-        header.add(IconButton("close", tr("close"), 18).apply { addActionListener { onClose() } }, BorderLayout.EAST)
+        header.add(Ui.label(title, 16f, Font.BOLD).apply { font = AppTheme.headline(18f) }, BorderLayout.LINE_START)
+        header.add(IconButton("close", tr("close"), 18).apply { addActionListener { onClose() } }, BorderLayout.LINE_END)
         add(Ui.padded(header, 0, 0, 10, 0), BorderLayout.NORTH)
         preferredSize = Dimension(340, 400)
     }
@@ -81,6 +84,7 @@ private class RowRenderer<T>(private val content: (T) -> Row) : Widget(), ListCe
     override fun getListCellRendererComponent(list: JList<out T>, value: T, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component {
         row = content(value)
         selected = isSelected
+        componentOrientation = list.componentOrientation
         getAccessibleContext().accessibleName = row.title
         return this
     }
@@ -96,7 +100,7 @@ private class RowRenderer<T>(private val content: (T) -> Row) : Widget(), ListCe
         var x = 12f + row.depth * 14f
         row.mark?.let {
             g.color = it
-            g.fill(RoundRectangle2D.Float(x - 4f, 8f, 4f, height - 16f, 4f, 4f))
+            g.fill(RoundRectangle2D.Float(leadingX(x - 4f, 4f), 8f, 4f, height - 16f, 4f, 4f))
             x += 8f
         }
         g.font = AppTheme.ui(13f, if (row.current || row.depth == 0) Font.BOLD else Font.PLAIN)
@@ -104,14 +108,14 @@ private class RowRenderer<T>(private val content: (T) -> Row) : Widget(), ListCe
         val fm = g.fontMetrics
         var t = row.title
         while (t.length > 2 && fm.stringWidth(t) > width - x - 12) t = t.dropLast(2) + "…"
-        g.drawString(t, x, if (row.sub == null) (height + fm.ascent - fm.descent) / 2f else 24f)
+        g.drawString(t, leadingX(x, fm.stringWidth(t).toFloat()), if (row.sub == null) (height + fm.ascent - fm.descent) / 2f else 24f)
         row.sub?.let { s ->
             g.font = AppTheme.ui(11.5f)
             g.color = pal.onSurfaceVariant
             var st = s
             val f2 = g.fontMetrics
             while (st.length > 2 && f2.stringWidth(st) > width - x - 12) st = st.dropLast(2) + "…"
-            g.drawString(st, x, 44f)
+            g.drawString(st, leadingX(x, f2.stringWidth(st).toFloat()), 44f)
         }
         g.dispose()
     }
@@ -255,6 +259,7 @@ class SearchPanel(private val c: ReaderController, onClose: () -> Unit) : SidePa
         override fun getListCellRendererComponent(list: JList<out SearchHit>, value: SearchHit, index: Int, isSelected: Boolean, cellHasFocus: Boolean): Component {
             hit = value
             sel = isSelected
+            componentOrientation = list.componentOrientation
             return this
         }
 
@@ -270,7 +275,8 @@ class SearchPanel(private val c: ReaderController, onClose: () -> Unit) : SidePa
             g.font = AppTheme.ui(11.5f, Font.BOLD)
             g.color = pal.accent
             val where = if (c.ui.value.fixed) I18n.format("page_number", h.start + 1) else c.text?.sectionTitleAt(h.chapter, h.start).orEmpty()
-            g.drawString(where.take(60), 12f, 18f)
+            val label = where.take(60)
+            g.drawString(label, leadingX(12f, g.fontMetrics.stringWidth(label).toFloat()), 18f)
             val attr = java.text.AttributedString(h.snippet.ifEmpty { " " })
             attr.addAttribute(java.awt.font.TextAttribute.FONT, AppTheme.ui(12.5f))
             attr.addAttribute(java.awt.font.TextAttribute.FOREGROUND, pal.onSurface)
@@ -286,7 +292,7 @@ class SearchPanel(private val c: ReaderController, onClose: () -> Unit) : SidePa
             while (lbm.position < h.snippet.length && lines < 2) {
                 val l = lbm.nextLayout(width - 24f)
                 y += l.ascent
-                l.draw(g, 12f, y)
+                l.drawAt(g, leadingX(12f, l.visibleAdvance), y)
                 y += l.descent + l.leading
                 lines++
             }
@@ -297,7 +303,7 @@ class SearchPanel(private val c: ReaderController, onClose: () -> Unit) : SidePa
 
 /** Typeface, size, spacing, margins and layout. */
 class TextPanel(private val app: App, private val c: ReaderController, onClose: () -> Unit) : SidePanel(tr("tool_text"), onClose) {
-    private val column = ScrollableColumn(null).apply { layout = BoxLayout(this, BoxLayout.Y_AXIS) }
+    private val column = ScrollingStack()
 
     init {
         add(Ui.scroll(column), BorderLayout.CENTER)
@@ -412,7 +418,7 @@ class TextPanel(private val app: App, private val c: ReaderController, onClose: 
 
 /** Page color, paper texture, night mode, dimming and warm light, PDF colors. */
 class ThemePanel(private val c: ReaderController, onClose: () -> Unit) : SidePanel(tr("reading_theme"), onClose) {
-    private val column = ScrollableColumn(null).apply { layout = BoxLayout(this, BoxLayout.Y_AXIS) }
+    private val column = ScrollingStack()
 
     init {
         add(Ui.scroll(column), BorderLayout.CENTER)
@@ -502,7 +508,7 @@ class ThemePanel(private val c: ReaderController, onClose: () -> Unit) : SidePan
             g.color = if (selected) pal.accent else pal.outlineVariant
             g.stroke = java.awt.BasicStroke(if (selected) 2.5f else 1f)
             g.draw(shape)
-            g.font = Font(AppTheme.headlineFamily, Font.PLAIN, 20)
+            g.font = AppTheme.headline(20f, bold = false)
             g.color = PageChrome.color(t.text, 255)
             val fm = g.fontMetrics
             g.drawString("Aa", (width - fm.stringWidth("Aa")) / 2f, height / 2f + 4f)

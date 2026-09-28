@@ -22,6 +22,10 @@ class VectorIcon(val name: String, private val size: Int = 20, private val strok
     override fun getIconWidth() = size
     override fun getIconHeight() = size
 
+    private companion object {
+        val DIRECTIONAL = setOf("back", "arrow-left", "arrow-right", "chevron-left", "chevron-right", "undo")
+    }
+
     fun withColor(c: () -> Color) = VectorIcon(name, size, stroke, c)
     fun sized(s: Int) = VectorIcon(name, s, stroke, color)
 
@@ -33,6 +37,11 @@ class VectorIcon(val name: String, private val size: Int = 20, private val strok
             g.translate(x, y)
             val k = size / 24.0
             g.scale(k, k)
+            // Icons that point somewhere face the other way in right-to-left layouts.
+            if (name in DIRECTIONAL && c != null && !c.componentOrientation.isLeftToRight) {
+                g.translate(24.0, 0.0)
+                g.scale(-1.0, 1.0)
+            }
             val enabled = c?.isEnabled ?: true
             val base = color?.invoke() ?: (c as? JComponent)?.foreground ?: AppTheme.palette.onSurface
             g.color = if (enabled) base else base.alpha(90)

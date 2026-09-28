@@ -10,6 +10,7 @@ import com.readarea.desktop.platform.SystemIntegration
 import com.readarea.desktop.reader.engine.PagePos
 import com.readarea.desktop.ui.components.ButtonKind
 import com.readarea.desktop.ui.components.Widget
+import com.readarea.desktop.ui.components.LeftToRight
 import com.readarea.desktop.ui.components.Dialogs
 import com.readarea.desktop.ui.components.IconButton
 import com.readarea.desktop.ui.components.PillButton
@@ -58,7 +59,7 @@ import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 import javax.swing.Timer
 import javax.swing.WindowConstants
-import javax.swing.border.EmptyBorder
+import com.readarea.desktop.ui.components.LeadingBorder
 
 class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int, Int>?) : JFrame(), ReaderHost {
     val controller = ReaderController(app, bookId, at)
@@ -292,7 +293,7 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
         endCard = null
         if (!u.endReached) return layers.repaint()
         val card = RoundCard(BorderLayout())
-        card.border = EmptyBorder(22, 24, 18, 24)
+        card.border = LeadingBorder(22, 24, 18, 24)
         card.add(Ui.vbox(
             Ui.headline(tr("the_end"), 26f),
             Ui.gap(6),
@@ -448,8 +449,10 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
             val panelTop = if (topBar.isVisible) topH else 0
             // Side panels grow a little on wide windows and never cover the whole page.
             val pw = (w * 0.3f).toInt().coerceIn(360, 420).coerceAtMost(w - 60)
-            leftPanel?.setBounds(0, panelTop, pw, h - panelTop)
-            rightPanel?.setBounds(w - pw, panelTop, pw, h - panelTop)
+            // Contents open on the leading side and the tools on the trailing side, mirrored in right-to-left languages.
+            val mirrored = !layers.componentOrientation.isLeftToRight
+            leftPanel?.setBounds(if (mirrored) w - pw else 0, panelTop, pw, h - panelTop)
+            rightPanel?.setBounds(if (mirrored) 0 else w - pw, panelTop, pw, h - panelTop)
             selectionPopup?.let { p ->
                 val sel = controller.ui.value.selection ?: return@let
                 val ps = p.preferredSize
@@ -492,7 +495,7 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
 
         init {
             isOpaque = false
-            border = EmptyBorder(6, if (Os.current == Os.MAC && !fullscreen) 10 else 10, 6, 10)
+            border = LeadingBorder(6, if (Os.current == Os.MAC && !fullscreen) 10 else 10, 6, 10)
             back.addActionListener {
                 app.main.bringToFront()
                 app.main.navigate("library")
@@ -518,8 +521,8 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
                 }.show(more, 0, more.height)
             }
             val left = Ui.hbox(back, Ui.gap(8), Ui.vbox(title, chapter))
-            add(left, BorderLayout.WEST)
-            add(Ui.hbox(toc, search, text, theme, speak, auto, bookmark, full, more, gap = 2), BorderLayout.EAST)
+            add(left, BorderLayout.LINE_START)
+            add(Ui.hbox(toc, search, text, theme, speak, auto, bookmark, full, more, gap = 2), BorderLayout.LINE_END)
         }
 
         fun update(u: ReaderUi) {
@@ -560,7 +563,7 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
 
         init {
             isOpaque = false
-            border = EmptyBorder(8, 18, 10, 18)
+            border = LeadingBorder(8, 18, 10, 18)
             slider.isOpaque = false
             slider.addChangeListener {
                 if (updating) return@addChangeListener
@@ -572,18 +575,22 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
             jump.isVisible = false
             val prev = IconButton("chevron-left", tr("previous_chapter"), 18).apply { addActionListener { controller.chapterStep(controller.ui.value.rtl) } }
             val next = IconButton("chevron-right", tr("next_chapter"), 18).apply { addActionListener { controller.chapterStep(!controller.ui.value.rtl) } }
-            add(Ui.hbox(prev, slider, next), BorderLayout.CENTER)
+            // The arrows and slider stand for directions on the page, so they keep their physical order.
+            add(LeftToRight().apply {
+                layout = javax.swing.BoxLayout(this, javax.swing.BoxLayout.X_AXIS)
+                listOf(prev, slider, next).forEach { (it as JComponent).alignmentY = CENTER_ALIGNMENT; add(it) }
+            }, BorderLayout.CENTER)
             val info = Transparent(BorderLayout())
-            info.add(page, BorderLayout.WEST)
-            info.add(Ui.hbox(jump, Ui.gap(10), left), BorderLayout.EAST)
+            info.add(page, BorderLayout.LINE_START)
+            info.add(Ui.hbox(jump, Ui.gap(10), left), BorderLayout.LINE_END)
             add(info, BorderLayout.SOUTH)
         }
 
         fun update(u: ReaderUi) {
             updating = true
             if (!slider.valueIsAdjusting) slider.value = (u.progress * 1000).toInt()
+            // A right-to-left orientation already runs the slider from the right; inverting it too would undo that.
             slider.componentOrientation = if (u.rtl) java.awt.ComponentOrientation.RIGHT_TO_LEFT else java.awt.ComponentOrientation.LEFT_TO_RIGHT
-            slider.inverted = u.rtl
             updating = false
             page.text = u.pageLabel
             left.text = if (u.fixed || u.pagesLeftInChapter <= 0) I18n.format("percent", (u.progress * 100).toInt()) else I18n.plural("pages_left_chapter", u.pagesLeftInChapter, u.pagesLeftInChapter)
@@ -636,7 +643,7 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
         }
     }
 
-    private inner class SelectionPopup(private val sel: SelectionUi) : RoundCard(FlowLayout(FlowLayout.LEFT, 4, 6)) {
+    private inner class SelectionPopup(private val sel: SelectionUi) : RoundCard(FlowLayout(FlowLayout.LEADING, 4, 6)) {
         init {
             ReadingThemes.highlightColors.forEachIndexed { i, argb ->
                 val dot = object : Widget() {
@@ -685,20 +692,20 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
 
     private inner class FootnoteCard(f: FootnoteUi) : RoundCard(BorderLayout()) {
         init {
-            border = EmptyBorder(14, 18, 12, 18)
+            border = LeadingBorder(14, 18, 12, 18)
             val area = JTextArea(f.text).apply {
                 isEditable = false
                 lineWrap = true
                 wrapStyleWord = true
                 isOpaque = false
-                font = Font(AppTheme.headlineFamily, Font.PLAIN, 15)
+                font = AppTheme.headline(15f, bold = false)
                 foreground = pal.onSurface
                 border = null
             }
             val scroll = Ui.scroll(area)
             scroll.preferredSize = Dimension(520, (area.preferredSize.height + 8).coerceIn(40, 260))
             add(scroll, BorderLayout.CENTER)
-            add(Transparent(FlowLayout(FlowLayout.RIGHT, 6, 0)).apply {
+            add(Transparent(FlowLayout(FlowLayout.TRAILING, 6, 0)).apply {
                 add(PillButton(tr("go_to_note"), "arrow-right", ButtonKind.TEXT, compact = true).apply { addActionListener { controller.followFootnote() } })
                 add(PillButton(tr("close"), null, ButtonKind.TEXT, compact = true).apply { addActionListener { controller.dismissFootnote() } })
             }, BorderLayout.SOUTH)
@@ -761,7 +768,7 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
 open class RoundCard(layout: LayoutManager) : JPanel(layout) {
     init {
         isOpaque = false
-        border = EmptyBorder(4, 10, 4, 10)
+        border = LeadingBorder(4, 10, 4, 10)
     }
 
     override fun paintComponent(g0: Graphics) {

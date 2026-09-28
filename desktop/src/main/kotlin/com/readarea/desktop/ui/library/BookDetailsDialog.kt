@@ -45,7 +45,7 @@ import javax.swing.JDialog
 import javax.swing.JPanel
 import javax.swing.JTextArea
 import javax.swing.KeyStroke
-import javax.swing.border.EmptyBorder
+import com.readarea.desktop.ui.components.LeadingBorder
 
 class BookDetailsDialog(private val app: App, private val window: MainWindow, private val bookId: Long) : JDialog(window, "", ModalityType.MODELESS) {
     private val root = object : JPanel(BorderLayout()) {
@@ -57,7 +57,7 @@ class BookDetailsDialog(private val app: App, private val window: MainWindow, pr
 
     init {
         contentPane = root
-        root.border = EmptyBorder(24, 26, 20, 26)
+        root.border = LeadingBorder(24, 26, 20, 26)
         size = Dimension(760, 560)
         minimumSize = Dimension(620, 440)
         setLocationRelativeTo(window)
@@ -90,12 +90,12 @@ class BookDetailsDialog(private val app: App, private val window: MainWindow, pr
             }
         }
         val left = Ui.vbox(cover, Ui.gap(14), read, gap = 0, align = CENTER_ALIGNMENT)
-        left.border = EmptyBorder(0, 0, 0, 24)
+        left.border = LeadingBorder(0, 0, 0, 24)
 
         val titleLabel = WrapText(b.title).apply { font = AppTheme.headline(23f) }
-        val authorRow = Transparent(FlowLayout(FlowLayout.LEFT, 0, 0))
+        val authorRow = Transparent(FlowLayout(FlowLayout.LEADING, 0, 0))
         if (b.author.isNotBlank()) authorRow.add(PillButton(b.author, null, ButtonKind.TEXT, compact = true).apply {
-            border = EmptyBorder(2, 0, 2, 6)
+            border = LeadingBorder(2, 0, 2, 6)
             toolTipText = tr("more_by_author")
             addActionListener {
                 window.navigate("library")
@@ -105,7 +105,7 @@ class BookDetailsDialog(private val app: App, private val window: MainWindow, pr
         })
         val series = b.series?.let { s -> Ui.secondary(tr("series") + ": " + s + (b.seriesIndex?.let { " #" + BookGrid.formatIndex(it) } ?: "")) }
 
-        val stars = Transparent(FlowLayout(FlowLayout.LEFT, 0, 0))
+        val stars = Transparent(FlowLayout(FlowLayout.LEADING, 0, 0))
         var rating = b.rating
         val starButtons = (1..5).map { n ->
             IconButton(if (n <= rating) "star-filled" else "star", I18n.format("rate_stars", n), 18) { if (n <= rating) Color(0xE8A33D) else pal.outline }
@@ -134,7 +134,7 @@ class BookDetailsDialog(private val app: App, private val window: MainWindow, pr
         }
         status.maximumSize = Dimension(460, 34)
 
-        val shelfRow = Transparent(FlowLayout(FlowLayout.LEFT, 6, 4))
+        val shelfRow = Transparent(FlowLayout(FlowLayout.LEADING, 6, 4))
         for ((id, name) in shelves) {
             val c = Chip(name, id in onShelves, "shelves")
             c.addActionListener { app.scope.launch { if (c.isSelected) app.library.addToShelf(id, listOf(b.id)) else app.library.removeFromShelf(id, listOf(b.id)) } }
@@ -170,9 +170,9 @@ class BookDetailsDialog(private val app: App, private val window: MainWindow, pr
         }
         right.add(Ui.gap(14))
         right.add(info)
-        right.border = EmptyBorder(0, 0, 0, 8)
+        right.border = LeadingBorder(0, 0, 0, 8)
 
-        val actions = Transparent(FlowLayout(FlowLayout.LEFT, 6, 0))
+        val actions = Transparent(FlowLayout(FlowLayout.LEADING, 6, 0))
         if (!b.bookFormat.fixedLayout) actions.add(PillButton(tr("look_inside"), "eye", ButtonKind.TONAL, compact = true).apply { addActionListener { lookInside(b) } })
         actions.add(PillButton(BookActions.revealLabel(), "reveal", ButtonKind.TONAL, compact = true).apply {
             isEnabled = File(b.path).exists()
@@ -189,7 +189,7 @@ class BookDetailsDialog(private val app: App, private val window: MainWindow, pr
             }
         })
         val body = Transparent(BorderLayout())
-        body.add(left, BorderLayout.WEST)
+        body.add(left, BorderLayout.LINE_START)
         // The column follows the viewport's width, so long titles and descriptions wrap instead of clipping.
         body.add(Ui.scroll(ScrollableColumn(BorderLayout()).apply { add(right, BorderLayout.NORTH) }), BorderLayout.CENTER)
         root.add(body, BorderLayout.CENTER)
@@ -200,7 +200,7 @@ class BookDetailsDialog(private val app: App, private val window: MainWindow, pr
 
     private fun infoGrid(b: Book): JComponent {
         val p = Transparent(GridBagLayout())
-        val c = GridBagConstraints().apply { anchor = GridBagConstraints.NORTHWEST; insets = Insets(2, 0, 2, 14); fill = GridBagConstraints.HORIZONTAL }
+        val c = GridBagConstraints().apply { anchor = GridBagConstraints.FIRST_LINE_START; insets = Insets(2, 0, 2, 14); fill = GridBagConstraints.HORIZONTAL }
         val df = DateFormat.getDateInstance(DateFormat.MEDIUM, I18n.locale)
         val rows = listOfNotNull(
             tr("formats") to b.bookFormat.label,
@@ -230,8 +230,8 @@ class BookDetailsDialog(private val app: App, private val window: MainWindow, pr
             isEditable = false
             lineWrap = true
             wrapStyleWord = true
-            font = Font(AppTheme.headlineFamily, Font.PLAIN, 15)
-            border = EmptyBorder(8, 8, 8, 8)
+            font = AppTheme.headline(15f, bold = false)
+            border = LeadingBorder(8, 8, 8, 8)
             caretPosition = 0
         }
         val scroll = Ui.scroll(area).apply { preferredSize = Dimension(520, 420) }

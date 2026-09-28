@@ -7,6 +7,9 @@ import com.readarea.desktop.i18n.tr
 import com.readarea.desktop.ui.components.CoverPainter
 import com.readarea.desktop.ui.components.Widget
 import com.readarea.desktop.ui.components.ellipsize
+import com.readarea.desktop.ui.components.drawAt
+import com.readarea.desktop.ui.components.leadingX
+import com.readarea.desktop.ui.components.rtl
 import com.readarea.desktop.ui.components.pal
 import com.readarea.desktop.ui.components.smooth
 import com.readarea.desktop.ui.theme.AppTheme
@@ -139,6 +142,7 @@ class BookGrid(private val onOpen: (Book) -> Unit, private val onContext: (List<
             book = value
             selected = isSelected
             focused = cellHasFocus
+            componentOrientation = list.componentOrientation
             getAccessibleContext().accessibleName = value.title
             return this
         }
@@ -166,58 +170,64 @@ class BookGrid(private val onOpen: (Book) -> Unit, private val onContext: (List<
                 g.color = Color(0, 0, 0, 110)
                 g.fill(RoundRectangle2D.Float(x, y, cw, ch, 12f, 12f))
             }
-            if (b.favorite) VectorIcon("heart-filled", 16) { Color(0xE05A47) }.paintIcon(this, g, (x + cw - 22).toInt(), (y + 6).toInt())
+            if (b.favorite) VectorIcon("heart-filled", 16) { Color(0xE05A47) }.paintIcon(this, g, leadingX(x + cw - 22, 16f).toInt(), (y + 6).toInt())
             if (b.status == BookStatus.FINISHED) VectorIcon("check", 14) { Color.WHITE }.let { ic ->
                 g.color = pal.success
-                g.fillOval((x + 6).toInt(), (y + 6).toInt(), 20, 20)
-                ic.paintIcon(this, g, (x + 9).toInt(), (y + 9).toInt())
+                val cx = leadingX(x + 6, 20f)
+                g.fillOval(cx.toInt(), (y + 6).toInt(), 20, 20)
+                ic.paintIcon(this, g, (cx + 3).toInt(), (y + 9).toInt())
             }
             var ty = y + ch + 10f
             if (b.progress > 0.005f && b.status != BookStatus.FINISHED) {
+                val fill = cw * b.progress.coerceIn(0f, 1f)
                 g.color = pal.onSurface.alpha(28)
                 g.fill(RoundRectangle2D.Float(x, y + ch + 6f, cw, 3f, 3f, 3f))
                 g.color = pal.accent
-                g.fill(RoundRectangle2D.Float(x, y + ch + 6f, cw * b.progress.coerceIn(0f, 1f), 3f, 3f, 3f))
+                g.fill(RoundRectangle2D.Float(leadingX(x, fill), y + ch + 6f, fill, 3f, 3f, 3f))
                 ty += 4f
             }
             g.color = pal.onSurface
-            val used = wrap(g, b.title, AppTheme.ui(12.5f, Font.BOLD), x, ty, cw, 2)
+            val used = wrap(g, b.title, AppTheme.ui(12.5f, Font.BOLD), x, ty, cw, 2, alignEnd = rtl)
             g.font = AppTheme.ui(11.5f)
             g.color = pal.onSurfaceVariant
             val fm = g.fontMetrics
             val author = ellipsize(b.author.ifBlank { if (b.progress > 0) I18n.format("percent_read", (b.progress * 100).toInt()) else "" }, fm, cw)
-            g.drawString(author, x, ty + used + fm.ascent + 2)
+            g.drawString(author, leadingX(x, fm.stringWidth(author).toFloat()), ty + used + fm.ascent + 2)
         }
 
         private fun paintRow(g: Graphics2D, b: Book) {
             val ch = 60f
             val cw = ch / 1.5f
-            CoverPainter.paint(g, b, 16f, 8f, cw, ch, 3f, false) { this@BookGrid.repaint() }
+            // Laid out from the leading edge, so the cover sits on the right in right-to-left languages.
+            CoverPainter.paint(g, b, leadingX(16f, cw), 8f, cw, ch, 3f, false) { this@BookGrid.repaint() }
             val x = 16f + cw + 16f
             val right = width - 16f
             g.font = AppTheme.ui(13.5f, Font.BOLD)
             g.color = if (b.missing) pal.onSurfaceVariant else pal.onSurface
             val fm = g.fontMetrics
             val infoW = 220f
-            g.drawString(ellipsize(b.title, fm, right - x - infoW), x, 30f)
+            val title = ellipsize(b.title, fm, right - x - infoW)
+            g.drawString(title, leadingX(x, fm.stringWidth(title).toFloat()), 30f)
             g.font = AppTheme.ui(12f)
             g.color = pal.onSurfaceVariant
             val fm2 = g.fontMetrics
-            val sub = listOfNotNull(b.author.takeIf { it.isNotBlank() }, b.series?.let { s -> b.seriesIndex?.let { "$s #${formatIndex(it)}" } ?: s }).joinToString(" · ")
-            g.drawString(ellipsize(sub, fm2, right - x - infoW), x, 50f)
+            val sub = ellipsize(listOfNotNull(b.author.takeIf { it.isNotBlank() }, b.series?.let { s -> b.seriesIndex?.let { "$s #${formatIndex(it)}" } ?: s }).joinToString(" · "), fm2, right - x - infoW)
+            g.drawString(sub, leadingX(x, fm2.stringWidth(sub).toFloat()), 50f)
             val status = when (b.status) {
                 BookStatus.FINISHED -> tr("status_finished")
                 BookStatus.WANT -> tr("status_want")
                 BookStatus.READING -> I18n.format("percent", (b.progress * 100).toInt())
                 else -> tr("status_new")
             }
-            g.drawString(status, right - fm2.stringWidth(status), 30f)
+            val sw = fm2.stringWidth(status).toFloat()
+            g.drawString(status, leadingX(right - sw, sw), 30f)
             if (showBadges) badge(g, b.bookFormat.label.uppercase(), right, 52f)
             if (b.progress > 0.005f && b.status == BookStatus.READING) {
+                val fill = 120f * b.progress.coerceIn(0f, 1f)
                 g.color = pal.onSurface.alpha(28)
-                g.fill(RoundRectangle2D.Float(right - 120f, 60f, 120f, 3f, 3f, 3f))
+                g.fill(RoundRectangle2D.Float(leadingX(right - 120f, 120f), 60f, 120f, 3f, 3f, 3f))
                 g.color = pal.accent
-                g.fill(RoundRectangle2D.Float(right - 120f, 60f, 120f * b.progress, 3f, 3f, 3f))
+                g.fill(RoundRectangle2D.Float(leadingX(right - 120f, fill), 60f, fill, 3f, 3f, 3f))
             }
         }
 
@@ -226,18 +236,19 @@ class BookGrid(private val onOpen: (Book) -> Unit, private val onContext: (List<
             val fm = g.fontMetrics
             val w = fm.stringWidth(text) + 10f
             val h = 16f
+            val bx = leadingX(right - w, w)
             g.color = Color(0, 0, 0, 140)
-            g.fill(RoundRectangle2D.Float(right - w, bottom - h, w, h, 8f, 8f))
+            g.fill(RoundRectangle2D.Float(bx, bottom - h, w, h, 8f, 8f))
             g.color = Color.WHITE
-            g.drawString(text, right - w + 5f, bottom - h + (h + fm.ascent - fm.descent) / 2f)
+            g.drawString(text, bx + 5f, bottom - h + (h + fm.ascent - fm.descent) / 2f)
         }
     }
 
     companion object {
         fun formatIndex(f: Float): String = if (f == f.toInt().toFloat()) f.toInt().toString() else f.toString()
 
-        /** Draws up to [maxLines] wrapped lines and returns the height used. */
-        fun wrap(g: Graphics2D, text: String, font: Font, x: Float, y: Float, width: Float, maxLines: Int): Float {
+        /** Draws up to [maxLines] wrapped lines and returns the height used; [alignEnd] right-aligns them. */
+        fun wrap(g: Graphics2D, text: String, font: Font, x: Float, y: Float, width: Float, maxLines: Int, alignEnd: Boolean = false): Float {
             if (text.isEmpty()) return 0f
             val attr = AttributedString(text, mapOf(TextAttribute.FONT to font))
             val lbm = LineBreakMeasurer(attr.iterator, g.fontRenderContext)
@@ -253,7 +264,7 @@ class BookGrid(private val onOpen: (Book) -> Unit, private val onContext: (List<
                     layout = java.awt.font.TextLayout(rest, font, g.fontRenderContext)
                 }
                 yy += layout.ascent
-                layout.draw(g, x, yy)
+                layout.drawAt(g, if (alignEnd) x + width - layout.visibleAdvance else x, yy)
                 yy += layout.descent + layout.leading
             }
             return yy - y

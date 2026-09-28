@@ -1,16 +1,9 @@
 package com.readarea.desktop.qa
 
 import com.readarea.core.format.BookFormat
-import com.readarea.desktop.App
-import com.readarea.desktop.configureRuntime
 import com.readarea.desktop.data.Book
 import com.readarea.desktop.data.Bookmark
-import com.readarea.desktop.data.Database
 import com.readarea.desktop.data.Highlight
-import com.readarea.desktop.data.Library
-import com.readarea.desktop.data.SettingsStore
-import com.readarea.desktop.i18n.I18n
-import com.readarea.desktop.platform.AppDirs
 import com.readarea.desktop.reader.Panel
 import com.readarea.desktop.reader.PageView
 import com.readarea.desktop.reader.ReaderWindow
@@ -27,11 +20,7 @@ import java.awt.GraphicsEnvironment
 import java.awt.Window
 import java.awt.image.BufferedImage
 import java.io.File
-import java.nio.file.Files
 import java.util.Collections
-import javax.imageio.ImageIO
-import javax.swing.JFrame
-import javax.swing.SwingUtilities
 
 /**
  * Runs the real app against a sample library on a (virtual) display, walks through every screen and the
@@ -42,38 +31,24 @@ import javax.swing.SwingUtilities
 class DesktopUiQa {
     companion object {
         private val out = File("build/qa-screens").apply { deleteRecursively(); mkdirs() }
-        private lateinit var home: File
-        private lateinit var app: App
-        private lateinit var library: Library
+        private lateinit var session: QaSession
+        private val app get() = session.app
+        private val library get() = session.library
         private val errors: MutableList<Throwable> = Collections.synchronizedList(ArrayList())
 
         @BeforeClass
         @JvmStatic
         fun start() {
             assumeFalse("needs a display", GraphicsEnvironment.isHeadless())
-            home = Files.createTempDirectory("readarea-qa").toFile()
-            System.setProperty("readarea.home", File(home, "data").path)
             Thread.setDefaultUncaughtExceptionHandler { _, e -> errors.add(e) }
-            val samples = SampleLibrary.create(File(home, "Books"))
-            val dirs = AppDirs.resolve().init()
-            configureRuntime(dirs)
-            val settings = SettingsStore(dirs.settings)
-            settings.updateApp { it.copy(folders = listOf(samples.path), onboardingDone = true, reopenLastBook = false) }
-            I18n.init("en")
-            val db = Database(dirs.database)
-            library = Library(db, settings, dirs)
-            app = App(dirs, settings, db, library, null)
-            onEdt { app.start(emptyList()) }
-            waitUntil(60_000) { val s = library.scan.value; !s.running && library.books.value.orEmpty().size >= 15 && library.books.value.orEmpty().all { it.metaLoaded } }
+            session = QaSession.start("en")
             seed()
         }
 
         @AfterClass
         @JvmStatic
         fun stop() {
-            if (!::app.isInitialized) return
-            onEdt { app.shutdown(exit = false) }
-            home.deleteRecursively()
+            if (::session.isInitialized) session.stop()
         }
 
         private fun seed() = runBlocking {
@@ -89,8 +64,7 @@ class DesktopUiQa {
             library.addHighlight(Highlight(bookId = epubs[1].id, chapter = 1, start = 10, end = 90, text = "Thinking about distant seas by candle light", color = 2, chapterTitle = "Chapter 2", progress = 0.3f))
             library.addBookmark(Bookmark(bookId = first.id, chapter = 1, offset = 400, progress = 0.34f, snippet = "Over by fox an an thinking thinking reading while the book", chapterTitle = "Chapter 2"))
             val today = com.readarea.core.library.ReadingStats.today()
-            val db = library
-            db.read {
+            library.read {
                 for (d in 0 until 60) {
                     if (d % 7 == 3) continue
                     insertSession(first.id, System.currentTimeMillis() - d * 86_400_000L, ((10 + (d * 37) % 50) * 60_000).toLong(), 12, today - d)
@@ -100,45 +74,7 @@ class DesktopUiQa {
             Thread.sleep(600)
         }
 
-        fun onEdt(block: () -> Unit) {
-            if (SwingUtilities.isEventDispatchThread()) block() else SwingUtilities.invokeAndWait(block)
-        }
-
-        fun <T> edt(block: () -> T): T {
-            var r: T? = null
-            onEdt { r = block() }
-            @Suppress("UNCHECKED_CAST")
-            return r as T
-        }
-
-        fun waitUntil(ms: Long, what: String = "condition", cond: () -> Boolean) {
-            val end = System.currentTimeMillis() + ms
-            while (System.currentTimeMillis() < end) {
-                if (edt(cond)) return
-                Thread.sleep(100)
-            }
-            throw AssertionError("Timed out waiting for $what")
-        }
-
-        fun shot(window: Window, name: String): BufferedImage {
-            Thread.sleep(250)
-            val img = edt {
-                val c: Component = (window as? JFrame)?.rootPane ?: window
-                val i = BufferedImage(c.width.coerceAtLeast(1), c.height.coerceAtLeast(1), BufferedImage.TYPE_INT_RGB)
-                val g = i.createGraphics()
-                c.paint(g)
-                g.dispose()
-                i
-            }
-            ImageIO.write(img, "png", File(out, "$name.png"))
-            return img
-        }
-
-        fun distinctColors(img: BufferedImage): Int {
-            val set = HashSet<Int>()
-            for (y in 0 until img.height step 7) for (x in 0 until img.width step 7) set.add(img.getRGB(x, y) and 0xF0F0F0)
-            return set.size
-        }
+        fun shot(window: Window, name: String): BufferedImage = shot(window, out, name)
 
         fun reader(id: Long): ReaderWindow = edt { Window.getWindows().filterIsInstance<ReaderWindow>().first { it.controller.bookId == id && it.isShowing } }
 

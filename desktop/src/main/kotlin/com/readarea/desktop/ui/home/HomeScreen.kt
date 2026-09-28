@@ -8,10 +8,13 @@ import com.readarea.desktop.i18n.I18n
 import com.readarea.desktop.i18n.tr
 import com.readarea.desktop.ui.MainWindow
 import com.readarea.desktop.ui.Screen
+import com.readarea.desktop.ui.components.ScrollingStack
 import com.readarea.desktop.ui.components.ButtonKind
 import com.readarea.desktop.ui.components.Widget
 import com.readarea.desktop.ui.components.FocusRing
 import com.readarea.desktop.ui.components.onActivate
+import com.readarea.desktop.ui.components.leadingX
+import com.readarea.desktop.ui.components.rtl
 import com.readarea.desktop.ui.components.Card
 import com.readarea.desktop.ui.components.CoverPainter
 import com.readarea.desktop.ui.components.PillButton
@@ -50,17 +53,17 @@ import javax.swing.BoxLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.KeyStroke
-import javax.swing.border.EmptyBorder
+import com.readarea.desktop.ui.components.LeadingBorder
 
 @OptIn(FlowPreview::class)
 class HomeScreen(private val app: App, private val window: MainWindow) : Screen {
     private val cards = CardLayout()
     private val root = Transparent(cards)
-    private val column = ScrollableColumn(null).apply { layout = BoxLayout(this, BoxLayout.Y_AXIS) }
+    private val column = ScrollingStack()
     override val component: JComponent = root
 
     init {
-        column.border = EmptyBorder(26, 30, 30, 30)
+        column.border = LeadingBorder(26, 30, 30, 30)
         root.add(Ui.scroll(column), "content")
         root.add(Transparent(BorderLayout()).apply {
             add(emptyState("logo", tr("welcome_title"), tr("welcome_body") + "\n\n" + tr("drop_hint"),
@@ -114,7 +117,7 @@ class HomeScreen(private val app: App, private val window: MainWindow) : Screen 
 
         val top = Transparent(BorderLayout(18, 0))
         top.add(heroCard(hero), BorderLayout.CENTER)
-        top.add(goalCard(todayMs, app.settings.app.value.dailyGoalMinutes), BorderLayout.EAST)
+        top.add(goalCard(todayMs, app.settings.app.value.dailyGoalMinutes), BorderLayout.LINE_END)
         top.alignmentX = JComponent.LEFT_ALIGNMENT
         top.maximumSize = Dimension(Int.MAX_VALUE, 290)
         column.add(top)
@@ -140,7 +143,7 @@ class HomeScreen(private val app: App, private val window: MainWindow) : Screen 
 
     private fun heroCard(b: Book?): JComponent {
         val card = Card(22, BorderLayout(22, 0), fill = { pal.surfaceContainer })
-        card.border = EmptyBorder(22, 22, 22, 26)
+        card.border = LeadingBorder(22, 22, 22, 26)
         if (b == null) {
             card.add(Ui.vbox(
                 Ui.label(tr("continue_reading"), 12.5f, Font.BOLD) { pal.accent },
@@ -159,7 +162,7 @@ class HomeScreen(private val app: App, private val window: MainWindow) : Screen 
 
             override fun paintComponent(g: Graphics) = CoverPainter.paint(g.create().smooth(), b, 2f, 2f, 146f, 219f, 7f, true) { repaint() }
         }
-        card.add(cover, BorderLayout.WEST)
+        card.add(cover, BorderLayout.LINE_START)
         val progress = ProgressLine(b.progress, 5).apply { maximumSize = Dimension(360, 8); preferredSize = Dimension(360, 8) }
         val left = if (b.readingMs > 0) "  ·  " + tr("time_spent", BookDetailsDialog.formatDuration(b.readingMs)) else ""
         val info = Ui.vbox(
@@ -173,7 +176,7 @@ class HomeScreen(private val app: App, private val window: MainWindow) : Screen 
             Ui.gap(8),
             Ui.secondary(I18n.format("percent_read", (b.progress * 100).toInt()) + left, 12.5f),
             Ui.gap(18),
-            Transparent(FlowLayout(FlowLayout.LEFT, 0, 0)).apply {
+            Transparent(FlowLayout(FlowLayout.LEADING, 0, 0)).apply {
                 add(PillButton(I18n.format("continue_percent", (b.progress * 100).toInt()), "read").apply { addActionListener { app.openBook(b.id) } })
                 add(Ui.gap(8))
                 add(PillButton(tr("details"), null, ButtonKind.TEXT).apply { addActionListener { window.showBook(b.id) } })
@@ -185,7 +188,7 @@ class HomeScreen(private val app: App, private val window: MainWindow) : Screen 
 
     private fun goalCard(todayMs: Long, goal: Int): JComponent {
         val card = Card(22, BorderLayout(), fill = { pal.surfaceContainer })
-        card.border = EmptyBorder(20, 20, 20, 20)
+        card.border = LeadingBorder(20, 20, 20, 20)
         card.preferredSize = Dimension(230, 270)
         val minutes = (todayMs / 60_000).toInt()
         val ring = object : Widget() {
@@ -290,7 +293,11 @@ class HomeScreen(private val app: App, private val window: MainWindow) : Screen 
         /** How many covers fit whole in the current width. */
         private fun visibleCount(): Int = (((width + gap) / (cw + gap)).toInt()).coerceIn(0, books.size)
 
-        private fun index(x: Int): Int = (x / (cw + gap)).toInt().takeIf { it in 0 until visibleCount() && x % (cw + gap) <= cw } ?: -1
+        private fun index(x: Int): Int {
+            // Covers start at the leading edge: from the right in right-to-left languages.
+            val lx = if (rtl) width - x else x
+            return (lx / (cw + gap)).toInt().takeIf { it in 0 until visibleCount() && lx % (cw + gap) <= cw } ?: -1
+        }
 
         override fun paintComponent(g0: Graphics) {
             val g = g0.create().smooth()
@@ -298,7 +305,7 @@ class HomeScreen(private val app: App, private val window: MainWindow) : Screen 
             if (focused >= n) focused = (n - 1).coerceAtLeast(0)
             for (i in 0 until n) {
                 val b = books[i]
-                val x = i * (cw + gap)
+                val x = leadingX(i * (cw + gap), cw)
                 val lift = if (i == hover) -4f else 0f
                 CoverPainter.paint(g, b, x, 4f + lift, cw, ch, 6f, true) { repaint() }
                 if (i == focused) FocusRing.paint(g, this, RoundRectangle2D.Float(x - 3f, 1f + lift, cw + 6f, ch + 6f, 12f, 12f))
@@ -306,10 +313,11 @@ class HomeScreen(private val app: App, private val window: MainWindow) : Screen 
                     g.color = pal.onSurface.alpha(28)
                     g.fill(RoundRectangle2D.Float(x, ch + 10f, cw, 3f, 3f, 3f))
                     g.color = pal.accent
-                    g.fill(RoundRectangle2D.Float(x, ch + 10f, cw * b.progress, 3f, 3f, 3f))
+                    val fill = cw * b.progress.coerceIn(0f, 1f)
+                    g.fill(RoundRectangle2D.Float(if (rtl) x + cw - fill else x, ch + 10f, fill, 3f, 3f, 3f))
                 }
                 g.color = pal.onSurface
-                BookGrid.wrap(g, b.title, AppTheme.ui(12f, Font.BOLD), x, ch + 16f, cw, 2)
+                BookGrid.wrap(g, b.title, AppTheme.ui(12f, Font.BOLD), x, ch + 16f, cw, 2, alignEnd = rtl)
             }
             g.dispose()
         }

@@ -42,12 +42,13 @@ import java.awt.geom.RoundRectangle2D
 import javax.swing.JComponent
 import javax.swing.JMenuItem
 import javax.swing.JPopupMenu
-import javax.swing.border.EmptyBorder
+import com.readarea.desktop.ui.components.LeadingBorder
 
 class ShelvesScreen(private val app: App, private val window: MainWindow) : Screen {
     private val cards = CardLayout()
     private val root = Transparent(cards)
-    private val grid = ScrollableColumn(WrapLayout(java.awt.FlowLayout.LEFT, 18, 18))
+    // The negative leading inset cancels the gap FlowLayout puts before the first card, lining it up with the title.
+    private val grid = ScrollableColumn(WrapLayout(java.awt.FlowLayout.LEADING, 18, 18)).apply { border = LeadingBorder(0, -18, 0, 0) }
     private val listCards = CardLayout()
     private val listBody = Transparent(listCards)
     private val detailTitle = Ui.headline("")
@@ -63,13 +64,13 @@ class ShelvesScreen(private val app: App, private val window: MainWindow) : Scre
     init {
         val newShelf = PillButton(tr("new_shelf"), "add", ButtonKind.PRIMARY, compact = true).apply { addActionListener { create() } }
         val header = Transparent(BorderLayout()).apply {
-            add(Ui.headline(tr("nav_shelves")), BorderLayout.WEST)
-            add(newShelf, BorderLayout.EAST)
+            add(Ui.headline(tr("nav_shelves")), BorderLayout.LINE_START)
+            add(newShelf, BorderLayout.LINE_END)
         }
         listBody.add(Ui.scroll(grid), "grid")
         listBody.add(emptyState("shelves", tr("shelves_empty_title"), tr("shelves_empty_body"), PillButton(tr("new_shelf"), "add").apply { addActionListener { create() } }), "empty")
         root.add(Transparent(BorderLayout()).apply {
-            border = EmptyBorder(22, 28, 0, 28)
+            border = LeadingBorder(22, 28, 0, 28)
             add(Ui.padded(header, 0, 0, 12, 0), BorderLayout.NORTH)
             add(listBody, BorderLayout.CENTER)
         }, "list")
@@ -86,11 +87,11 @@ class ShelvesScreen(private val app: App, private val window: MainWindow) : Scre
             }.show(options, 0, options.height)
         }
         val detailHeader = Transparent(BorderLayout()).apply {
-            add(Ui.hbox(back, Ui.gap(6), detailTitle, Ui.gap(12), detailCount), BorderLayout.WEST)
-            add(options, BorderLayout.EAST)
+            add(Ui.hbox(back, Ui.gap(6), detailTitle, Ui.gap(12), detailCount), BorderLayout.LINE_START)
+            add(options, BorderLayout.LINE_END)
         }
         root.add(Transparent(BorderLayout()).apply {
-            border = EmptyBorder(18, 22, 0, 28)
+            border = LeadingBorder(18, 22, 0, 28)
             add(Ui.padded(detailHeader, 0, 0, 10, 0), BorderLayout.NORTH)
             detailBody.add(Ui.scroll(books), "books")
             detailBody.add(emptyState("shelves", tr("shelf_empty_title"), tr("shelf_empty_body")), "empty")

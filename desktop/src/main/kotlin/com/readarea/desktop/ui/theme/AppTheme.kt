@@ -94,7 +94,14 @@ object AppTheme {
     /** A serif family for headings, like the book-ish titles of the Android app. */
     val headlineFamily: String by lazy { ReaderFonts.familyFor("serif") }
 
-    fun headline(size: Float, bold: Boolean = true): Font = Font(headlineFamily, if (bold) Font.BOLD else Font.PLAIN, 1).deriveFont(size)
+    private val headlineBase: Array<Font> by lazy {
+        // Through StyleContext, so characters the serif lacks (Arabic, CJK...) fall back to other fonts
+        // instead of showing as boxes.
+        val sc = javax.swing.text.StyleContext.getDefaultStyleContext()
+        arrayOf(sc.getFont(headlineFamily, Font.PLAIN, 12), sc.getFont(headlineFamily, Font.BOLD, 12))
+    }
+
+    fun headline(size: Float, bold: Boolean = true): Font = headlineBase[if (bold) 1 else 0].deriveFont(size)
 
     fun ui(size: Float, style: Int = Font.PLAIN): Font = (UIManager.getFont("defaultFont") ?: Font(Font.SANS_SERIF, Font.PLAIN, 13)).deriveFont(style, size)
 

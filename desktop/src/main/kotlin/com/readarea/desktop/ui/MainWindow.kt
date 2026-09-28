@@ -11,6 +11,8 @@ import com.readarea.desktop.ui.components.addOnLayer
 import com.readarea.desktop.ui.components.Widget
 import com.readarea.desktop.ui.components.FocusRing
 import com.readarea.desktop.ui.components.onActivate
+import com.readarea.desktop.ui.components.leadingX
+import com.readarea.desktop.ui.components.rtl
 import com.readarea.desktop.ui.components.Ui
 import com.readarea.desktop.ui.components.pal
 import com.readarea.desktop.ui.components.smooth
@@ -57,7 +59,7 @@ import javax.swing.JPanel
 import javax.swing.KeyStroke
 import javax.swing.TransferHandler
 import javax.swing.WindowConstants
-import javax.swing.border.EmptyBorder
+import com.readarea.desktop.ui.components.LeadingBorder
 
 /** A screen shown in the main window's content area. */
 interface Screen {
@@ -96,10 +98,11 @@ class MainWindow(val app: App) : JFrame("ReadArea") {
         }
         for ((id, s) in screens) content.add(s.component, id)
         val root = JPanel(BorderLayout())
-        root.add(sidebar, BorderLayout.WEST)
+        root.add(sidebar, BorderLayout.LINE_START)
         root.add(content, BorderLayout.CENTER)
         contentPane = root
         layeredPane.addOnLayer(toast, javax.swing.JLayeredPane.POPUP_LAYER)
+        // Children added from now on are mirrored as they come (see Mirroring); these exist already.
         if (I18n.rtl) applyComponentOrientation(ComponentOrientation.RIGHT_TO_LEFT)
         restoreBounds()
         installKeys()
@@ -245,11 +248,11 @@ class MainWindow(val app: App) : JFrame("ReadArea") {
         private val statusRow = Ui.hbox(Box.createHorizontalStrut(14), Spinner(), Box.createHorizontalStrut(8), status)
 
         init {
-            layout = BoxLayout(this, BoxLayout.Y_AXIS)
-            border = EmptyBorder(if (Os.current == Os.MAC) 44 else 18, 12, 14, 12)
+            layout = BoxLayout(this, BoxLayout.PAGE_AXIS)
+            border = LeadingBorder(if (Os.current == Os.MAC) 44 else 18, 12, 14, 12)
             preferredSize = Dimension(224, 100)
             val logo = Ui.hbox(javax.swing.JLabel(VectorIcon("logo", 30)), Ui.gap(10), Ui.label("ReadArea", 18f, Font.BOLD).apply { font = AppTheme.headline(19f) })
-            logo.border = EmptyBorder(0, 10, 18, 0)
+            logo.border = LeadingBorder(0, 10, 18, 0)
             logo.alignmentX = LEFT_ALIGNMENT
             add(logo)
             for ((id, label, icon) in listOf(
@@ -264,7 +267,7 @@ class MainWindow(val app: App) : JFrame("ReadArea") {
             add(Box.createVerticalGlue())
             statusRow.alignmentX = LEFT_ALIGNMENT
             statusRow.isVisible = false
-            statusRow.border = EmptyBorder(0, 0, 10, 0)
+            statusRow.border = LeadingBorder(0, 0, 10, 0)
             add(statusRow)
             val settings = NavItem("settings", tr("nav_settings"), "settings")
             items["settings"] = settings
@@ -286,7 +289,8 @@ class MainWindow(val app: App) : JFrame("ReadArea") {
             g.color = pal.sidebar
             g.fillRect(0, 0, width, height)
             g.color = pal.outlineVariant.alpha(120)
-            g.fillRect(width - 1, 0, 1, height)
+            // The divider faces the content, whichever side the sidebar is on.
+            g.fillRect(if (rtl) 0 else width - 1, 0, 1, height)
         }
     }
 
@@ -318,11 +322,11 @@ class MainWindow(val app: App) : JFrame("ReadArea") {
                 g.fill(RoundRectangle2D.Float(0f, 2f, width.toFloat(), height - 4f, height - 4f, height - 4f))
             }
             FocusRing.paint(g, this, RoundRectangle2D.Float(1f, 3f, width - 2f, height - 6f, height - 6f, height - 6f))
-            ic.paintIcon(this, g, 14, (height - 20) / 2)
+            ic.paintIcon(this, g, leadingX(14f, 20f).toInt(), (height - 20) / 2)
             g.font = AppTheme.ui(13.5f, if (selected) Font.BOLD else Font.PLAIN)
             g.color = if (selected) pal.onAccentContainer else pal.onSurface
             val fm = g.fontMetrics
-            g.drawString(label, 46, (height + fm.ascent - fm.descent) / 2)
+            g.drawString(label, leadingX(46f, fm.stringWidth(label).toFloat()), (height + fm.ascent - fm.descent) / 2f)
             g.dispose()
         }
     }

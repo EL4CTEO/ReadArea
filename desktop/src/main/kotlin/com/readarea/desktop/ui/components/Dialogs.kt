@@ -16,7 +16,6 @@ import javax.swing.JPanel
 import javax.swing.JTextArea
 import javax.swing.JTextField
 import javax.swing.KeyStroke
-import javax.swing.border.EmptyBorder
 
 /** Small modal dialogs in the app's style: confirm, text input, message. Enter confirms, Escape cancels. */
 object Dialogs {
@@ -29,10 +28,10 @@ object Dialogs {
                 g.fillRect(0, 0, width, height)
             }
         }
-        root.border = EmptyBorder(22, 24, 18, 24)
+        root.border = LeadingBorder(22, 24, 18, 24)
         root.add(Ui.label(title, 17f, Font.BOLD).apply { font = com.readarea.desktop.ui.theme.AppTheme.headline(19f) }, BorderLayout.NORTH)
         root.add(Ui.padded(content, 12, 0, 16, 0), BorderLayout.CENTER)
-        root.add(Transparent(FlowLayout(FlowLayout.RIGHT, 8, 0)).apply { buttons.forEach { add(it) } }, BorderLayout.SOUTH)
+        root.add(Transparent(FlowLayout(FlowLayout.TRAILING, 8, 0)).apply { buttons.forEach { add(it) } }, BorderLayout.SOUTH)
         d.contentPane = root
         d.rootPane.registerKeyboardAction({ onEscape(); d.dispose() }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_IN_FOCUSED_WINDOW)
         if (onEnter != null) {

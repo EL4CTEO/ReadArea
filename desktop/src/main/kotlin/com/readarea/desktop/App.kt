@@ -4,6 +4,8 @@ import com.readarea.core.format.BookFormat
 import com.readarea.desktop.data.Database
 import com.readarea.desktop.data.Library
 import com.readarea.desktop.data.SettingsStore
+import com.readarea.desktop.i18n.I18n
+import com.readarea.desktop.ui.components.Mirroring
 import com.readarea.desktop.i18n.tr
 import com.readarea.desktop.platform.AppDirs
 import com.readarea.desktop.platform.Os
@@ -62,6 +64,7 @@ class App(
 
     fun start(files: List<File>) {
         AppTheme.apply(dark, settings.app.value.accent)
+        Mirroring.install()
         main = MainWindow(this)
         SystemIntegration.install(icons.last(), onOpenFiles = { openFiles(it) }, onAbout = { main.showSettings(about = true) }, onPreferences = { main.showSettings() }, onQuit = { shutdown(exit = false) })
         main.isVisible = true
@@ -153,7 +156,7 @@ class App(
             val first = ids.first()
             library.get(first)?.let { b -> if (!b.metaLoaded) launch { library.loadMetadata(b) } }
             if (ids.size == 1) openBook(first) else {
-                main.toast(tr("toast_added_books", ids.size))
+                main.toast(I18n.plural("toast_added_books", ids.size, ids.size))
                 main.bringToFront()
             }
         }

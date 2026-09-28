@@ -9,6 +9,8 @@ import com.readarea.desktop.platform.SystemIntegration
 import com.readarea.desktop.reader.engine.ReaderFonts
 import com.readarea.desktop.ui.MainWindow
 import com.readarea.desktop.ui.Screen
+import com.readarea.desktop.ui.components.VBox
+import com.readarea.desktop.ui.components.ScrollingStack
 import com.readarea.desktop.ui.components.FocusRing
 import com.readarea.desktop.ui.components.onActivate
 import com.readarea.desktop.ui.components.ButtonKind
@@ -48,19 +50,19 @@ import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JScrollPane
-import javax.swing.border.EmptyBorder
+import com.readarea.desktop.ui.components.LeadingBorder
 
 class SettingsScreen(private val app: App, private val window: MainWindow) : Screen {
-    private val column = ScrollableColumn(null).apply { layout = BoxLayout(this, BoxLayout.Y_AXIS) }
+    private val column = ScrollingStack()
     private val scroll: JScrollPane = Ui.scroll(column)
     private var aboutCard: JComponent? = null
     override val component: JComponent = scroll
     private var building = false
-    private val folderList = Transparent(null).apply { layout = BoxLayout(this, BoxLayout.Y_AXIS) }
-    private val fontList = Transparent(null).apply { layout = BoxLayout(this, BoxLayout.Y_AXIS) }
+    private val folderList = VBox()
+    private val fontList = VBox()
 
     init {
-        column.border = EmptyBorder(22, 28, 36, 28)
+        column.border = LeadingBorder(22, 28, 36, 28)
         build()
         app.scope.launch { app.settings.app.collect { if (!building) rebuildFolders() } }
     }
@@ -176,14 +178,14 @@ class SettingsScreen(private val app: App, private val window: MainWindow) : Scr
             val row = Transparent(BorderLayout(10, 0))
             row.alignmentX = JComponent.LEFT_ALIGNMENT
             row.maximumSize = Dimension(Int.MAX_VALUE, 40)
-            row.add(JLabel(VectorIcon("folder", 18) { pal.accent }), BorderLayout.WEST)
+            row.add(JLabel(VectorIcon("folder", 18) { pal.accent }), BorderLayout.LINE_START)
             row.add(Ui.label(f, 13f).apply { toolTipText = f }, BorderLayout.CENTER)
             row.add(IconButton("close", tr("remove_folder"), 16).apply {
                 addActionListener {
                     val (ok, removeBooks) = Dialogs.confirm(window, tr("remove_folder_title"), tr("remove_folder_body", File(f).name), tr("remove_folder"), checkbox = tr("remove_books_too"))
                     if (ok) app.library.removeFolder(f, removeBooks)
                 }
-            }, BorderLayout.EAST)
+            }, BorderLayout.LINE_END)
             folderList.add(row)
         }
         folderList.revalidate()
@@ -207,7 +209,7 @@ class SettingsScreen(private val app: App, private val window: MainWindow) : Scr
                     app.settings.updateReader { r -> if (r.fontFamily == "file:$name") r.copy(fontFamily = "serif") else r }
                     rebuildFonts()
                 }
-            }, BorderLayout.EAST)
+            }, BorderLayout.LINE_END)
             fontList.add(row)
         }
         fontList.revalidate()
@@ -280,8 +282,8 @@ class SettingsScreen(private val app: App, private val window: MainWindow) : Scr
 
     private fun section(icon: String, title: String, vararg content: JComponent): JComponent {
         val card = Card(20, BorderLayout(), { pal.surfaceContainer })
-        card.border = EmptyBorder(18, 22, 18, 22)
-        val body = Transparent(null).apply { layout = BoxLayout(this, BoxLayout.Y_AXIS) }
+        card.border = LeadingBorder(18, 22, 18, 22)
+        val body = VBox()
         body.add(Ui.hbox(JLabel(VectorIcon(icon, 20) { pal.accent }), Ui.gap(10), Ui.label(title, 15f, Font.BOLD)).apply { alignmentX = JComponent.LEFT_ALIGNMENT })
         body.add(Ui.gap(12))
         for (c in content) {
@@ -291,19 +293,19 @@ class SettingsScreen(private val app: App, private val window: MainWindow) : Scr
         card.add(body)
         val wrap = Transparent(BorderLayout())
         wrap.add(card)
-        wrap.border = EmptyBorder(0, 0, 16, 0)
+        wrap.border = LeadingBorder(0, 0, 16, 0)
         wrap.alignmentX = JComponent.LEFT_ALIGNMENT
         wrap.maximumSize = Dimension(820, Int.MAX_VALUE)
         return wrap
     }
 
     private fun row(label: String, hint: String?, control: JComponent): JComponent =
-        Ui.settingRow(label, hint, control).apply { border = EmptyBorder(8, 0, 8, 0) }
+        Ui.settingRow(label, hint, control).apply { border = LeadingBorder(8, 0, 8, 0) }
 
     private fun switch(on: Boolean, onChange: (Boolean) -> Unit): JComponent = Switch(on).apply { addActionListener { onChange(isSelected) } }
 
     private fun accents(selected: Int): JComponent {
-        val p = Transparent(FlowLayout(FlowLayout.RIGHT, 6, 0))
+        val p = Transparent(FlowLayout(FlowLayout.TRAILING, 6, 0))
         var sel = selected
         val swatches = ArrayList<JComponent>()
         Accents.colors.forEachIndexed { i, rgb ->
