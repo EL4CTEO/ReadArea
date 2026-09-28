@@ -35,7 +35,7 @@ jobs:
 
       - name: Upload desktop screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-screenshots
           path: |
@@ -47,7 +47,7 @@ jobs:
 
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: core-desktop-reports
           path: |
@@ -74,7 +74,7 @@ jobs:
 
       - name: Upload test reports
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-reports
           path: app/build/reports/tests
@@ -132,7 +132,7 @@ jobs:
           fi
 
       - name: Upload installers
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-${{ matrix.os }}
           path: desktop/build/package/dist
