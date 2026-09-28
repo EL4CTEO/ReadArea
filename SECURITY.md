@@ -29,6 +29,9 @@ get an answer, and credit in the release notes if you'd like it.
   quadratic blow-ups;
 - text scanners that stay linear on hostile input: Markdown emphasis, links and rules and CSS comments are
   matched by hand-written scans or bounded patterns, not regexes that backtrack or recurse per repetition;
+- page layout on the desktop that stays linear in a paragraph's length however densely it's styled: a
+  paragraph with thousands of links, marks or ruby annotations is laid out a line at a time from a window of
+  its text, since Java's own text classes take quadratic time on it;
 - no DTDs or external entities processed at all (only character references like `&amp;` are decoded);
 - every offset and length read from a binary header (MOBI, PalmDOC) checked before use;
 - images decoded at most 16,384 pixels a side and 24 megapixels, subsampled if larger;

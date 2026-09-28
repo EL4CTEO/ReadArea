@@ -22,7 +22,9 @@ import java.awt.font.TextLayout
 import java.awt.geom.AffineTransform
 import java.awt.geom.Rectangle2D
 import java.awt.image.ColorModel
+import java.text.AttributedCharacterIterator
 import java.text.AttributedString
+import java.text.Bidi
 import java.text.BreakIterator
 import java.text.CharacterIterator
 import java.util.Locale
@@ -231,6 +233,8 @@ class TextLayoutBuilder(
     private val colors: SpanColors,
     private val images: ImageCache,
     private val locale: Locale,
+    /** Paragraphs styled in more stretches than this are laid out a line at a time; see [windowed]. */
+    private val manyRuns: Int = MANY_RUNS,
 ) {
     private val st = setup.settings
     private val frc = FRC
@@ -374,7 +378,8 @@ class TextLayoutBuilder(
                 offset += 1
                 return@forEachIndexed
             }
-            val attributed = attributed(b, text, style, size, blockStart, links)
+            val styling = styling(b, text, style, size, blockStart, links)
+            val attributed = if (styling.spans > manyRuns) null else styling.attributed(0, text.length)
             val first = lines.size
             var segStart = 0
             while (segStart <= text.length) {
@@ -388,29 +393,29 @@ class TextLayoutBuilder(
                     if (segEnd >= text.length) break
                     continue
                 }
-                val iter = attributed.getIterator(null, segStart, segEnd)
                 val breaker = BreakIterator.getLineInstance(locale).let { if (st.hyphenation) it else NoSoftHyphenBreaks(it) }
-                val lbm = LineBreakMeasurer(iter, breaker, frc)
+                val source = if (attributed != null) wholeParagraph(attributed, segStart, segEnd, breaker) else windowed(styling, segStart, segEnd, breaker, size)
                 var firstLine = true
-                while (lbm.position < segEnd) {
-                    val lineStart = lbm.position
+                var lineStart = segStart
+                while (lineStart < segEnd) {
                     val left = if (firstLine) style.first else style.rest
                     val wrap = (width - left).coerceAtLeast(fontPx * 2)
-                    var layout = lbm.nextLayout(wrap, segEnd, false) ?: break
-                    var end = lbm.position
+                    var measured = source.line(lineStart, wrap) ?: break
+                    var layout = measured.layout
+                    var end = measured.end
                     var hyphen = st.hyphenation && end < segEnd && text[end - 1] == '­'
                     val hyphenW = if (hyphen) hyphenWidth(size) else 0f
                     if (hyphen && layout.visibleAdvance + hyphenW > wrap) {
-                        lbm.position = lineStart
-                        layout = lbm.nextLayout(wrap - hyphenW, segEnd, false) ?: break
-                        end = lbm.position
+                        measured = source.line(lineStart, wrap - hyphenW) ?: break
+                        layout = measured.layout
+                        end = measured.end
                         hyphen = end < segEnd && text[end - 1] == '­'
                     }
                     val last = end >= segEnd
                     val target = wrap - if (hyphen) hyphenWidth(size) else 0f
                     if (style.align == Align.JUSTIFY && !last && layout.visibleAdvance >= target * 0.72f) {
                         layout = if (hasSpace(text, lineStart, end)) runCatching { layout.getJustifiedLayout(target) }.getOrDefault(layout)
-                        else justifyByTracking(attributed, lineStart, end, target - layout.visibleAdvance, size) ?: layout
+                        else justifyByTracking(measured.source, lineStart - measured.offset, end - measured.offset, target - layout.visibleAdvance, size) ?: layout
                     }
                     val ltr = layout.isLeftToRight
                     val visible = layout.visibleAdvance + (if (hyphen) hyphenWidth(size) else 0f)
@@ -437,6 +442,7 @@ class TextLayoutBuilder(
                     )
                     y += h
                     firstLine = false
+                    lineStart = end
                 }
                 segStart = segEnd + 1
                 if (segEnd >= text.length) break
@@ -508,8 +514,100 @@ class TextLayoutBuilder(
 
     private fun hyphenWidth(size: Float): Float = hyphenWidths.getOrPut(size) { TextLayout("-", font(false, false, size, false, false, false, false, false, false), frc).advance }
 
-    private fun attributed(b: Block, text: String, style: Style, size: Float, blockStart: Int, links: MutableList<LinkRange>): AttributedString {
-        val a = AttributedString(text)
+    /** A measured line: its layout, where it ends, and the styled text it came from, starting at [offset]. */
+    private class Measured(val layout: TextLayout, val end: Int, val source: AttributedString, val offset: Int)
+
+    private fun interface LineSource {
+        fun line(start: Int, wrap: Float): Measured?
+    }
+
+    private fun wholeParagraph(attributed: AttributedString, segStart: Int, segEnd: Int, breaker: BreakIterator): LineSource {
+        val lbm = LineBreakMeasurer(attributed.getIterator(null, segStart, segEnd), breaker, frc)
+        return LineSource { start, wrap ->
+            if (lbm.position != start) lbm.position = start
+            lbm.nextLayout(wrap, segEnd, false)?.let { Measured(it, lbm.position, attributed, 0) }
+        }
+    }
+
+    /**
+     * Lays out a paragraph styled in many stretches (fonts, links, ruby) a line at a time, each from a window of
+     * text reaching a little past where the line can end. Java's text classes find a stretch by searching from
+     * the first one, so a paragraph with thousands of them (a crafted book, or dense ruby or footnote marks) took
+     * time quadratic in its length; a window holds only the stretches its line needs. A line that reaches the
+     * end of its window is measured again from a larger one, and each window is given the paragraph's
+     * direction, which it would otherwise guess from its own first letter.
+     */
+    private fun windowed(styling: Styling, segStart: Int, segEnd: Int, breaker: BreakIterator, size: Float): LineSource {
+        val text = styling.text
+        val chars = text.toCharArray(segStart, segEnd)
+        val ltr = !Bidi.requiresBidi(chars, 0, chars.size) || Bidi(chars, 0, null, 0, chars.size, Bidi.DIRECTION_DEFAULT_LEFT_TO_RIGHT).baseIsLeftToRight()
+        val direction = if (ltr) TextAttribute.RUN_DIRECTION_LTR else TextAttribute.RUN_DIRECTION_RTL
+        var window = (width / (size * 0.25f)).toInt().coerceIn(64, 4096) + WINDOW_MARGIN
+        return LineSource { start, wrap ->
+            var measured: Measured? = null
+            while (true) {
+                val end = minOf(segEnd, start + window)
+                val a = styling.attributed(start, end)
+                a.addAttribute(TextAttribute.RUN_DIRECTION, direction)
+                val lbm = LineBreakMeasurer(a.iterator, breaker, frc)
+                val layout = lbm.nextLayout(wrap, end - start, false) ?: break
+                val lineEnd = start + lbm.position
+                if (end < segEnd && lineEnd > end - WINDOW_MARGIN) {
+                    window *= 2
+                    continue
+                }
+                measured = Measured(layout, lineEnd, a, start)
+                break
+            }
+            measured
+        }
+    }
+
+    private class Span(val start: Int, val end: Int, val value: Any)
+
+    /**
+     * How a paragraph is styled, worked out once: fonts (split where glyphs need the fallback font), marks, link
+     * colors and character replacements (tab widths, ruby), each in order of position, so the whole paragraph
+     * or any window of it can be styled from just the spans it overlaps.
+     */
+    private class Styling(val text: String) {
+        val fonts = ArrayList<Span>()
+        val marks = ArrayList<Span>()
+        val linkColors = ArrayList<Span>()
+        val replacements = java.util.TreeMap<Int, GraphicAttribute>()
+        private var replacementSpans: List<Span>? = null
+
+        /** How many styled stretches the text breaks into: what Java's text classes search through. */
+        val spans: Int get() = fonts.size + marks.size + linkColors.size + replacements.size
+
+        fun attributed(from: Int, to: Int): AttributedString {
+            val a = AttributedString(if (from == 0 && to == text.length) text else text.substring(from, to))
+            apply(a, TextAttribute.FONT, fonts, from, to)
+            apply(a, TextAttribute.BACKGROUND, marks, from, to)
+            apply(a, TextAttribute.FOREGROUND, linkColors, from, to)
+            val graphics = replacementSpans ?: replacements.map { (at, g) -> Span(at, at + 1, g) }.also { replacementSpans = it }
+            apply(a, TextAttribute.CHAR_REPLACEMENT, graphics, from, to)
+            return a
+        }
+
+        /** Applies the [spans] (in order and not overlapping) that fall in [from, to), shifted to start at 0. */
+        private fun apply(a: AttributedString, key: AttributedCharacterIterator.Attribute, spans: List<Span>, from: Int, to: Int) {
+            var lo = 0
+            var hi = spans.size
+            while (lo < hi) {
+                val mid = (lo + hi) ushr 1
+                if (spans[mid].end <= from) lo = mid + 1 else hi = mid
+            }
+            var i = lo
+            while (i < spans.size && spans[i].start < to) {
+                val span = spans[i++]
+                a.addAttribute(key, span.value, maxOf(span.start, from) - from, minOf(span.end, to) - from)
+            }
+        }
+    }
+
+    private fun styling(b: Block, text: String, style: Style, size: Float, blockStart: Int, links: MutableList<LinkRange>): Styling {
+        val styling = Styling(text)
         val fb = fallbacks.getOrPut(style.mono) {
             val probe = font(style.mono, false, fontPx, false, false, false, false, false, false)
             Fallback(probe, probe)
@@ -528,11 +626,11 @@ class TextLayoutBuilder(
             val runScale = if (st.publisherStyles && r.scale != 1f && b.kind != BlockKind.HEADING) r.scale.coerceIn(0.7f, 1.6f) else 1f
             val runSize = size * runScale
             fb.runs(text, rs, re) { s, e, useFallback ->
-                a.addAttribute(TextAttribute.FONT, font(mono, useFallback, runSize, bold, italic, sup, sub, r.style and RunStyle.UNDERLINE != 0, r.style and RunStyle.STRIKE != 0), s, e)
+                styling.fonts.add(Span(s, e, font(mono, useFallback, runSize, bold, italic, sup, sub, r.style and RunStyle.UNDERLINE != 0, r.style and RunStyle.STRIKE != 0)))
             }
-            if (r.style and RunStyle.MARK != 0) a.addAttribute(TextAttribute.BACKGROUND, MARK, rs, re)
+            if (r.style and RunStyle.MARK != 0) styling.marks.add(Span(rs, re, MARK))
             if (r.link != null) {
-                a.addAttribute(TextAttribute.FOREGROUND, colors.link, rs, re)
+                styling.linkColors.add(Span(rs, re, colors.link))
                 links.add(LinkRange(blockStart + rs, blockStart + re, r.link!!))
             }
         }
@@ -540,15 +638,15 @@ class TextLayoutBuilder(
         if (style.mono) {
             var t = text.indexOf('\t')
             while (t >= 0) {
-                a.addAttribute(TextAttribute.CHAR_REPLACEMENT, SpaceGraphic(size * 0.6f * 4), t, t + 1)
+                styling.replacements[t] = SpaceGraphic(size * 0.6f * 4)
                 t = text.indexOf('\t', t + 1)
             }
         }
-        applyRuby(a, b, text, size, style)
-        return a
+        planRuby(styling, b, text, size, style)
+        return styling
     }
 
-    private fun applyRuby(a: AttributedString, b: Block, text: String, size: Float, style: Style) {
+    private fun planRuby(styling: Styling, b: Block, text: String, size: Float, style: Style) {
         val taken = BooleanArray(text.length)
         for (rb in b.ruby) {
             var s = rb.start.coerceIn(0, text.length)
@@ -556,7 +654,7 @@ class TextLayoutBuilder(
             while (e > s && text[e - 1].isWhitespace()) e--
             while (s < e && text[s].isWhitespace()) s++
             if (e <= s || (s until e).any { text[it] == '\n' || taken[it] } || rb.text.isBlank()) continue
-            placeRuby(a, text, s, e, rb.text, size, style)
+            placeRuby(styling, text, s, e, rb.text, size, style)
             for (i in s until e) taken[i] = true
         }
         var k = 0
@@ -564,7 +662,7 @@ class TextLayoutBuilder(
             if (r.style and RunStyle.EMPHASIS != 0) {
                 for (q in k until k + r.text.length) {
                     if (q < text.length && !taken[q] && !text[q].isWhitespace() && !Character.isSurrogate(text[q])) {
-                        placeRuby(a, text, q, q + 1, "・", size, style)
+                        placeRuby(styling, text, q, q + 1, "・", size, style)
                         taken[q] = true
                     }
                 }
@@ -573,15 +671,15 @@ class TextLayoutBuilder(
         }
     }
 
-    private fun placeRuby(a: AttributedString, text: String, s: Int, e: Int, ruby: String, size: Float, style: Style) {
+    private fun placeRuby(styling: Styling, text: String, s: Int, e: Int, ruby: String, size: Float, style: Style) {
         val base = text.substring(s, e)
         val primary = font(style.mono, false, size, style.bold, style.italic, false, false, false, false)
         val baseFont = if (primary.canDisplayUpTo(base) == -1) primary else font(style.mono, true, size, style.bold, style.italic, false, false, false, false)
         val rubySize = size * 0.5f
         val rubyPrimary = font(false, false, rubySize, false, false, false, false, false, false)
         val rubyFont = if (rubyPrimary.canDisplayUpTo(ruby) == -1) rubyPrimary else font(false, true, rubySize, false, false, false, false, false, false)
-        a.addAttribute(TextAttribute.CHAR_REPLACEMENT, RubyGraphic(base, ruby, baseFont, rubyFont, frc), s, s + 1)
-        for (i in s + 1 until e) a.addAttribute(TextAttribute.CHAR_REPLACEMENT, EmptyGraphic(), i, i + 1)
+        styling.replacements[s] = RubyGraphic(base, ruby, baseFont, rubyFont, frc)
+        for (i in s + 1 until e) styling.replacements[i] = EmptyGraphic()
     }
 
     /**
@@ -632,5 +730,11 @@ class TextLayoutBuilder(
         val FRC = FontRenderContext(null, true, true)
         private val MARK = Color(0xFF, 0xD5, 0x4F, 0x55)
         private const val OPENING = "「『（〔［｛〈《【〘〖〝"
+
+        /** Styled stretches above which a paragraph is laid out in windows; real paragraphs rarely have more. */
+        const val MANY_RUNS = 64
+
+        /** How far short of its window's end a line must stop to be sure the window didn't cut it short. */
+        private const val WINDOW_MARGIN = 16
     }
 }
