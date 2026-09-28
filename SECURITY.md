@@ -25,7 +25,10 @@ get an answer, and credit in the release notes if you'd like it.
 
 - limits on file size (128 MB of text), on each archive entry (32 MB), on the total markup an EPUB may expand
   to (256 MB) and on entry counts, against decompression bombs;
-- nesting depth capped at 256 levels in XML and HTML, against stack exhaustion and quadratic blow-ups;
+- nesting depth capped at 256 levels in XML and HTML (8 for CSS media queries), against stack exhaustion and
+  quadratic blow-ups;
+- text scanners that stay linear on hostile input: Markdown emphasis, links and rules and CSS comments are
+  matched by hand-written scans or bounded patterns, not regexes that backtrack or recurse per repetition;
 - no DTDs or external entities processed at all (only character references like `&amp;` are decoded);
 - every offset and length read from a binary header (MOBI, PalmDOC) checked before use;
 - images decoded at most 16,384 pixels a side and 24 megapixels, subsampled if larger;
