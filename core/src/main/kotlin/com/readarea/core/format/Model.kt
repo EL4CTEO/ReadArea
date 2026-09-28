@@ -161,4 +161,4 @@ class ParsedBook(
 
 enum class ParseError { INVALID, DRM, UNSUPPORTED, EMPTY, TOO_LARGE }
 
-class BookParseException(val reason: ParseError, message: String) : Exception(message)
+class BookParseException(val reason: ParseError, message: String, cause: Throwable? = null) : Exception(message, cause)

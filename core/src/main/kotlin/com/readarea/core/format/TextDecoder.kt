@@ -184,6 +184,9 @@ class MapResources(private val map: Map<String, () -> ByteArray?>) : ResourcePro
 
 object Limits {
     const val ENTRY = 32 * 1024 * 1024
+
+    /** Markup (chapters and stylesheets) one book may expand to in total. */
+    const val MARKUP = 256L * 1024 * 1024
     const val FILE = 128 * 1024 * 1024
     const val ARCHIVE = 1024L * 1024 * 1024
     const val ENTRIES = 100_000

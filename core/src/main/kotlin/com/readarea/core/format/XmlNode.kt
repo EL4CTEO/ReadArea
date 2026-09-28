@@ -49,20 +49,45 @@ class XmlNode(val name: String, val attrs: Attributes, val parent: XmlNode?) {
     }
 
     companion object {
+        /**
+         * Nesting deeper than this is flattened: no real document comes close, and the cap keeps a crafted
+         * file from exhausting the stack in the recursive walks or making each end tag search a long chain.
+         */
+        const val MAX_DEPTH = 256
+
         fun parse(xml: String): XmlNode {
             val root = XmlNode("#root", Attributes.EMPTY, null)
             var cur = root
+            var depth = 0
+            var overflow = 0
             HtmlTokenizer(xml).parse(object : HtmlHandler {
                 override fun startTag(name: String, attrs: Attributes, selfClosing: Boolean) {
                     val node = XmlNode(name, attrs, cur)
                     cur.addChild(node)
-                    if (!selfClosing) cur = node
+                    if (selfClosing) return
+                    if (depth < MAX_DEPTH) {
+                        cur = node
+                        depth++
+                    } else {
+                        overflow++
+                    }
                 }
 
                 override fun endTag(name: String) {
+                    if (overflow > 0) {
+                        overflow--
+                        return
+                    }
                     var n: XmlNode? = cur
-                    while (n != null && n.name != name) n = n.parent
-                    if (n?.parent != null) cur = n.parent!!
+                    var up = 0
+                    while (n != null && n.name != name) {
+                        n = n.parent
+                        up++
+                    }
+                    if (n?.parent != null) {
+                        cur = n.parent!!
+                        depth -= up + 1
+                    }
                 }
 
                 override fun text(text: String) {

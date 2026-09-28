@@ -60,6 +60,10 @@ class HtmlConverter(
     private val rtText = StringBuilder()
     private var htmlAttrs: Triple<String?, String?, String?>? = null
 
+    /** Start tags past [MAX_DEPTH] that weren't pushed; their end tags are dropped to match. */
+    private var overflow = 0
+    private val linkedSheets = HashSet<String>()
+
     fun convert(html: String): List<Block> {
         HtmlTokenizer(html).parse(this)
         finish()
@@ -80,13 +84,22 @@ class HtmlConverter(
             }
             "link" -> {
                 if (attrs["rel"]?.contains("stylesheet", true) == true) {
-                    attrs["href"]?.let { href -> loadCss?.invoke(PathUtil.resolve(basePath, href))?.let { stylesheet.add(it) } }
+                    // Each stylesheet counts once, however often a document links it.
+                    attrs["href"]?.let { href ->
+                        val path = PathUtil.resolve(basePath, href)
+                        if (linkedSheets.size < MAX_STYLESHEETS && linkedSheets.add(path)) loadCss?.invoke(path)?.let { stylesheet.add(it) }
+                    }
                 }
                 return
             }
             "meta", "base" -> return
         }
         if (inHead) return
+        // Nesting past any real book's stops here, so a crafted file can't make each tag cost more than the last.
+        if (stack.size >= MAX_DEPTH && !selfClosing && name !in VOID) {
+            overflow++
+            return
+        }
         val parent = top()
         if (parent?.hidden == true) {
             if (!selfClosing && name !in VOID) stack.add(Frame(name, false, 0, 1f, null, null, true, false, false, null, 0))
@@ -255,6 +268,10 @@ class HtmlConverter(
             }
         }
         if (inHead) return
+        if (overflow > 0) {
+            overflow--
+            return
+        }
         val idx = stack.indexOfLast { it.tag == name }
         if (idx < 0) return
         popTo(idx)
@@ -489,6 +506,8 @@ class HtmlConverter(
 
     companion object {
         private val WS = Regex("\\s+")
+        const val MAX_DEPTH = 256
+        private const val MAX_STYLESHEETS = 32
         private val VOID = setOf("br", "img", "hr", "meta", "link", "input", "area", "base", "col", "embed", "param", "source", "track", "wbr")
         private val HIDDEN = setOf("script", "style", "noscript", "template", "button", "select", "input", "textarea", "iframe", "object", "audio", "video", "canvas", "math", "map")
         private val STOPS = setOf("ul", "ol", "dl", "table", "blockquote", "div", "section", "body")

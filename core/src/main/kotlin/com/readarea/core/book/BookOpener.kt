@@ -55,6 +55,10 @@ object BookOpener {
     fun open(file: File, format: BookFormat, title: String = titleFromFileName(file.name)): OpenBook {
         require(!format.fixedLayout) { "$format is rendered as pages" }
         checkSize(file)
+        return guarded { openParsed(file, format, title) }
+    }
+
+    private fun openParsed(file: File, format: BookFormat, title: String): OpenBook {
         return when (format) {
             BookFormat.EPUB -> zipBook(file, split = false) { EpubParser(it).parse().let { p -> if (p.meta.title.isBlank()) p.withTitle(title) else p } }
             BookFormat.DOCX -> zipBook(file, split = true) { DocxParser(it, title).parse() }
@@ -84,6 +88,10 @@ object BookOpener {
     /** Title, author, cover and the rest, read without parsing the whole book where the format allows. */
     fun details(file: File, format: BookFormat, title: String = titleFromFileName(file.name)): BookDetails {
         checkSize(file)
+        return guarded { readDetails(file, format, title) }
+    }
+
+    private fun readDetails(file: File, format: BookFormat, title: String): BookDetails {
         return when (format) {
             BookFormat.EPUB -> FileZipAccess(file).useZip { zip ->
                 val parser = EpubParser(zip)
@@ -102,6 +110,26 @@ object BookOpener {
             BookFormat.PDF, BookFormat.TXT -> BookDetails(BookMeta(title = title), null)
             BookFormat.MD, BookFormat.RTF, BookFormat.HTML -> open(file, format, title).use { BookDetails(it.book.meta, it.book.coverBytes()) }
         }
+    }
+
+    /**
+     * The boundary between untrusted files and the app: whatever a malformed or hostile file makes a
+     * parser do, callers only ever see a [BookParseException] (or an I/O error reading the file).
+     */
+    private inline fun <T> guarded(block: () -> T): T = try {
+        block()
+    } catch (e: BookParseException) {
+        throw e
+    } catch (e: java.util.zip.ZipException) {
+        throw BookParseException(ParseError.INVALID, "This file is damaged or isn't a valid book", e)
+    } catch (e: java.io.IOException) {
+        throw e
+    } catch (e: RuntimeException) {
+        throw BookParseException(ParseError.INVALID, "This file is damaged or isn't a valid book", e)
+    } catch (e: StackOverflowError) {
+        throw BookParseException(ParseError.INVALID, "This file is damaged or isn't a valid book", e)
+    } catch (e: OutOfMemoryError) {
+        throw BookParseException(ParseError.TOO_LARGE, "This book is too large to open", e)
     }
 
     private fun checkSize(file: File) {

@@ -59,14 +59,25 @@ class EpubParser(private val zip: ZipAccess) {
         checkDrm()
 
         val spine = opf.find("spine")
+        // A document listed twice is read once: repeating one entry must not multiply the work.
         val spineItems = spine?.children("itemref")?.mapNotNull { manifest[it["idref"]] }
             ?.filter { it.mediaType.contains("html") || it.href.endsWith("html", true) || it.href.endsWith(".htm", true) || it.mediaType.contains("svg") }
+            ?.distinctBy { it.href }
             .orEmpty()
         if (spineItems.isEmpty()) throw BookParseException(ParseError.EMPTY, "This EPUB has no readable content")
 
         val tocRaw = parseNav(manifest) ?: parseNcx(spine?.get("toc"), manifest) ?: emptyList()
+        // Chapters and stylesheets together may only expand to so much, so a small archive of highly
+        // compressible entries can't tie up the reader or fill its memory.
+        var markup = 0L
+        val readMarkup: (String) -> ByteArray? = { path ->
+            zip.read(path)?.also {
+                markup += it.size
+                if (markup > Limits.MARKUP) throw BookParseException(ParseError.TOO_LARGE, "This book is too large to open")
+            }
+        }
         val cssCache = HashMap<String, String?>()
-        val loadCss: (String) -> String? = { path -> cssCache.getOrPut(path) { zip.read(path)?.let { TextDecoder.decode(it) } } }
+        val loadCss: (String) -> String? = { path -> cssCache.getOrPut(path) { readMarkup(path)?.let { TextDecoder.decode(it) } } }
 
         val chapterIndex = HashMap<String, Int>()
         val chapters = ArrayList<Chapter>()
@@ -74,7 +85,7 @@ class EpubParser(private val zip: ZipAccess) {
         var horizontalVotes = 0
         spineItems.forEachIndexed { i, item ->
             chapterIndex[item.href] = i
-            val html = zip.read(item.href)?.let { TextDecoder.decode(it) } ?: ""
+            val html = readMarkup(item.href)?.let { TextDecoder.decode(it) } ?: ""
             val converter = HtmlConverter(item.href, Stylesheet(), loadCss)
             val blocks = converter.convert(html)
             if (converter.vertical) verticalVotes++ else if (converter.horizontalDeclared) horizontalVotes++
