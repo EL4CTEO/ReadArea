@@ -31,6 +31,8 @@ import java.util.zip.ZipInputStream
 /** A reflowable book opened for reading. Closing it releases the file it reads resources from. */
 class OpenBook(val book: ParsedBook, private val onClose: () -> Unit = {}) : Closeable {
     override fun close() = onClose()
+
+    internal fun withSafeMeta() = OpenBook(ParsedBook(book.meta.sanitized(), book.chapters, book.toc, book.resources), onClose)
 }
 
 /** What the library shows for a book before it is opened: its metadata and cover image bytes. */
@@ -55,7 +57,7 @@ object BookOpener {
     fun open(file: File, format: BookFormat, title: String = titleFromFileName(file.name)): OpenBook {
         require(!format.fixedLayout) { "$format is rendered as pages" }
         checkSize(file)
-        return guarded { openParsed(file, format, title) }
+        return guarded { openParsed(file, format, title) }.withSafeMeta()
     }
 
     private fun openParsed(file: File, format: BookFormat, title: String): OpenBook {
@@ -88,7 +90,7 @@ object BookOpener {
     /** Title, author, cover and the rest, read without parsing the whole book where the format allows. */
     fun details(file: File, format: BookFormat, title: String = titleFromFileName(file.name)): BookDetails {
         checkSize(file)
-        return guarded { readDetails(file, format, title) }
+        return guarded { readDetails(file, format, title) }.let { BookDetails(it.meta.sanitized(), it.cover) }
     }
 
     private fun readDetails(file: File, format: BookFormat, title: String): BookDetails {

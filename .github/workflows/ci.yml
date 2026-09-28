@@ -121,6 +121,8 @@ jobs:
 
       # Builds the app image, runs its self-test through the native launcher, then the installers.
       - name: Package
+        # bash everywhere: PowerShell would split -Preadarea.android=false at the dot.
+        shell: bash
         run: ./gradlew --no-daemon -Preadarea.android=false :desktop:packageDesktop
 
       - name: Upload installers

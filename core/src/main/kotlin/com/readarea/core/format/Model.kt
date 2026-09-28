@@ -95,7 +95,33 @@ data class BookMeta(
     val coverRef: String? = null,
     val rtl: Boolean = false,
     val vertical: Boolean = false,
-)
+) {
+    /**
+     * The metadata as the app may store and show it. Every field comes straight from the file, so each is
+     * trimmed to a sane length and cleared of control characters and of the direction overrides that
+     * could make a title display as something it isn't.
+     */
+    fun sanitized(): BookMeta = copy(
+        title = line(title, 500),
+        author = line(author, 300),
+        language = language?.let { line(it, 35) }?.takeIf { it.isNotEmpty() },
+        description = description?.let { paragraph(it, 20_000) }?.takeIf { it.isNotEmpty() },
+        series = series?.let { line(it, 200) }?.takeIf { it.isNotEmpty() },
+        seriesIndex = seriesIndex?.takeIf { it.isFinite() && it >= 0f && it < 1_000_000f },
+        publisher = publisher?.let { line(it, 200) }?.takeIf { it.isNotEmpty() },
+        coverRef = coverRef?.takeIf { it.length <= 1000 },
+    )
+
+    private companion object {
+        /** C0/C1 controls, and bidi embeddings, overrides and isolates (U+202A–202E, U+2066–2069). */
+        val UNSAFE = Regex("[\\p{Cc}\\u202A-\\u202E\\u2066-\\u2069]")
+        val SPACES = Regex("\\s+")
+
+        fun line(s: String, max: Int): String = s.take(max * 4).replace(UNSAFE, " ").replace(SPACES, " ").trim().take(max)
+
+        fun paragraph(s: String, max: Int): String = s.take(max * 2).split('\n').joinToString("\n") { line(it, max) }.trim().take(max)
+    }
+}
 
 object TextDirection {
     private val rtlLanguages = setOf("ar", "he", "iw", "fa", "ur", "yi", "ji", "ps", "dv", "ckb", "sd", "ug", "syr")

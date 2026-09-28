@@ -819,7 +819,9 @@ class ReaderController(private val app: App, val bookId: Long, private val initi
     private fun openLink(href: String, x: Float, y: Float) {
         val t = text ?: return
         if (BookText.hasScheme(href)) {
-            if (SystemIntegration.isOpenableLink(href)) _ui.update { it.copy(message = "link:${href.trim()}") }
+            // The confirmation shows the link in plain ASCII, so hidden direction marks or look-alike
+            // characters can't disguise where it goes.
+            SystemIntegration.safeLink(href)?.let { link -> _ui.update { it.copy(message = "link:$link") } }
             return
         }
         val target = t.resolveLink(href, pos.chapter) ?: return

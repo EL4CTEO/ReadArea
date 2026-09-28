@@ -142,6 +142,8 @@ jobs:
           echo "MACOS_SIGNING_IDENTITY=$MACOS_SIGNING_IDENTITY" >> "$GITHUB_ENV"
 
       - name: Package
+        # bash everywhere: PowerShell would split -Preadarea.android=false at the dot.
+        shell: bash
         run: ./gradlew --no-daemon -Preadarea.android=false :desktop:packageDesktop
 
       - name: Notarize (macOS)

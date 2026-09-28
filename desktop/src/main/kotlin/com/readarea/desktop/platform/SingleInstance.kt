@@ -17,7 +17,7 @@ import java.security.SecureRandom
  * reach it; requests also carry a random token from a file only that user can read. The running app only
  * accepts a short list of existing regular files, which it opens exactly as if they'd been dropped on it.
  */
-class SingleInstance(private val dir: File) : AutoCloseable {
+class SingleInstance(private val dir: File, private val requestTimeoutMs: Long = 5_000L) : AutoCloseable {
     private val socket = File(dir, "instance.sock")
     private val tokenFile = File(dir, "instance.token")
     private var server: ServerSocketChannel? = null
@@ -72,6 +72,11 @@ class SingleInstance(private val dir: File) : AutoCloseable {
     }
 
     private fun handle(client: SocketChannel, token: String, onRequest: (List<File>) -> Unit) {
+        // A client that connects and never finishes its request is cut off rather than kept forever.
+        Thread.ofVirtual().start {
+            runCatching { Thread.sleep(requestTimeoutMs) }
+            runCatching { client.close() }
+        }
         run {
             runCatching {
                 client.use { c ->
@@ -87,13 +92,15 @@ class SingleInstance(private val dir: File) : AutoCloseable {
         }
     }
 
+    /** Reads one request, ending with a blank line, of at most [MAX_BYTES]. */
     private fun readLimited(c: SocketChannel): String? {
         val buf = ByteBuffer.allocate(MAX_BYTES)
+        val a = buf.array()
         while (buf.hasRemaining()) {
             val n = c.read(buf)
             if (n < 0) break
-            val s = String(buf.array(), 0, buf.position(), StandardCharsets.UTF_8)
-            if (s.endsWith("\n\n")) return s
+            val p = buf.position()
+            if (p >= 2 && a[p - 1] == '\n'.code.toByte() && a[p - 2] == '\n'.code.toByte()) return String(a, 0, p, StandardCharsets.UTF_8)
         }
         return null
     }

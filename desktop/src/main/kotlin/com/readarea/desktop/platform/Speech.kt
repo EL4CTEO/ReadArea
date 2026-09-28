@@ -33,9 +33,13 @@ interface SpeechEngine {
                 ?: SystemIntegration.systemBinary("/usr/bin/spd-say")?.let { SpdSay(it) }
         }
 
-        /** Removes control characters and engine markup such as `[[rate 900]]` from book text. */
+        /**
+         * Removes control characters and engine commands from book text. `say` and eSpeak both read
+         * `[[...]]` as commands (rate, silence, raw phonemes), so no `[[` survives, however long.
+         */
         fun clean(text: String): String = text
             .replace(Regex("\\[\\[[^\\]]{0,40}]]"), " ")
+            .replace("[[", "[ [")
             .replace(Regex("[\\u0000-\\u001F\\u007F\\u2028\\u2029\\uFFFC]"), " ")
             .replace('\u00AD', '\u200B')
             .replace(Regex("\\s+"), " ")

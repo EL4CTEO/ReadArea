@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit
  */
 object SystemIntegration {
     private val SAFE_SCHEMES = setOf("http", "https", "mailto")
+    private const val MAX_LINK = 2000
 
     /** Runs [cmd] and returns its standard output, or null if it failed or took too long. */
     fun run(cmd: List<String>, timeoutMs: Long = 2000): String? = runCatching {
@@ -70,19 +71,26 @@ object SystemIntegration {
         return System.getenv("GTK_THEME")?.contains("dark", true) == true
     }
 
-    /** Whether a link from a book may be opened at all: only web pages and email. */
-    fun isOpenableLink(href: String): Boolean {
-        val uri = runCatching { URI(href.trim()) }.getOrNull() ?: return false
-        val scheme = uri.scheme?.lowercase() ?: return false
-        if (scheme !in SAFE_SCHEMES) return false
-        if (scheme != "mailto" && uri.host.isNullOrBlank()) return false
-        return true
+    /**
+     * A link from a book in the form it may be shown and opened, or null if it may not be opened at all:
+     * only web pages (with a plain ASCII host) and email, at most 2,000 characters, percent-encoded so
+     * every character is visible for what it is.
+     */
+    fun safeLink(href: String): String? {
+        val text = href.trim()
+        if (text.length > MAX_LINK) return null
+        val uri = runCatching { URI(text) }.getOrNull() ?: return null
+        val scheme = uri.scheme?.lowercase() ?: return null
+        if (scheme !in SAFE_SCHEMES) return null
+        if (scheme != "mailto" && uri.host.isNullOrBlank()) return null
+        return uri.toASCIIString().takeIf { it.length <= MAX_LINK }
     }
+
+    fun isOpenableLink(href: String): Boolean = safeLink(href) != null
 
     /** Opens a web or email link in the default app. Anything else is refused. */
     fun openLink(href: String): Boolean {
-        if (!isOpenableLink(href)) return false
-        val uri = URI(href.trim())
+        val uri = URI(safeLink(href) ?: return false)
         return runCatching {
             val d = Desktop.getDesktop()
             if (uri.scheme.equals("mailto", true) && d.isSupported(Desktop.Action.MAIL)) d.mail(uri) else d.browse(uri)

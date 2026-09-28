@@ -79,7 +79,8 @@ object ReaderFonts {
      */
     fun base(key: String, fontsDir: File?): Font = resolved.getOrPut(key) {
         if (key.startsWith("file:") && fontsDir != null) {
-            loadCustom(File(fontsDir, key.removePrefix("file:")))?.let { return@getOrPut it.deriveFont(1f) }
+            val file = File(fontsDir, key.removePrefix("file:"))
+            if (com.readarea.desktop.platform.AppDirs.isInside(fontsDir, file)) loadCustom(file)?.let { return@getOrPut it.deriveFont(1f) }
         }
         Font(familyFor(key), Font.PLAIN, 1).deriveFont(1f)
     }

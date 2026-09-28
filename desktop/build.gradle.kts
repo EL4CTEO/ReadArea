@@ -45,6 +45,8 @@ val desktopJvmArgs = listOf(
     "-Xss4m",
     "-XX:+UseG1GC",
     "-XX:MaxRAMPercentage=40",
+    // No hsperfdata file in the shared temp folder advertising the running process.
+    "-XX:-UsePerfData",
 )
 
 application {
