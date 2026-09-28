@@ -56,6 +56,7 @@ class EpubParser(private val zip: ZipAccess) {
             vertical = writingMode?.startsWith("vertical") == true,
         )
         if (metadataOnly) return ParsedBook(meta, emptyList(), emptyList(), zip)
+        checkDrm()
 
         val spine = opf.find("spine")
         val spineItems = spine?.children("itemref")?.mapNotNull { manifest[it["idref"]] }
@@ -93,6 +94,24 @@ class EpubParser(private val zip: ZipAccess) {
         }
         return ParsedBook(finalMeta, chapters, toc, zip)
     }
+
+    /**
+     * Store books (Adobe ADEPT, Apple FairPlay, Readium LCP, Kobo) encrypt their chapters and list them in
+     * META-INF/encryption.xml. Only font obfuscation, which leaves the text readable, is allowed.
+     */
+    private fun checkDrm() {
+        if (zip.read("META-INF/license.lcpl") != null || zip.read("META-INF/rights.xml") != null) throw drm()
+        val xml = zip.read("META-INF/encryption.xml") ?: return
+        val root = XmlNode.parse(TextDecoder.decode(xml))
+        val encrypted = root.findAll("encrypteddata").any { data ->
+            val algorithm = data.find("encryptionmethod")?.get("algorithm").orEmpty()
+            val uri = data.find("cipherreference")?.get("uri").orEmpty().lowercase()
+            algorithm !in FONT_OBFUSCATION && !FONT_FILE.containsMatchIn(uri)
+        }
+        if (encrypted) throw drm()
+    }
+
+    private fun drm() = BookParseException(ParseError.DRM, "This book is DRM-protected and can't be opened")
 
     fun firstSpineDocument(): String? {
         val container = zip.read("META-INF/container.xml")?.let { XmlNode.parse(TextDecoder.decode(it)) }
@@ -178,6 +197,8 @@ class EpubParser(private val zip: ZipAccess) {
 
     companion object {
         private val WS = Regex("\\s+")
+        private val FONT_OBFUSCATION = setOf("http://www.idpf.org/2008/embedding", "http://ns.adobe.com/pdf/enc#RC")
+        private val FONT_FILE = Regex("\\.(otf|ttf|woff2?)$")
 
         fun stripTags(s: String): String = Entities.decode(CoverImages.stripTags(s)).replace(WS, " ").trim()
     }
