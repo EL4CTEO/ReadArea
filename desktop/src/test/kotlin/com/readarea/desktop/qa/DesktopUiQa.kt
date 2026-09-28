@@ -9,6 +9,7 @@ import com.readarea.desktop.reader.PageView
 import com.readarea.desktop.reader.ReaderWindow
 import kotlinx.coroutines.runBlocking
 import org.junit.AfterClass
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeFalse
 import org.junit.BeforeClass
@@ -244,6 +245,56 @@ class DesktopUiQa {
         Thread.sleep(800)
         val reopened = edt { w2.controller.pos to w2.controller.engine!!.let { e -> e.offsetOf(w2.controller.pos) to e.endOffsetOf(w2.controller.pos) } }
         assertTrue("saved ${saved.first} reopened ${reopened.first}", reopened.first.chapter == saved.first.chapter && saved.second in reopened.second.first until reopened.second.second)
+        onEdt { w2.saveAndClose() }
+    }
+
+    @Test
+    fun d3_readerModes() {
+        // PDFs: search finds text on the right page and jumps there.
+        val pdf = book("Atlas of Clouds")
+        onEdt { app.openBook(pdf.id) }
+        waitUntil(20_000, "the PDF") { runCatching { reader(pdf.id).controller.ui.value.laidOut }.getOrDefault(false) }
+        val pw = reader(pdf.id)
+        onEdt { pw.controller.search("Chapter 3") }
+        waitUntil(10_000, "PDF search results") { !pw.controller.ui.value.searching && pw.controller.ui.value.searchResults.isNotEmpty() }
+        val hit = edt { pw.controller.ui.value.searchResults.first() }
+        onEdt { pw.controller.openSearchHit(hit) }
+        waitUntil(3_000, "the PDF hit's page") { pw.controller.pos.page == hit.start }
+        onEdt { pw.saveAndClose() }
+
+        val b = book("A Field Guide to Quiet")
+        onEdt { app.openBook(b.id) }
+        waitUntil(20_000, "the book") { runCatching { reader(b.id).controller.ui.value.laidOut }.getOrDefault(false) }
+        val w = reader(b.id)
+        val c = w.controller
+        onEdt { w.setSize(820, 900) }
+        Thread.sleep(800)
+
+        // Automatic page turning moves on by itself and stops when asked.
+        onEdt { c.updateSettings { it.copy(autoTurnSeconds = 3) } }
+        val before = edt { c.pos }
+        onEdt { c.toggleAutoTurn() }
+        waitUntil(6_000, "an automatic page turn") { c.pos != before }
+        onEdt { c.toggleAutoTurn() }
+        assertTrue(edt { !c.ui.value.autoTurn })
+
+        // Continuous scrolling keeps the reading position through a switch of mode and a reopen.
+        onEdt { c.goTo(1, 0) }
+        waitUntil(3_000, "chapter 2") { c.pos.chapter == 1 }
+        onEdt { c.updateSettings { it.copy(pageAnim = "scroll") } }
+        waitUntil(5_000, "scroll mode") { c.scrollMode && c.ui.value.laidOut && c.ui.value.scrollMode }
+        Thread.sleep(600)
+        assertEquals(1, edt { c.pos.chapter })
+        onEdt { c.savePosition() }
+        Thread.sleep(400)
+        onEdt { w.saveAndClose() }
+        Thread.sleep(500)
+        onEdt { app.openBook(b.id) }
+        waitUntil(20_000, "the book again") { runCatching { reader(b.id).controller.ui.value.laidOut }.getOrDefault(false) }
+        val w2 = reader(b.id)
+        assertEquals(1, edt { w2.controller.pos.chapter })
+        onEdt { w2.controller.updateSettings { it.copy(pageAnim = "curl", autoTurnSeconds = 30) } }
+        Thread.sleep(500)
         onEdt { w2.saveAndClose() }
     }
 
