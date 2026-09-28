@@ -45,12 +45,14 @@ sealed interface OpenedBook {
     fun close()
 }
 
-class ReflowableBook(val book: ParsedBook, private val onClose: () -> Unit = {}) : OpenedBook {
-    override val meta: BookMeta get() = book.meta
+class ReflowableBook(parsed: ParsedBook, private val onClose: () -> Unit = {}) : OpenedBook {
+    val book: ParsedBook = parsed.sanitized()
+    override val meta: BookMeta = book.meta
     override fun close() = onClose()
 }
 
-class FixedBook(override val meta: BookMeta, val source: FixedSource) : OpenedBook {
+class FixedBook(meta: BookMeta, val source: FixedSource) : OpenedBook {
+    override val meta: BookMeta = meta.sanitized()
     override fun close() = source.close()
 }
 

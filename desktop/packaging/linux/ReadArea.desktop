@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=APPLICATION_NAME
+GenericName=E-book Reader
+Comment=APPLICATION_DESCRIPTION
+Exec=APPLICATION_LAUNCHER %F
+Icon=APPLICATION_ICON
+Terminal=false
+Type=Application
+Categories=DEPLOY_BUNDLE_CATEGORY
+Keywords=ebook;e-book;epub;reader;books;library;
+StartupWMClass=com-readarea-desktop-MainKt
+DESKTOP_MIMES
