@@ -1,6 +1,8 @@
+<p align="center"><img src="docs/icon.png" width="112" alt="ReadArea icon"/></p>
+
 # ReadArea
 
-**A beautiful, private e-book reader for Android, macOS, Windows and Linux.** Real page-turning, lovely typography, and your notes stay on your device. No ads, no accounts, no internet.
+**A private e-book reader for Android, macOS, Windows and Linux.** Real page turns and fine typography. No ads, no accounts, no internet.
 
 **[⬇ Download the latest version](https://github.com/EL4CTEO/ReadArea/releases/latest)**
 
@@ -25,7 +27,7 @@ Every release on the **[releases page](https://github.com/EL4CTEO/ReadArea/relea
 
 1. On your phone, open the latest release and tap `ReadArea-x.y.z.apk` to download it.
 2. Open the downloaded file. If Android asks, allow your browser or file manager to **install unknown apps**.
-3. Tap **Install**.
+3. Tap **Install**. If Play Protect warns about an unknown app, tap **Scan app**, or **More details → Install anyway**.
 
 Needs Android 8.0 or newer.
 
@@ -68,44 +70,13 @@ On ARM computers (like a Raspberry Pi 5 or an ARM laptop), pick the `linux-arm64
 
 ## What it can do
 
-**Reading that feels like a book**
-- A page curl that follows your finger, or slide, fade, instant and continuous scrolling if you prefer.
-- Themes like Paper, Sepia, Night and AMOLED black, switching to dark automatically with your phone.
-- Choose font, size, spacing and margins, or import your own fonts.
-- Brightness right in the book: swipe along the left edge, dim below your screen's minimum, and add a warm light for bedtime.
-
-**Notes and tools**
-- Highlight in five colors, add notes and bookmarks, and export your notes.
-- Search the whole book, and see footnotes in a pop-up without losing your place.
-- Read aloud with the current sentence highlighted, while pages turn by themselves.
-- Automatic page turning for hands-free reading.
-
-**Your library**
-- Every book shows its real cover, taken from the file itself. Books without one get a nicely designed cover.
-- Shelves, favorites, ratings, and *Reading / Want to read / Finished*.
-- Search, sort and filter, plus a *Look inside* preview.
-- Reading stats: streaks, a daily goal and charts of your reading time.
-
-**Foldables and tablets**
-- Two pages side by side on unfolded phones (Galaxy Z Fold, Fold wide, TriFold) and tablets.
-- Text never falls into the fold, and tabletop mode puts the page on top and the controls below.
-
-**On your computer**
-- Two-page spreads in wide windows, with a page curl you drag with the mouse.
-- Keyboard shortcuts for everything: pages, chapters, search, bookmarks, contents, text size and full screen.
-- Several books open at once, each in its own window, and your place kept in all of them.
-- Reads aloud with the voices your computer already has.
-- Looks at home on each system and follows its dark mode.
-
-**Any language, any direction**
-- The app speaks 17 languages, and the whole app mirrors for Arabic.
-- Right-to-left books (Arabic, Hebrew, Persian, manga) turn pages the right way.
-- Vertical Japanese and Chinese text, with furigana beside the characters.
-
-**Light on your battery**
-- A small download: under 3 MB on Android, and the desktop app brings everything it needs, so there's nothing else to install.
-- Nothing is redrawn while you read.
-- The screen stays on while you're reading, then sleeps normally. You choose how long.
+- **Reads like a book:** a page curl that follows your finger (or slide, fade, scroll), themes from Paper to AMOLED black, your choice of font, size, spacing and margins, and in-book brightness with a warm light.
+- **Notes and tools:** highlights in five colors, notes, bookmarks and export, full-text search, footnote pop-ups, read aloud with the sentence highlighted, and hands-free page turning.
+- **Your library:** real covers from each file, shelves, favorites, ratings and reading status, search and filters, and reading stats with streaks and a daily goal.
+- **Big screens:** two-page spreads on foldables, tablets and wide desktop windows, with text kept out of the fold.
+- **On a computer:** keyboard shortcuts for everything, several books open at once, your system's voices for read aloud, and native look and dark mode.
+- **Any language:** 17 app languages, right-to-left books and a mirrored app for Arabic, and vertical Japanese and Chinese with furigana.
+- **Light:** under 3 MB on Android, nothing to install alongside the desktop app, and nothing redrawn while you read.
 
 ## Supported formats
 
