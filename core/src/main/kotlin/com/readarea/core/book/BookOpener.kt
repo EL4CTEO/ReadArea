@@ -32,7 +32,7 @@ import java.util.zip.ZipInputStream
 class OpenBook(val book: ParsedBook, private val onClose: () -> Unit = {}) : Closeable {
     override fun close() = onClose()
 
-    internal fun withSafeMeta() = OpenBook(ParsedBook(book.meta.sanitized(), book.chapters, book.toc, book.resources), onClose)
+    internal fun sanitized() = OpenBook(book.sanitized(), onClose)
 }
 
 /** What the library shows for a book before it is opened: its metadata and cover image bytes. */
@@ -57,7 +57,7 @@ object BookOpener {
     fun open(file: File, format: BookFormat, title: String = titleFromFileName(file.name)): OpenBook {
         require(!format.fixedLayout) { "$format is rendered as pages" }
         checkSize(file)
-        return guarded { openParsed(file, format, title) }.withSafeMeta()
+        return guarded { openParsed(file, format, title) }.sanitized()
     }
 
     private fun openParsed(file: File, format: BookFormat, title: String): OpenBook {

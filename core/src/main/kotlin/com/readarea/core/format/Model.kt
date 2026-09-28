@@ -102,25 +102,29 @@ data class BookMeta(
      * could make a title display as something it isn't.
      */
     fun sanitized(): BookMeta = copy(
-        title = line(title, 500),
-        author = line(author, 300),
-        language = language?.let { line(it, 35) }?.takeIf { it.isNotEmpty() },
-        description = description?.let { paragraph(it, 20_000) }?.takeIf { it.isNotEmpty() },
-        series = series?.let { line(it, 200) }?.takeIf { it.isNotEmpty() },
+        title = SafeText.line(title, 500),
+        author = SafeText.line(author, 300),
+        language = language?.let { SafeText.line(it, 35) }?.takeIf { it.isNotEmpty() },
+        description = description?.let { SafeText.paragraph(it, 20_000) }?.takeIf { it.isNotEmpty() },
+        series = series?.let { SafeText.line(it, 200) }?.takeIf { it.isNotEmpty() },
         seriesIndex = seriesIndex?.takeIf { it.isFinite() && it >= 0f && it < 1_000_000f },
-        publisher = publisher?.let { line(it, 200) }?.takeIf { it.isNotEmpty() },
+        publisher = publisher?.let { SafeText.line(it, 200) }?.takeIf { it.isNotEmpty() },
         coverRef = coverRef?.takeIf { it.length <= 1000 },
     )
+}
 
-    private companion object {
-        /** C0/C1 controls, and bidi embeddings, overrides and isolates (U+202A–202E, U+2066–2069). */
-        val UNSAFE = Regex("[\\p{Cc}\\u202A-\\u202E\\u2066-\\u2069]")
-        val SPACES = Regex("\\s+")
+/**
+ * Text from a book made safe to store and show on one line: trimmed to a sane length, and cleared of control
+ * characters and of the direction overrides that could make it display as something it isn't.
+ */
+object SafeText {
+    /** C0/C1 controls, and bidi embeddings, overrides and isolates (U+202A–202E, U+2066–2069). */
+    private val UNSAFE = Regex("[\\p{Cc}\\u202A-\\u202E\\u2066-\\u2069]")
+    private val SPACES = Regex("\\s+")
 
-        fun line(s: String, max: Int): String = s.take(max * 4).replace(UNSAFE, " ").replace(SPACES, " ").trim().take(max)
+    fun line(s: String, max: Int): String = s.take(max * 4).replace(UNSAFE, " ").replace(SPACES, " ").trim().take(max)
 
-        fun paragraph(s: String, max: Int): String = s.take(max * 2).split('\n').joinToString("\n") { line(it, max) }.trim().take(max)
-    }
+    fun paragraph(s: String, max: Int): String = s.take(max * 2).split('\n').joinToString("\n") { line(it, max) }.trim().take(max)
 }
 
 object TextDirection {
@@ -183,6 +187,21 @@ class ParsedBook(
     val resources: ResourceProvider,
 ) {
     fun coverBytes(): ByteArray? = meta.coverRef?.let { resources.read(it) }
+
+    /**
+     * The book with everything shown outside its pages made safe (see [SafeText]): its metadata, and the
+     * titles of its chapters and table-of-contents entries, which a crafted book could make megabytes long.
+     */
+    fun sanitized(): ParsedBook = ParsedBook(
+        meta.sanitized(),
+        chapters.map { c -> SafeText.line(c.title, TITLE).let { if (it == c.title) c else c.copy(title = it) } },
+        toc.map { t -> SafeText.line(t.title, TITLE).let { if (it == t.title) t else t.copy(title = it) } },
+        resources,
+    )
+
+    private companion object {
+        const val TITLE = 300
+    }
 }
 
 enum class ParseError { INVALID, DRM, UNSUPPORTED, EMPTY, TOO_LARGE }

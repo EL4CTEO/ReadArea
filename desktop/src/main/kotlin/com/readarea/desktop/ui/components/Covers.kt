@@ -213,8 +213,7 @@ object CoverPainter {
         by -= fm.height * 1.1f
         if (author.isNotBlank()) {
             g.color = c(p.ink, 0.85f)
-            var a2 = author
-            while (a2.length > 1 && fm.stringWidth(a2) > w * 0.86f) a2 = a2.dropLast(2) + "…"
+            val a2 = ellipsize(author, fm, w * 0.86f)
             g.drawString(a2, x + (w - fm.stringWidth(a2)) / 2f, by)
         }
     }

@@ -88,8 +88,7 @@ class Toast : Widget() {
         g.color = if (AppTheme.palette.dark) Color(0x1E1B17) else Color(0xF7F2EA)
         g.font = font
         val fm = g.fontMetrics
-        var t = text
-        while (t.length > 3 && fm.stringWidth(t) > width - 32) t = t.dropLast(2) + "…"
+        val t = ellipsize(text, fm, width - 32f)
         g.drawString(t, (width - fm.stringWidth(t)) / 2f, (height + fm.ascent - fm.descent) / 2f)
         g.dispose()
     }

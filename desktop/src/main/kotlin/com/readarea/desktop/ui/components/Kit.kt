@@ -677,11 +677,16 @@ fun java.awt.Component.mirrorIfRtl(g: Graphics2D) {
     g.scale(-1.0, 1.0)
 }
 
-/** Shortens [text] with an ellipsis so it fits in [max] pixels. */
+/**
+ * Shortens [text] with an ellipsis so it fits in [max] pixels, measuring a few dozen times however long the
+ * text is: titles come from books and can be any length, and this runs while painting.
+ */
 fun ellipsize(text: String, fm: java.awt.FontMetrics, max: Float): String {
-    if (fm.stringWidth(text) <= max) return text
+    // Far more characters than any line on any screen can show.
+    val limit = 1000
+    if (text.length <= limit && fm.stringWidth(text) <= max) return text
     var lo = 0
-    var hi = text.length
+    var hi = minOf(text.length, limit)
     while (lo < hi) {
         val mid = (lo + hi + 1) / 2
         if (fm.stringWidth(text.substring(0, mid) + "…") <= max) lo = mid else hi = mid - 1

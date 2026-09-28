@@ -4,6 +4,7 @@ import com.readarea.core.book.ComicPages
 import com.readarea.core.format.BookParseException
 import com.readarea.core.format.FileZipAccess
 import com.readarea.core.format.ParseError
+import com.readarea.core.format.SafeText
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.io.IOUtils
 import org.apache.pdfbox.io.RandomAccessReadBufferedFile
@@ -128,8 +129,8 @@ class PdfSource private constructor(private val doc: PDDocument) : FixedSource {
             var item: PDOutlineItem? = node.firstChild
             while (item != null && out.size < 5000 && seen.add(item)) {
                 val page = runCatching { item.findDestinationPage(doc)?.let { doc.pages.indexOf(it) } }.getOrNull() ?: -1
-                val title = item.title?.replace(Regex("\\s+"), " ")?.trim().orEmpty()
-                if (page >= 0 && title.isNotEmpty()) out.add(FixedTocEntry(title.take(200), page, depth))
+                val title = SafeText.line(item.title.orEmpty(), 200)
+                if (page >= 0 && title.isNotEmpty()) out.add(FixedTocEntry(title, page, depth))
                 if (depth < 8) walk(item, depth + 1)
                 item = item.nextSibling
             }

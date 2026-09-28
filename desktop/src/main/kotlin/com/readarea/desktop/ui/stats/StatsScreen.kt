@@ -42,6 +42,7 @@ import javax.swing.JComponent
 import javax.swing.JLabel
 import javax.swing.JSlider
 import com.readarea.desktop.ui.components.LeadingBorder
+import com.readarea.desktop.ui.components.ellipsize
 
 class StatsScreen(private val app: App, @Suppress("UNUSED_PARAMETER") window: MainWindow) : Screen {
     private val column = ScrollingStack()
@@ -156,8 +157,7 @@ class StatsScreen(private val app: App, @Suppress("UNUSED_PARAMETER") window: Ma
                     g.font = AppTheme.ui(13f, Font.BOLD)
                     g.color = pal.onSurface
                     val fm = g.fontMetrics
-                    var title = t.title
-                    while (title.length > 2 && fm.stringWidth(title) > width - barW - 24) title = title.dropLast(2) + "…"
+                    val title = ellipsize(t.title, fm, width - barW - 24)
                     g.drawString(title, leadingX(0f, fm.stringWidth(title).toFloat()), 21f)
                     val x = width - barW
                     val track = barW - 70f

@@ -51,6 +51,7 @@ import javax.swing.JSlider
 import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
 import com.readarea.desktop.ui.components.LeadingBorder
+import com.readarea.desktop.ui.components.ellipsize
 
 /** The frame the side panels share: a title, a close button and a scrolling body. */
 abstract class SidePanel(title: String, onClose: () -> Unit) : JPanel(BorderLayout()) {
@@ -106,15 +107,13 @@ private class RowRenderer<T>(private val content: (T) -> Row) : Widget(), ListCe
         g.font = AppTheme.ui(13f, if (row.current || row.depth == 0) Font.BOLD else Font.PLAIN)
         g.color = if (selected) pal.onAccentContainer else pal.onSurface
         val fm = g.fontMetrics
-        var t = row.title
-        while (t.length > 2 && fm.stringWidth(t) > width - x - 12) t = t.dropLast(2) + "…"
+        val t = ellipsize(row.title, fm, width - x - 12)
         g.drawString(t, leadingX(x, fm.stringWidth(t).toFloat()), if (row.sub == null) (height + fm.ascent - fm.descent) / 2f else 24f)
         row.sub?.let { s ->
             g.font = AppTheme.ui(11.5f)
             g.color = pal.onSurfaceVariant
-            var st = s
             val f2 = g.fontMetrics
-            while (st.length > 2 && f2.stringWidth(st) > width - x - 12) st = st.dropLast(2) + "…"
+            val st = ellipsize(s, f2, width - x - 12)
             g.drawString(st, leadingX(x, f2.stringWidth(st).toFloat()), 44f)
         }
         g.dispose()

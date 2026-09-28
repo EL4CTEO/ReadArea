@@ -125,12 +125,21 @@ object PageChrome {
         g.paint = old
     }
 
+    /**
+     * Shortens a running header to fit, measuring a few dozen times however long it is: it's drawn on every
+     * page, and a chapter title can be any length.
+     */
     private fun ellipsize(g: Graphics2D, text: String, max: Float): String {
         val fm = g.fontMetrics
-        if (fm.stringWidth(text) <= max) return text
-        var end = text.length
-        while (end > 0 && fm.stringWidth(text.substring(0, end) + "…") > max) end--
-        return text.substring(0, end).trimEnd() + "…"
+        if (text.length <= 1000 && fm.stringWidth(text) <= max) return text
+        var lo = 0
+        var hi = minOf(text.length, 1000)
+        while (lo < hi) {
+            val mid = (lo + hi + 1) / 2
+            if (fm.stringWidth(text.substring(0, mid) + "…") <= max) lo = mid else hi = mid - 1
+        }
+        if (lo > 0 && Character.isHighSurrogate(text[lo - 1])) lo--
+        return text.substring(0, lo).trimEnd() + "…"
     }
 
     fun drawChrome(g: Graphics2D, s: PageSetup, theme: ReadingTheme, header: String?, pageLabel: String, progress: Float, bookmarked: Boolean, col: Int = 0) {

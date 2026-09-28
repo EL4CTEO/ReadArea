@@ -105,6 +105,20 @@ class DesktopSecurityTest {
     }
 
     @Test
+    fun titlesOfAnyLengthFitQuickly() {
+        // Book titles, chapter headings and contents entries are shortened while painting; a huge one used to be
+        // cut two characters at a time, measuring the whole rest on every step.
+        val fm = java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_RGB).createGraphics().let { g -> g.font = java.awt.Font(java.awt.Font.SANS_SERIF, java.awt.Font.PLAIN, 13); g.fontMetrics }
+        val start = System.nanoTime()
+        for (text in listOf("W".repeat(2_000_000), "\u0301".repeat(2_000_000), "漢字".repeat(1_000_000), "Short")) {
+            val fitted = com.readarea.desktop.ui.components.ellipsize(text, fm, 200f)
+            assertTrue(fm.stringWidth(fitted) <= 200 || fitted == "…")
+            if (text == "Short") assertEquals("Short", fitted) else assertTrue(fitted.endsWith("…"))
+        }
+        assertTrue("took ${(System.nanoTime() - start) / 1_000_000} ms", System.nanoTime() - start < 2_000_000_000L)
+    }
+
+    @Test
     fun imageBombsAreNotDecoded() {
         val start = System.currentTimeMillis()
         assertNull(Images.size(pngClaiming(100_000, 100_000)))
