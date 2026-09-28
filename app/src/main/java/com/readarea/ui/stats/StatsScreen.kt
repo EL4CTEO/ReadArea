@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -102,7 +103,10 @@ fun StatsScreen(vm: LibraryViewModel, @Suppress("UNUSED_PARAMETER") actions: App
                     }
                 }
                 Text(stringResource(R.string.last_20_weeks), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 24.dp, bottom = 12.dp))
-                Box(Modifier.clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp).horizontalScroll(rememberScrollState())) {
+                val heat = rememberScrollState()
+                // Opens on the latest weeks: they are the ones people look for, and the ones a phone would cut off.
+                LaunchedEffect(heat.maxValue) { heat.scrollTo(heat.maxValue) }
+                Box(Modifier.clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(16.dp).horizontalScroll(heat)) {
                     val weeks = 20
                     val today = LocalDate.now()
                     val start = today.minusDays((today.dayOfWeek.value - 1).toLong()).minusWeeks((weeks - 1).toLong())

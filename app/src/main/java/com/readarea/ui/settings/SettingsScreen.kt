@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -105,7 +106,8 @@ fun SettingsScreen(vm: LibraryViewModel, actions: AppActions) {
                 Spacer(Modifier.height(16.dp))
                 Text(stringResource(R.string.accent), style = MaterialTheme.typography.bodyLarge)
                 Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Wraps: six swatches need 300dp, more than a narrow screen or a large display size leaves.
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Accents.colors.forEachIndexed { i, c ->
                         val selected = s.accent == i && !s.dynamicColor
                         Box(
