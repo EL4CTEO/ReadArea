@@ -377,11 +377,9 @@ class ReaderController(private val app: App, val bookId: Long, private val initi
                 if (isScroll(s)) host?.scrollTo(pos, fraction)
                 e.prefetch(pos)
             }
+            // The rest of the book, nearest chapters first.
             val order = (0 until e.chapterCount).sortedBy { kotlin.math.abs(it - a.first) }
-            for (c in order) {
-                ensureActive()
-                e.ensure(c)
-            }
+            e.ensureAll(order) { !isActive }
             withContext(Dispatchers.Swing) {
                 rebuildBookmarkPages()
                 refreshUi()

@@ -98,6 +98,14 @@ abstract class Jpackage : DefaultTask() {
     @get:Input
     abstract val extraArgs: ListProperty<String>
 
+    /**
+     * For `app-image`: start the app once to record the classes start-up loads into a class-data archive
+     * the launcher then uses, for noticeably faster launches. Skipped (with a warning) where the app can't
+     * start, such as without a display.
+     */
+    @get:Input
+    abstract val trainClassArchive: Property<Boolean>
+
     /** Environment for jpackage, e.g. signing settings that shouldn't end up in the build cache key. */
     @get:Internal
     abstract val environment: MapProperty<String, String>
@@ -157,5 +165,6 @@ abstract class Jpackage : DefaultTask() {
         val output = p.inputStream.bufferedReader().readText()
         if (p.waitFor() != 0) error("jpackage failed:\n$output")
         logger.info(output)
+        if (type.get() == "app-image" && trainClassArchive.getOrElse(false)) ClassArchiveTraining(dest, appName.get(), temporaryDir, logger).run()
     }
 }

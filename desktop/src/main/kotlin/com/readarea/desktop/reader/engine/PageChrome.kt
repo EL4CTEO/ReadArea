@@ -9,7 +9,6 @@ import java.awt.GradientPaint
 import java.awt.Graphics2D
 import java.awt.LinearGradientPaint
 import java.awt.RenderingHints
-import java.awt.TexturePaint
 import java.awt.geom.Ellipse2D
 import java.awt.geom.Line2D
 import java.awt.geom.Path2D
@@ -19,8 +18,6 @@ import kotlin.random.Random
 
 /** Everything drawn around the text: paper, header and footer, the spine of a spread, the bookmark ribbon. */
 object PageChrome {
-    private var texture: BufferedImage? = null
-    private var textureKey = 0
     private val chromeFont = Font(Font.SANS_SERIF, Font.PLAIN, 12)
 
     fun color(argb: Int, alpha: Int = (argb ushr 24)): Color = Color((argb shr 16) and 0xFF, (argb shr 8) and 0xFF, argb and 0xFF, alpha.coerceIn(0, 255))
@@ -34,50 +31,85 @@ object PageChrome {
         g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
     }
 
+    /**
+     * The page: its color and, for light themes, a faint paper grain. The grain is baked with the page
+     * color into an opaque tile at the screen's pixel density and copied straight onto the device, which
+     * is some 30 times faster than filling a translucent texture through a scaled transform.
+     */
     fun drawBackground(g: Graphics2D, theme: ReadingTheme, w: Int, h: Int) {
-        g.color = color(theme.background, 255)
-        g.fillRect(0, 0, w, h)
-        if (theme.texture) {
-            val tex = texture(theme)
-            val old = g.paint
-            g.paint = TexturePaint(tex, Rectangle2D.Float(0f, 0f, tex.width.toFloat(), tex.height.toFloat()))
+        val tx = g.transform
+        if (!theme.texture || tx.shearX != 0.0 || tx.shearY != 0.0 || tx.scaleX <= 0.0 || tx.scaleY <= 0.0) {
+            g.color = color(theme.background, 255)
             g.fillRect(0, 0, w, h)
-            g.paint = old
+            return
         }
+        val tile = paperTile(theme, tx.scaleX)
+        val x0 = kotlin.math.floor(tx.translateX).toInt()
+        val y0 = kotlin.math.floor(tx.translateY).toInt()
+        val dw = kotlin.math.ceil(w * tx.scaleX).toInt()
+        val dh = kotlin.math.ceil(h * tx.scaleY).toInt()
+        val savedClip = g.clip
+        g.transform = java.awt.geom.AffineTransform()
+        g.clipRect(x0, y0, dw, dh)
+        var y = 0
+        while (y < dh) {
+            var x = 0
+            while (x < dw) {
+                g.drawImage(tile, x0 + x, y0 + y, null)
+                x += tile.width
+            }
+            y += tile.height
+        }
+        g.transform = tx
+        g.clip = savedClip
     }
 
-    /** A faint paper grain, generated once per page color. */
-    @Synchronized
-    private fun texture(theme: ReadingTheme): BufferedImage {
-        val key = theme.background
-        texture?.let { if (textureKey == key) return it }
-        val size = 256
-        val img = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
+    private data class TileKey(val background: Int, val dark: Boolean, val scale: Int)
+
+    private val tiles = LinkedHashMap<TileKey, BufferedImage>()
+
+    /** The paper grain over the page color, 256 logical pixels square, drawn at [scale] device pixels each. */
+    private fun paperTile(theme: ReadingTheme, scale: Double): BufferedImage = synchronized(tiles) {
+        val key = TileKey(theme.background, theme.dark, (scale * 100).toInt())
+        tiles[key]?.let { return it }
+        val logical = 256
+        val size = kotlin.math.ceil(logical * scale).toInt().coerceIn(1, 2048)
+        val img = BufferedImage(size, size, BufferedImage.TYPE_INT_RGB)
         val g = img.createGraphics()
+        g.color = color(theme.background, 255)
+        g.fillRect(0, 0, size, size)
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        g.scale(size / logical.toDouble(), size / logical.toDouble())
         val rnd = Random(7)
         val darken = !theme.dark
         repeat(2600) {
-            val x = rnd.nextFloat() * size
-            val y = rnd.nextFloat() * size
+            val x = rnd.nextFloat() * logical
+            val y = rnd.nextFloat() * logical
             val a = rnd.nextInt(4, 14)
             g.color = if (darken) Color(70, 50, 20, a) else Color(255, 255, 255, a)
             val r = rnd.nextFloat() * 0.9f + 0.3f
-            g.fill(Ellipse2D.Float(x - r, y - r, r * 2, r * 2))
+            // Grains near an edge are drawn again on the far side, so tiles meet without seams.
+            for (dx in listOf(0, -logical, logical)) for (dy in listOf(0, -logical, logical)) {
+                if ((dx != 0 && x + dx !in -2f..logical + 2f) || (dy != 0 && y + dy !in -2f..logical + 2f)) continue
+                g.fill(Ellipse2D.Float(x + dx - r, y + dy - r, r * 2, r * 2))
+            }
         }
         g.stroke = BasicStroke(0.6f)
         repeat(140) {
-            val x = rnd.nextFloat() * size
-            val y = rnd.nextFloat() * size
+            val x = rnd.nextFloat() * logical
+            val y = rnd.nextFloat() * logical
             val len = rnd.nextFloat() * 9f + 3f
             val ang = rnd.nextFloat() * Math.PI.toFloat()
             g.color = if (darken) Color(90, 60, 30, rnd.nextInt(5, 12)) else Color(255, 255, 255, rnd.nextInt(4, 9))
-            g.draw(Line2D.Float(x, y, x + len * kotlin.math.cos(ang), y + len * kotlin.math.sin(ang)))
+            for (dx in listOf(0, -logical, logical)) for (dy in listOf(0, -logical, logical)) {
+                g.draw(Line2D.Float(x + dx, y + dy, x + dx + len * kotlin.math.cos(ang), y + dy + len * kotlin.math.sin(ang)))
+            }
         }
         g.dispose()
-        texture = img
-        textureKey = key
-        return img
+        // A few page colors and screen densities at most; keep the newest.
+        if (tiles.size >= 6) tiles.remove(tiles.keys.first())
+        tiles[key] = img
+        img
     }
 
     fun drawSpine(g: Graphics2D, s: PageSetup) {

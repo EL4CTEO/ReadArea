@@ -7,6 +7,7 @@ import com.readarea.desktop.i18n.I18n
 import com.readarea.desktop.platform.AppDirs
 import com.readarea.desktop.platform.Os
 import com.readarea.desktop.platform.SingleInstance
+import com.readarea.desktop.platform.StartupTrace
 import java.io.File
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -22,6 +23,7 @@ fun main(args: Array<String>) {
     args.firstOrNull { it == "--self-test" || it.startsWith("--self-test=") }?.let { arg ->
         exitProcess(if (com.readarea.desktop.tools.SelfTest.run(arg.substringAfter('=', "").takeIf { it.isNotEmpty() }?.let(::File))) 0 else 1)
     }
+    StartupTrace.mark("main")
     val files = args.filter { !it.startsWith("-") }.map { File(it).absoluteFile }.filter { it.isFile }
 
     val dirs = AppDirs.resolve().init()
@@ -32,12 +34,14 @@ fun main(args: Array<String>) {
 
     val settings = SettingsStore(dirs.settings)
     I18n.init(settings.app.value.language)
+    StartupTrace.mark("settings")
     val db = try {
         Database(dirs.database)
     } catch (e: Exception) {
         javax.swing.JOptionPane.showMessageDialog(null, "ReadArea couldn't open its library.\n\n${e.message}", "ReadArea", javax.swing.JOptionPane.ERROR_MESSAGE)
         exitProcess(1)
     }
+    StartupTrace.mark("database")
     val library = Library(db, settings, dirs)
     val app = App(dirs, settings, db, library, instance)
     if (settings.app.value.themeMode == "system") app.detectDarkNow()

@@ -4,6 +4,16 @@ import com.readarea.core.theme.ReadingTheme
 import com.readarea.desktop.data.ReaderSettings
 import java.awt.Graphics2D
 
+/** Threads for laying out chapters in the background: most of the cores, leaving one for the window. */
+private val LAYOUT_THREADS = (Runtime.getRuntime().availableProcessors() - 1).coerceIn(1, 6)
+
+private val layoutPool = java.util.concurrent.Executors.newFixedThreadPool(LAYOUT_THREADS) { r ->
+    Thread(r, "chapter-layout").apply {
+        isDaemon = true
+        priority = Thread.NORM_PRIORITY - 1
+    }
+}
+
 data class PagePos(val chapter: Int, val page: Int)
 
 /**
@@ -102,6 +112,26 @@ abstract class PageEngine {
         protected set
 
     fun allReady(): Boolean = (0 until chapterCount).all { isReady(it) }
+
+    /**
+     * Lays out [chapters] in the given order, spread over a few background threads: chapters are
+     * independent, and the engine drops any result laid out for settings that have since changed.
+     * Returns early once [cancelled] says so.
+     */
+    fun ensureAll(chapters: List<Int>, cancelled: () -> Boolean) {
+        if (chapters.isEmpty()) return
+        val next = java.util.concurrent.atomic.AtomicInteger()
+        val work = Runnable {
+            while (!cancelled()) {
+                val i = next.getAndIncrement()
+                if (i >= chapters.size) break
+                ensure(chapters[i])
+            }
+        }
+        val helpers = (1 until minOf(LAYOUT_THREADS, chapters.size)).map { layoutPool.submit(work) }
+        work.run()
+        helpers.forEach { runCatching { it.get() } }
+    }
 
     fun totalPages(): Int? {
         if (!allReady()) return null

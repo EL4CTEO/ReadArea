@@ -73,6 +73,7 @@ val macSigning: List<String> = System.getenv("MACOS_SIGNING_IDENTITY")?.takeIf {
 
 fun Jpackage.common() {
     group = "distribution"
+    trainClassArchive.convention(false)
     appName.set(packaging.appName)
     appVersion.set(packaging.appVersion.map { numericVersion(it) })
     vendor.set(packaging.vendor)
@@ -115,6 +116,9 @@ val appImageTask = tasks.register<Jpackage>("appImage") {
             else -> provider { emptyList() }
         },
     )
+    // Needs a display (CI runs Linux packaging under xvfb). On macOS the training would change the
+    // bundle after jpackage signed it, so signed builds start without the archive.
+    trainClassArchive.set(macSigning.isEmpty() && System.getenv("READAREA_SKIP_CDS") != "1")
     destination.set(packageDir.map { it.dir("image") })
 }
 

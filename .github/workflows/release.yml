@@ -107,7 +107,7 @@ jobs:
 
       - name: Install packaging tools (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y fakeroot rpm
+        run: sudo apt-get update && sudo apt-get install -y fakeroot rpm xvfb
 
       - name: Install WiX 3 (Windows)
         if: runner.os == 'Windows'
@@ -142,9 +142,15 @@ jobs:
           echo "MACOS_SIGNING_IDENTITY=$MACOS_SIGNING_IDENTITY" >> "$GITHUB_ENV"
 
       - name: Package
-        # bash everywhere: PowerShell would split -Preadarea.android=false at the dot.
+        # bash everywhere: PowerShell would split -Preadarea.android=false at the dot. On Linux a virtual
+        # display lets the packaging start the app once to record its class-data archive.
         shell: bash
-        run: ./gradlew --no-daemon -Preadarea.android=false :desktop:packageDesktop
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run -a ./gradlew --no-daemon -Preadarea.android=false :desktop:packageDesktop
+          else
+            ./gradlew --no-daemon -Preadarea.android=false :desktop:packageDesktop
+          fi
 
       - name: Notarize (macOS)
         if: runner.os == 'macOS' && env.HAS_MAC_CERT == 'true'

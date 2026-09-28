@@ -17,6 +17,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -208,14 +209,25 @@ class Library(private val db: Database, private val settings: SettingsStore, pri
 
     // Metadata and covers
 
-    private suspend fun loadPendingMetadata() {
+    /** Reads titles, authors and covers for new books, a few at a time. */
+    private suspend fun loadPendingMetadata() = kotlinx.coroutines.coroutineScope {
         val pending = read { pendingMeta() }
-        if (pending.isEmpty()) return
+        if (pending.isEmpty()) return@coroutineScope
         _scan.value = _scan.value.copy(total = pending.size, processed = 0)
-        pending.forEachIndexed { i, b ->
-            loadMetadata(b)
-            _scan.value = _scan.value.copy(processed = i + 1)
-        }
+        val done = java.util.concurrent.atomic.AtomicInteger()
+        val gate = kotlinx.coroutines.sync.Semaphore(META_PARALLELISM)
+        pending.map { b ->
+            launch {
+                gate.acquire()
+                try {
+                    loadMetadata(b)
+                } finally {
+                    gate.release()
+                }
+                val n = done.incrementAndGet()
+                _scan.update { it.copy(processed = n) }
+            }
+        }.forEach { it.join() }
     }
 
     suspend fun loadMetadata(book: Book) {
@@ -279,15 +291,17 @@ class Library(private val db: Database, private val settings: SettingsStore, pri
             series = m?.series?.take(200),
             seriesIndex = m?.seriesIndex,
             publisher = m?.publisher?.take(200),
-            coverPath = cover?.let { saveCover(book.id, it) },
+            coverPath = cover?.let { saveCover(book.id, it, book.coverPath) },
             metaLoaded = true,
             pageCount = pages,
         )
     }
 
-    private fun saveCover(id: Long, img: java.awt.image.BufferedImage): String? {
+    private fun saveCover(id: Long, img: java.awt.image.BufferedImage, previous: String?): String? {
         val dir = dirs.covers
-        dir.listFiles()?.filter { it.name.startsWith("cover_${id}_") }?.forEach { it.delete() }
+        // Replace the book's old cover by its recorded path; listing the folder for every book would make
+        // scanning a large library quadratic.
+        previous?.let { File(it) }?.takeIf { AppDirs.isInside(dir, it) }?.delete()
         val file = File(dir, "cover_${id}_${System.currentTimeMillis() % 1_000_000}.jpg")
         return runCatching {
             Images.writeJpeg(Images.fit(img, COVER_W, COVER_H), file)
@@ -369,6 +383,7 @@ class Library(private val db: Database, private val settings: SettingsStore, pri
         const val COVER_W = 400
         const val COVER_H = 600
         private const val META_TIMEOUT_MS = 20_000L
+        private val META_PARALLELISM = (Runtime.getRuntime().availableProcessors() / 2).coerceIn(2, 4)
         private val metaExecutor = java.util.concurrent.Executors.newCachedThreadPool { r -> Thread(r, "book-details").apply { isDaemon = true } }
         private const val MAX_DEPTH = 16
         private const val MAX_FILES = 200_000

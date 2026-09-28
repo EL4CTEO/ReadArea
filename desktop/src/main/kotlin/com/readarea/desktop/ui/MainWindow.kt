@@ -75,13 +75,25 @@ class MainWindow(val app: App) : JFrame("ReadArea") {
             g.fillRect(0, 0, width, height)
         }
     }
-    val library = LibraryScreen(app, this)
-    private val home = HomeScreen(app, this)
-    private val shelves = ShelvesScreen(app, this)
-    private val notes = NotesScreen(app, this)
-    private val stats = StatsScreen(app, this)
-    private val settingsScreen = SettingsScreen(app, this)
-    private val screens = linkedMapOf<String, Screen>("home" to home, "library" to library, "shelves" to shelves, "notes" to notes, "stats" to stats, "settings" to settingsScreen)
+
+    /** Screens are built the first time they're shown, so start-up only pays for the one on screen. */
+    private val screenFactories = linkedMapOf<String, () -> Screen>(
+        "home" to { HomeScreen(app, this) },
+        "library" to { LibraryScreen(app, this) },
+        "shelves" to { ShelvesScreen(app, this) },
+        "notes" to { NotesScreen(app, this) },
+        "stats" to { StatsScreen(app, this) },
+        "settings" to { SettingsScreen(app, this) },
+    )
+    private val screens = HashMap<String, Screen>()
+
+    private fun screen(id: String): Screen? = screens[id] ?: screenFactories[id]?.invoke()?.also {
+        screens[id] = it
+        content.add(it.component, id)
+    }
+
+    val library: LibraryScreen get() = screen("library") as LibraryScreen
+    private val settingsScreen: SettingsScreen get() = screen("settings") as SettingsScreen
     private val sidebar = Sidebar()
     private val toast = Toast()
     var current = "home"
@@ -96,7 +108,7 @@ class MainWindow(val app: App) : JFrame("ReadArea") {
             rootPane.putClientProperty("apple.awt.transparentTitleBar", true)
             rootPane.putClientProperty("apple.awt.windowTitleVisible", false)
         }
-        for ((id, s) in screens) content.add(s.component, id)
+        screen(current)
         val root = JPanel(BorderLayout())
         root.add(sidebar, BorderLayout.LINE_START)
         root.add(content, BorderLayout.CENTER)
@@ -136,7 +148,7 @@ class MainWindow(val app: App) : JFrame("ReadArea") {
     }
 
     fun navigate(id: String) {
-        val s = screens[id] ?: return
+        val s = screen(id) ?: return
         current = id
         cards.show(content, id)
         sidebar.select(id)
@@ -190,7 +202,7 @@ class MainWindow(val app: App) : JFrame("ReadArea") {
             map.put(key, name)
             actions.put(name, object : AbstractAction() { override fun actionPerformed(e: java.awt.event.ActionEvent) = run() })
         }
-        screens.keys.forEachIndexed { i, id -> bind(KeyStroke.getKeyStroke(KeyEvent.VK_1 + i, menu), "nav-$id") { navigate(id) } }
+        screenFactories.keys.forEachIndexed { i, id -> bind(KeyStroke.getKeyStroke(KeyEvent.VK_1 + i, menu), "nav-$id") { navigate(id) } }
         bind(KeyStroke.getKeyStroke(KeyEvent.VK_O, menu), "open") { app.chooseFiles(this) }
         bind(KeyStroke.getKeyStroke(KeyEvent.VK_O, menu or InputEvent.SHIFT_DOWN_MASK), "folder") { app.chooseFolder(this) }
         bind(KeyStroke.getKeyStroke(KeyEvent.VK_F, menu), "find") {
@@ -215,7 +227,7 @@ class MainWindow(val app: App) : JFrame("ReadArea") {
             })
             add(JMenu(tr("menu_view")).apply {
                 listOf("nav_home", "nav_library", "nav_shelves", "nav_notes", "nav_stats").forEachIndexed { i, k ->
-                    add(item(tr(k), KeyEvent.VK_1 + i) { navigate(screens.keys.elementAt(i)) })
+                    add(item(tr(k), KeyEvent.VK_1 + i) { navigate(screenFactories.keys.elementAt(i)) })
                 }
             })
             add(JMenu(tr("menu_window")).apply {

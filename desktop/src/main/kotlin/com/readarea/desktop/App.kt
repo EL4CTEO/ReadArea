@@ -6,6 +6,7 @@ import com.readarea.desktop.data.Library
 import com.readarea.desktop.data.SettingsStore
 import com.readarea.desktop.i18n.I18n
 import com.readarea.desktop.ui.components.Mirroring
+import com.readarea.desktop.platform.StartupTrace
 import com.readarea.desktop.i18n.tr
 import com.readarea.desktop.platform.AppDirs
 import com.readarea.desktop.platform.Os
@@ -63,11 +64,18 @@ class App(
     }
 
     fun start(files: List<File>) {
+        StartupTrace.mark("ui thread")
         AppTheme.apply(dark, settings.app.value.accent)
         Mirroring.install()
+        StartupTrace.mark("look and feel")
         main = MainWindow(this)
+        StartupTrace.mark("window built")
         SystemIntegration.install(icons.last(), onOpenFiles = { openFiles(it) }, onAbout = { main.showSettings(about = true) }, onPreferences = { main.showSettings() }, onQuit = { shutdown(exit = false) })
         main.isVisible = true
+        SwingUtilities.invokeLater { StartupTrace.mark("window shown") }
+        // Packaging starts the app once with READAREA_TRAINING_RUN=1 to record which classes start-up
+        // loads (a class-data archive that makes later launches faster), then it quits on its own.
+        if (System.getenv("READAREA_TRAINING_RUN") == "1") javax.swing.Timer(5000) { shutdown(exit = true) }.apply { isRepeats = false }.start()
         instance?.listen { received -> SwingUtilities.invokeLater { if (received.isEmpty()) main.bringToFront() else openFiles(received) } }
         watchSettings()
         if (files.isNotEmpty()) openFiles(files)
