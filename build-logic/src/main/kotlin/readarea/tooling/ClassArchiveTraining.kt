@@ -11,8 +11,10 @@ import java.util.zip.ZipOutputStream
 /**
  * Records an application class-data archive for a jpackage app image: starts the app through its own
  * launcher with a small book, lets it quit on its own (READAREA_TRAINING_RUN), and has the JVM write
- * the classes it loaded to `<name>.jsa` next to the jars. The launcher is only pointed at the archive
- * once it exists, so a failed training leaves a working image that starts the ordinary way.
+ * the classes it loaded to `<name>.jsa` next to the jars. The options go in the launcher's configuration
+ * as `$APPDIR` paths, which hold up to spaces in the install folder where an environment variable would
+ * not; the launcher is only pointed at the archive once it exists, so a failed training leaves a working
+ * image that starts the ordinary way.
  */
 class ClassArchiveTraining(private val image: File, private val name: String, private val scratch: File, private val logger: Logger) {
     fun run() {
@@ -22,38 +24,55 @@ class ClassArchiveTraining(private val image: File, private val name: String, pr
             HostOs.WINDOWS -> File(image, "$name/$name.exe")
             HostOs.LINUX -> File(image, "$name/bin/$name")
         }
-        val appDir = if (os == HostOs.MAC) File(image, "$name.app/Contents/app") else File(image, "$name/lib/app")
+        // Where jpackage puts the jars and the launcher's configuration on each platform.
+        val appDir = when (os) {
+            HostOs.MAC -> File(image, "$name.app/Contents/app")
+            HostOs.WINDOWS -> File(image, "$name/app")
+            HostOs.LINUX -> File(image, "$name/lib/app")
+        }
         val cfg = File(appDir, "$name.cfg")
         val archive = File(appDir, "$name.jsa")
         if (!launcher.isFile || !cfg.isFile) return logger.warn("Class-data archive skipped: no launcher or configuration in $image")
+        val text = cfg.readText()
+        val eol = if (text.contains("\r\n")) "\r\n" else "\n"
+        val original = text.lines().dropLastWhile { it.isEmpty() }
+        val section = original.indexOfFirst { it.trim() == "[JavaOptions]" }
+        if (section < 0) return logger.warn("Class-data archive skipped: no [JavaOptions] in $cfg")
+        fun configure(option: String?) {
+            val lines = original.toMutableList()
+            if (option != null) lines.add(section + 1, "java-options=$option")
+            cfg.writeText(lines.joinToString(eol, postfix = eol))
+        }
+
         val home = File(scratch, "training-home").apply { deleteRecursively(); mkdirs() }
         val book = File(scratch, "Training.epub").apply { writeBytes(sampleEpub()) }
+        // The JVM writes the archive read-only, which Windows then refuses to delete or replace.
+        archive.setWritable(true)
         archive.delete()
-        val pb = ProcessBuilder(launcher.path, book.path).redirectErrorStream(true)
-        val env = pb.environment()
-        env["JAVA_TOOL_OPTIONS"] = listOfNotNull(env["JAVA_TOOL_OPTIONS"], "-XX:ArchiveClassesAtExit=${archive.path}").joinToString(" ")
-        env["READAREA_HOME"] = home.path
-        env["READAREA_TRAINING_RUN"] = "1"
-        val p = pb.start()
+        configure("-XX:ArchiveClassesAtExit=\$APPDIR/$name.jsa")
         val out = ByteArrayOutputStream()
-        val reader = Thread { runCatching { p.inputStream.copyTo(out) } }.apply { isDaemon = true; start() }
-        val finished = p.waitFor(2, TimeUnit.MINUTES)
-        if (!finished) p.destroyForcibly()
-        reader.join(1000)
-        home.deleteRecursively()
-        if (!finished || p.exitValue() != 0 || !archive.isFile || archive.length() < 1_000_000) {
+        val (finished, exit) = try {
+            val pb = ProcessBuilder(launcher.path, book.path).redirectErrorStream(true)
+            pb.environment()["READAREA_HOME"] = home.path
+            pb.environment()["READAREA_TRAINING_RUN"] = "1"
+            val p = pb.start()
+            val reader = Thread { runCatching { p.inputStream.copyTo(out) } }.apply { isDaemon = true; start() }
+            val finished = p.waitFor(2, TimeUnit.MINUTES)
+            if (!finished) p.destroyForcibly().waitFor(10, TimeUnit.SECONDS)
+            reader.join(1000)
+            finished to if (finished) p.exitValue() else -1
+        } finally {
+            configure(null)
+            home.deleteRecursively()
+        }
+        if (!finished || exit != 0 || !archive.isFile || archive.length() < 1_000_000) {
+            archive.setWritable(true)
             archive.delete()
-            logger.warn("Class-data archive skipped: the training run didn't complete (exit ${if (finished) p.exitValue() else "timeout"}).\n${out.toString(Charsets.UTF_8).takeLast(2000)}")
+            logger.warn("Class-data archive skipped: the training run didn't complete (exit ${if (finished) exit else "timeout"}).\n${out.toString(Charsets.UTF_8).takeLast(2000)}")
             return
         }
-        val lines = cfg.readLines().toMutableList()
-        val section = lines.indexOfFirst { it.trim() == "[JavaOptions]" }
-        if (section < 0) {
-            archive.delete()
-            return logger.warn("Class-data archive skipped: no [JavaOptions] in $cfg")
-        }
-        lines.add(section + 1, "java-options=-XX:SharedArchiveFile=\$APPDIR/$name.jsa")
-        cfg.writeText(lines.joinToString("\n", postfix = "\n"))
+        archive.setWritable(true)
+        configure("-XX:SharedArchiveFile=\$APPDIR/$name.jsa")
         logger.lifecycle("Class-data archive: ${archive.length() / (1 shl 20)} MB")
     }
 
