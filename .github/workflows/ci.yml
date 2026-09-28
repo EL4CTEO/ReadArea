@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   core-desktop:
-    name: Core tests
+    name: Core and desktop tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -30,7 +30,19 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Test
-        run: xvfb-run -a ./gradlew --no-daemon -Preadarea.android=false :core:test
+        # The desktop UI tests drive the real app on a virtual display and save screenshots.
+        run: xvfb-run -a -s "-screen 0 1600x1000x24" ./gradlew --no-daemon -Preadarea.android=false :core:test :desktop:test
+
+      - name: Upload desktop screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-screenshots
+          path: |
+            desktop/build/qa-screens
+            desktop/build/screens
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload test reports
         if: failure()

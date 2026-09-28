@@ -41,4 +41,5 @@ val androidBuild: Boolean = providers.gradleProperty("readarea.android").orNull?
 gradle.extra["readarea.android"] = androidBuild
 
 include(":core")
+include(":desktop")
 if (androidBuild) include(":app")
