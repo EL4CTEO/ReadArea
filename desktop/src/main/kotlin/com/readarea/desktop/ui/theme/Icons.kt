@@ -379,19 +379,31 @@ object Icons {
 
 /** The app icon at any size: the open book on the warm brown square of the launcher icon. */
 object AppIcon {
-    fun image(size: Int): java.awt.image.BufferedImage {
+    /**
+     * The app icon at [size] pixels. [margin] is the transparent border as a fraction of the size: macOS
+     * icons sit on a grid with about 10% around the artwork, other systems use less.
+     */
+    fun image(size: Int, margin: Float = 0.06f): java.awt.image.BufferedImage {
         val img = java.awt.image.BufferedImage(size, size, java.awt.image.BufferedImage.TYPE_INT_ARGB)
         val g = img.createGraphics()
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
         g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
         val s = size.toFloat()
-        val inset = s * 0.06f
-        val shape = RoundRectangle2D.Float(inset, inset, s - inset * 2, s - inset * 2, s * 0.44f, s * 0.44f)
+        val inset = s * margin
+        val body = s - inset * 2
+        val shape = RoundRectangle2D.Float(inset, inset, body, body, body * 0.47f, body * 0.47f)
+        if (margin >= 0.09f) {
+            // The soft shadow macOS icons carry below the tile.
+            for (i in 1..6) {
+                g.color = Color(0, 0, 0, 10)
+                g.fill(RoundRectangle2D.Float(inset - i * 0.4f, inset + i * s * 0.004f, body + i * 0.8f, body + i * 0.4f, body * 0.47f, body * 0.47f))
+            }
+        }
         g.paint = java.awt.GradientPaint(0f, 0f, Color(0xB0703F), s, s, Color(0x5E331C))
         g.fill(shape)
         g.paint = java.awt.RadialGradientPaint(s * 0.37f, s * 0.31f, s * 0.55f, floatArrayOf(0f, 1f), arrayOf(Color(255, 255, 255, 0x33), Color(255, 255, 255, 0)))
         g.fill(shape)
-        val k = (s - inset * 2) / 24.0 * 0.92
+        val k = body / 24.0 * 0.92
         g.translate((s - 24 * k) / 2.0, (s - 24 * k) / 2.0 + s * 0.01)
         g.scale(k, k)
         Icons.drawLogo(g)

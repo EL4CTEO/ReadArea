@@ -18,6 +18,10 @@ fun main(args: Array<String>) {
         println("ReadArea " + (App::class.java.`package`?.implementationVersion ?: "dev"))
         return
     }
+    // Checks a packaged build has everything it needs (runtime modules, native libraries, codecs).
+    args.firstOrNull { it == "--self-test" || it.startsWith("--self-test=") }?.let { arg ->
+        exitProcess(if (com.readarea.desktop.tools.SelfTest.run(arg.substringAfter('=', "").takeIf { it.isNotEmpty() }?.let(::File))) 0 else 1)
+    }
     val files = args.filter { !it.startsWith("-") }.map { File(it).absoluteFile }.filter { it.isFile }
 
     val dirs = AppDirs.resolve().init()
@@ -66,10 +70,3 @@ fun configureRuntime(dirs: AppDirs) {
 }
 
 private val quietLoggers = ArrayList<Logger>()
-
-/** Builds the app for tests and tools without showing windows. */
-fun createHeadless(dirs: AppDirs): Triple<SettingsStore, Database, Library> {
-    val settings = SettingsStore(dirs.settings)
-    val db = Database(dirs.database)
-    return Triple(settings, db, Library(db, settings, dirs))
-}

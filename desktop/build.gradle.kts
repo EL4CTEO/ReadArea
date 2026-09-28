@@ -1,11 +1,11 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import javax.xml.parsers.DocumentBuilderFactory
 
 // ReadArea for macOS, Windows and Linux: a Kotlin/JVM Swing app sharing :core with the Android app.
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
     application
+    id("readarea.desktop-packaging")
 }
 
 val appVersion: String = providers.environmentVariable("READAREA_VERSION_NAME").orNull?.takeIf { it.isNotBlank() } ?: "1.0.0"
@@ -53,108 +53,45 @@ application {
     applicationDefaultJvmArgs = desktopJvmArgs
 }
 
-/**
- * Turns the Android string resources (the single source of truth for all 17 languages) into resource
- * bundles for the desktop app. Plurals become `name#one`, `name#few` and so on.
- */
-abstract class GenerateStrings : DefaultTask() {
-    @get:InputDirectory
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val resDir: DirectoryProperty
-
-    @get:OutputDirectory
-    abstract val outDir: DirectoryProperty
-
-    @TaskAction
-    fun generate() {
-        val out = outDir.get().asFile.resolve("i18n")
-        out.deleteRecursively()
-        out.mkdirs()
-        val folders = resDir.get().asFile.listFiles { f -> f.isDirectory && f.name.startsWith("values") && f.resolve("strings.xml").isFile }.orEmpty()
-        for (folder in folders.sortedBy { it.name }) {
-            val suffixes = bundleSuffixes(folder.name.removePrefix("values"))
-            val entries = parse(folder.resolve("strings.xml"))
-            val text = buildString {
-                append("# Generated from app/src/main/res/").append(folder.name).append("/strings.xml. Do not edit.\n")
-                for ((k, v) in entries.toSortedMap()) append(k).append('=').append(escape(v)).append('\n')
-            }
-            for (suffix in suffixes) out.resolve("strings$suffix.properties").writeText(text, Charsets.ISO_8859_1)
-        }
-    }
-
-    private fun bundleSuffixes(qualifier: String): List<String> = when (qualifier) {
-        "" -> listOf("")
-        "-in" -> listOf("_in", "_id")
-        "-pt-rBR" -> listOf("_pt_BR", "_pt")
-        "-zh-rCN" -> listOf("_zh_CN", "_zh")
-        else -> listOf("_" + qualifier.removePrefix("-").replace("-r", "_"))
-    }
-
-    private fun parse(file: File): Map<String, String> {
-        val factory = DocumentBuilderFactory.newInstance()
-        factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
-        factory.isExpandEntityReferences = false
-        val doc = factory.newDocumentBuilder().parse(file)
-        val out = LinkedHashMap<String, String>()
-        val strings = doc.getElementsByTagName("string")
-        for (i in 0 until strings.length) {
-            val e = strings.item(i) as org.w3c.dom.Element
-            if (e.getAttribute("translatable") == "false") continue
-            out[e.getAttribute("name")] = unescape(e.textContent)
-        }
-        val plurals = doc.getElementsByTagName("plurals")
-        for (i in 0 until plurals.length) {
-            val p = plurals.item(i) as org.w3c.dom.Element
-            val items = p.getElementsByTagName("item")
-            for (k in 0 until items.length) {
-                val item = items.item(k) as org.w3c.dom.Element
-                out[p.getAttribute("name") + "#" + item.getAttribute("quantity")] = unescape(item.textContent)
-            }
-        }
-        return out
-    }
-
-    private fun unescape(raw: String): String {
-        val sb = StringBuilder()
-        var quoted = false
-        var i = 0
-        val s = raw.trim()
-        while (i < s.length) {
-            val c = s[i]
-            when {
-                c == '\\' && i + 1 < s.length -> {
-                    when (val n = s[i + 1]) {
-                        'n' -> sb.append('\n')
-                        't' -> sb.append('\t')
-                        else -> sb.append(n)
-                    }
-                    i += 2
-                    continue
-                }
-                c == '"' -> quoted = !quoted
-                !quoted && c.isWhitespace() -> if (sb.isEmpty() || !sb.last().isWhitespace()) sb.append(' ')
-                else -> sb.append(c)
-            }
-            i++
-        }
-        return sb.toString()
-    }
-
-    private fun escape(v: String): String = buildString {
-        v.forEachIndexed { i, c ->
-            when {
-                c == '\\' -> append("\\\\")
-                c == '\n' -> append("\\n")
-                c == '\t' -> append("\\t")
-                c == ' ' && i == 0 -> append("\\ ")
-                c.code < 0x20 || c.code > 0x7E -> append("\\u%04x".format(c.code))
-                else -> append(c)
-            }
-        }
+tasks.jar {
+    archiveBaseName.set("readarea-desktop")
+    manifest {
+        attributes("Implementation-Title" to "ReadArea", "Implementation-Version" to appVersion)
     }
 }
 
-val generateStrings by tasks.registering(GenerateStrings::class) {
+// Installers for macOS, Windows and Linux: `./gradlew :desktop:packageDesktop` on each platform.
+desktopPackaging {
+    appName.set("ReadArea")
+    appVersion.set(project.version.toString())
+    vendor.set("ReadArea")
+    appDescription.set("A calm, private e-book reader")
+    copyright.set("Copyright © 2026 EL4CTEO. MIT License.")
+    homepage.set("https://github.com/EL4CTEO/ReadArea")
+    identifier.set("com.readarea.desktop")
+    mainClass.set(application.mainClass)
+    iconExporter.set("com.readarea.desktop.tools.IconExport")
+    jvmArgs.set(desktopJvmArgs)
+    // Used by name, so jdeps can't see them: legacy text encodings, locale data for dates and numbers,
+    // and the bridge screen readers use on Windows.
+    extraModules.set(listOf("jdk.charsets", "jdk.localedata", "jdk.accessibility"))
+    locales.set(listOf("en", "ar", "de", "es", "fr", "hi", "id", "in", "it", "ja", "ko", "nl", "pl", "pt", "ru", "tr", "uk", "zh"))
+    licenseFile.set(rootProject.layout.projectDirectory.file("LICENSE"))
+    resourceDir.set(layout.projectDirectory.dir("packaging"))
+    windowsUpgradeUuid.set("d47633b5-2e65-482b-bd2a-d0083ba4778f")
+    // E-book formats only: ReadArea shouldn't take over PDFs or documents other apps usually open.
+    fileAssociations.set(
+        listOf(
+            readarea.build.FileAssociation("epub", "application/epub+zip", "EPUB e-book"),
+            readarea.build.FileAssociation("mobi", "application/x-mobipocket-ebook", "Mobipocket e-book"),
+            readarea.build.FileAssociation("azw3", "application/vnd.amazon.ebook", "Kindle e-book"),
+            readarea.build.FileAssociation("fb2", "application/x-fictionbook+xml", "FictionBook e-book"),
+            readarea.build.FileAssociation("cbz", "application/vnd.comicbook+zip", "Comic book archive"),
+        ),
+    )
+}
+
+val generateStrings = tasks.register<readarea.build.GenerateStrings>("generateStrings") {
     resDir.set(rootProject.layout.projectDirectory.dir("app/src/main/res"))
     outDir.set(layout.buildDirectory.dir("generated/strings"))
 }
