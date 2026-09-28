@@ -1,10 +1,10 @@
-import readarea.build.DesktopPackagingExtension
-import readarea.build.Host
-import readarea.build.HostOs
-import readarea.build.JlinkRuntime
-import readarea.build.Jpackage
-import readarea.build.PrepareAppInput
-import readarea.build.SelfTestImage
+import readarea.tooling.DesktopPackagingExtension
+import readarea.tooling.Host
+import readarea.tooling.HostOs
+import readarea.tooling.JlinkRuntime
+import readarea.tooling.Jpackage
+import readarea.tooling.PrepareAppInput
+import readarea.tooling.SelfTestImage
 
 /*
  * Native installers for the desktop app, built with the JDK's own tools on each platform:

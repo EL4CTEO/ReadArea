@@ -82,16 +82,16 @@ desktopPackaging {
     // E-book formats only: ReadArea shouldn't take over PDFs or documents other apps usually open.
     fileAssociations.set(
         listOf(
-            readarea.build.FileAssociation("epub", "application/epub+zip", "EPUB e-book"),
-            readarea.build.FileAssociation("mobi", "application/x-mobipocket-ebook", "Mobipocket e-book"),
-            readarea.build.FileAssociation("azw3", "application/vnd.amazon.ebook", "Kindle e-book"),
-            readarea.build.FileAssociation("fb2", "application/x-fictionbook+xml", "FictionBook e-book"),
-            readarea.build.FileAssociation("cbz", "application/vnd.comicbook+zip", "Comic book archive"),
+            readarea.tooling.FileAssociation("epub", "application/epub+zip", "EPUB e-book"),
+            readarea.tooling.FileAssociation("mobi", "application/x-mobipocket-ebook", "Mobipocket e-book"),
+            readarea.tooling.FileAssociation("azw3", "application/vnd.amazon.ebook", "Kindle e-book"),
+            readarea.tooling.FileAssociation("fb2", "application/x-fictionbook+xml", "FictionBook e-book"),
+            readarea.tooling.FileAssociation("cbz", "application/vnd.comicbook+zip", "Comic book archive"),
         ),
     )
 }
 
-val generateStrings = tasks.register<readarea.build.GenerateStrings>("generateStrings") {
+val generateStrings = tasks.register<readarea.tooling.GenerateStrings>("generateStrings") {
     resDir.set(rootProject.layout.projectDirectory.dir("app/src/main/res"))
     outDir.set(layout.buildDirectory.dir("generated/strings"))
 }
