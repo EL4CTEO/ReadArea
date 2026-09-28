@@ -190,21 +190,26 @@ class ContentsPanel(private val c: ReaderController, onClose: () -> Unit) : Side
     private fun render() {
         val u = c.ui.value
         tabs.setOptions(listOf(tr("tool_contents"), I18n.format("tab_bookmarks", u.bookmarks.size), I18n.format("tab_highlights", u.highlights.size)))
-        if (tocModel.size() != u.toc.size || (0 until tocModel.size()).any { tocModel[it] != u.toc[it] }) {
-            tocModel.clear()
-            u.toc.forEach { tocModel.addElement(it) }
-        }
+        sync(tocModel, u.toc)
         val e = c.engine
         currentToc = u.toc.lastOrNull { t ->
             if (t.page >= 0) t.page <= c.pos.page
             else t.chapter < c.pos.chapter || (t.chapter == c.pos.chapter && (t.anchor == null || (c.text?.anchors(t.chapter)?.get(t.anchor) ?: 0) <= (e?.endOffsetOf(c.pos) ?: 0)))
         }
         toc.repaint()
-        bmModel.clear()
-        u.bookmarks.forEach { bmModel.addElement(it) }
-        hlModel.clear()
-        u.highlights.forEach { hlModel.addElement(it) }
+        sync(bmModel, u.bookmarks)
+        sync(hlModel, u.highlights)
         (body.layout as java.awt.CardLayout).show(body, tab.toString())
+    }
+
+    /**
+     * Refills a list only when its items changed, in one event: this runs on every page turn, and refilling
+     * makes the list measure every row again.
+     */
+    private fun <T> sync(model: DefaultListModel<T>, items: List<T>) {
+        if (model.size() == items.size && items.indices.all { model[it] == items[it] }) return
+        model.clear()
+        model.addAll(items)
     }
 
     fun focusCurrent() {
