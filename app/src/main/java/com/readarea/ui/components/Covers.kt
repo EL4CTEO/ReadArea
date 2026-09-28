@@ -18,9 +18,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,17 +76,27 @@ object CoverCache {
     }
 }
 
+/**
+ * The cover image at [path]: null while it loads, and when there is no cover. The state is keyed on [path], so a
+ * card that stays on screen while its book changes (the home screen's "Continue reading") drops the old cover in the
+ * same pass instead of keeping it: `produceState` would restart its loader but keep showing the previous value.
+ */
+@Composable
+private fun rememberCover(path: String?): ImageBitmap? {
+    var image by remember(path) { mutableStateOf(path?.let { CoverCache.get(it) }) }
+    LaunchedEffect(path) {
+        if (path != null && image == null) image = withContext(Dispatchers.IO) { CoverCache.load(path) }
+    }
+    return image
+}
+
 @Composable
 fun BookCover(book: BookEntity, modifier: Modifier = Modifier, corner: Dp = 8.dp, elevation: Dp = 4.dp) {
-    val path = book.coverPath
-    val image by produceState(initialValue = path?.let { CoverCache.get(it) }, path) {
-        if (path != null && value == null) value = withContext(Dispatchers.IO) { CoverCache.load(path) }
-    }
+    val image = rememberCover(book.coverPath)
     val shape = RoundedCornerShape(topStart = corner / 2, bottomStart = corner / 2, topEnd = corner, bottomEnd = corner)
     Box(modifier.aspectRatio(0.68f).shadow(elevation, shape).clip(shape)) {
-        val img = image
-        if (img != null) {
-            Image(img, contentDescription = book.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        if (image != null) {
+            Image(image, contentDescription = book.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         } else {
             GeneratedCover(book.title, book.author, BookFormat.byName(book.format), Modifier.fillMaxSize())
         }
