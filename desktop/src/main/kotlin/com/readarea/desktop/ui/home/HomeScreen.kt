@@ -10,6 +10,8 @@ import com.readarea.desktop.ui.MainWindow
 import com.readarea.desktop.ui.Screen
 import com.readarea.desktop.ui.components.ButtonKind
 import com.readarea.desktop.ui.components.Widget
+import com.readarea.desktop.ui.components.FocusRing
+import com.readarea.desktop.ui.components.onActivate
 import com.readarea.desktop.ui.components.Card
 import com.readarea.desktop.ui.components.CoverPainter
 import com.readarea.desktop.ui.components.PillButton
@@ -37,14 +39,17 @@ import java.awt.Dimension
 import java.awt.FlowLayout
 import java.awt.Font
 import java.awt.Graphics
+import java.awt.event.KeyEvent
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.awt.geom.Arc2D
 import java.awt.geom.RoundRectangle2D
 import java.time.LocalTime
+import javax.swing.AbstractAction
 import javax.swing.BoxLayout
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.KeyStroke
 import javax.swing.border.EmptyBorder
 
 @OptIn(FlowPreview::class)
@@ -218,16 +223,21 @@ class HomeScreen(private val app: App, private val window: MainWindow) : Screen 
     }
 
     /** A row of covers with titles; click to open, right-click for details. */
-    private inner class CoverRow(private val books: List<Book>) : JPanel() {
+    /**
+     * A row of covers. Only covers that fit whole are shown; the rest are a click away in the library.
+     * Arrow keys move between covers, Enter opens one and the context-menu key shows its details.
+     */
+    private inner class CoverRow(private val books: List<Book>) : Widget(javax.accessibility.AccessibleRole.LIST) {
         private val cw = 118f
         private val ch = cw * 1.5f
         private val gap = 22f
         private var hover = -1
+        private var focused = 0
 
         init {
-            isOpaque = false
             alignmentX = LEFT_ALIGNMENT
             preferredSize = Dimension(((cw + gap) * books.size).toInt(), (ch + 58).toInt())
+            minimumSize = Dimension(0, (ch + 58).toInt())
             maximumSize = Dimension(Int.MAX_VALUE, (ch + 58).toInt())
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
             val m = object : MouseAdapter() {
@@ -252,17 +262,46 @@ class HomeScreen(private val app: App, private val window: MainWindow) : Screen 
             }
             addMouseListener(m)
             addMouseMotionListener(m)
+            onActivate { books.getOrNull(focused)?.let { app.openBook(it.id) } }
+            key(KeyEvent.VK_LEFT) { move(if (componentOrientation.isLeftToRight) -1 else 1) }
+            key(KeyEvent.VK_RIGHT) { move(if (componentOrientation.isLeftToRight) 1 else -1) }
+            key(KeyEvent.VK_CONTEXT_MENU) { books.getOrNull(focused)?.let { window.showBook(it.id) } }
+            describe()
         }
 
-        private fun index(x: Int): Int = (x / (cw + gap)).toInt().takeIf { it in books.indices && x % (cw + gap) <= cw } ?: -1
+        private fun key(code: Int, action: () -> Unit) {
+            val name = "key$code"
+            getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(code, 0), name)
+            actionMap.put(name, object : AbstractAction() {
+                override fun actionPerformed(e: java.awt.event.ActionEvent) = action()
+            })
+        }
+
+        private fun move(step: Int) {
+            focused = (focused + step).coerceIn(0, (visibleCount() - 1).coerceAtLeast(0))
+            describe()
+            repaint()
+        }
+
+        private fun describe() {
+            getAccessibleContext().accessibleName = books.getOrNull(focused)?.let { b -> if (b.author.isBlank()) b.title else "${b.title}, ${b.author}" }
+        }
+
+        /** How many covers fit whole in the current width. */
+        private fun visibleCount(): Int = (((width + gap) / (cw + gap)).toInt()).coerceIn(0, books.size)
+
+        private fun index(x: Int): Int = (x / (cw + gap)).toInt().takeIf { it in 0 until visibleCount() && x % (cw + gap) <= cw } ?: -1
 
         override fun paintComponent(g0: Graphics) {
             val g = g0.create().smooth()
-            books.forEachIndexed { i, b ->
+            val n = visibleCount()
+            if (focused >= n) focused = (n - 1).coerceAtLeast(0)
+            for (i in 0 until n) {
+                val b = books[i]
                 val x = i * (cw + gap)
-                if (x > width) return@forEachIndexed
                 val lift = if (i == hover) -4f else 0f
                 CoverPainter.paint(g, b, x, 4f + lift, cw, ch, 6f, true) { repaint() }
+                if (i == focused) FocusRing.paint(g, this, RoundRectangle2D.Float(x - 3f, 1f + lift, cw + 6f, ch + 6f, 12f, 12f))
                 if (b.progress > 0.005f && b.status != BookStatus.FINISHED) {
                     g.color = pal.onSurface.alpha(28)
                     g.fill(RoundRectangle2D.Float(x, ch + 10f, cw, 3f, 3f, 3f))

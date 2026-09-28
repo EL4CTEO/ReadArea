@@ -52,6 +52,16 @@ class DocxParser(private val zip: ZipAccess, private val fallbackTitle: String) 
         return out
     }
 
+    /** Word's built-in style ids, for documents written without a styles part. */
+    private fun builtInHeading(styleId: String): Int? {
+        val id = styleId.lowercase()
+        return when {
+            id == "title" -> 1
+            id.startsWith("heading") -> id.removePrefix("heading").toIntOrNull()?.coerceIn(1, 6)
+            else -> null
+        }
+    }
+
     private fun toHtml(xml: String, rels: Map<String, String>, headings: Map<String, Int>): String {
         val out = StringBuilder()
         val para = StringBuilder()
@@ -119,7 +129,7 @@ class DocxParser(private val zip: ZipAccess, private val fallbackTitle: String) 
                     "hyperlink" -> link = null
                     "p" -> {
                         val content = para.toString()
-                        val level = pStyle?.let { headings[it] }
+                        val level = pStyle?.let { headings[it] ?: builtInHeading(it) }
                         val style = when (align) {
                             "center" -> " style=\"text-align:center\""
                             "right", "end" -> " style=\"text-align:right\""

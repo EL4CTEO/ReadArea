@@ -9,6 +9,8 @@ import com.readarea.desktop.platform.SystemIntegration
 import com.readarea.desktop.reader.engine.ReaderFonts
 import com.readarea.desktop.ui.MainWindow
 import com.readarea.desktop.ui.Screen
+import com.readarea.desktop.ui.components.FocusRing
+import com.readarea.desktop.ui.components.onActivate
 import com.readarea.desktop.ui.components.ButtonKind
 import com.readarea.desktop.ui.components.Widget
 import com.readarea.desktop.ui.components.Card
@@ -295,16 +297,8 @@ class SettingsScreen(private val app: App, private val window: MainWindow) : Scr
         return wrap
     }
 
-    private fun row(label: String, hint: String?, control: JComponent): JComponent {
-        val left = Ui.vbox(Ui.label(label, 13.5f))
-        if (hint != null) left.add(Ui.label("<html><div style='width:360px'>${Ui.escape(hint)}</div></html>", 12f) { pal.onSurfaceVariant })
-        val p = Transparent(BorderLayout(16, 0))
-        p.border = EmptyBorder(8, 0, 8, 0)
-        p.add(left, BorderLayout.CENTER)
-        p.add(Transparent(FlowLayout(FlowLayout.RIGHT, 0, 0)).apply { add(control) }, BorderLayout.EAST)
-        p.maximumSize = Dimension(Int.MAX_VALUE, p.preferredSize.height + 8)
-        return p
-    }
+    private fun row(label: String, hint: String?, control: JComponent): JComponent =
+        Ui.settingRow(label, hint, control).apply { border = EmptyBorder(8, 0, 8, 0) }
 
     private fun switch(on: Boolean, onChange: (Boolean) -> Unit): JComponent = Switch(on).apply { addActionListener { onChange(isSelected) } }
 
@@ -319,13 +313,15 @@ class SettingsScreen(private val app: App, private val window: MainWindow) : Scr
                     cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
                     toolTipText = Accents.names[i]
                     getAccessibleContext().accessibleName = Accents.names[i]
+                    val pick = {
+                        sel = i
+                        swatches.forEach { it.repaint() }
+                        app.settings.updateApp { it.copy(accent = i) }
+                    }
                     addMouseListener(object : MouseAdapter() {
-                        override fun mouseClicked(e: MouseEvent) {
-                            sel = i
-                            swatches.forEach { it.repaint() }
-                            app.settings.updateApp { it.copy(accent = i) }
-                        }
+                        override fun mouseClicked(e: MouseEvent) = pick()
                     })
+                    onActivate(pick)
                 }
 
                 override fun paintComponent(g0: Graphics) {
@@ -337,6 +333,7 @@ class SettingsScreen(private val app: App, private val window: MainWindow) : Scr
                         g.stroke = java.awt.BasicStroke(2f)
                         g.draw(Ellipse2D.Float(1f, 1f, 26f, 26f))
                     }
+                    if (i != sel) FocusRing.paint(g, this, Ellipse2D.Float(1f, 1f, 26f, 26f))
                     g.dispose()
                 }
             }

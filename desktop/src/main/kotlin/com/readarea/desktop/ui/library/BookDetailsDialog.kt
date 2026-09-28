@@ -16,6 +16,8 @@ import com.readarea.desktop.ui.components.CoverPainter
 import com.readarea.desktop.ui.components.Dialogs
 import com.readarea.desktop.ui.components.IconButton
 import com.readarea.desktop.ui.components.PillButton
+import com.readarea.desktop.ui.components.ScrollableColumn
+import com.readarea.desktop.ui.components.WrapText
 import com.readarea.desktop.ui.components.Segmented
 import com.readarea.desktop.ui.components.Transparent
 import com.readarea.desktop.ui.components.Ui
@@ -90,7 +92,7 @@ class BookDetailsDialog(private val app: App, private val window: MainWindow, pr
         val left = Ui.vbox(cover, Ui.gap(14), read, gap = 0, align = CENTER_ALIGNMENT)
         left.border = EmptyBorder(0, 0, 0, 24)
 
-        val titleLabel = Ui.label("<html>${Ui.escape(b.title)}</html>", 22f).apply { font = AppTheme.headline(23f) }
+        val titleLabel = WrapText(b.title).apply { font = AppTheme.headline(23f) }
         val authorRow = Transparent(FlowLayout(FlowLayout.LEFT, 0, 0))
         if (b.author.isNotBlank()) authorRow.add(PillButton(b.author, null, ButtonKind.TEXT, compact = true).apply {
             border = EmptyBorder(2, 0, 2, 6)
@@ -148,20 +150,10 @@ class BookDetailsDialog(private val app: App, private val window: MainWindow, pr
             }
         })
 
-        val description = b.description?.takeIf { it.isNotBlank() }?.let { d ->
-            JTextArea(d).apply {
-                isEditable = false
-                lineWrap = true
-                wrapStyleWord = true
-                isOpaque = false
-                font = AppTheme.ui(13f)
-                foreground = pal.onSurfaceVariant
-                border = null
-            }
-        }
+        val description = b.description?.takeIf { it.isNotBlank() }?.let { d -> WrapText(d, 13f) { pal.onSurfaceVariant } }
 
         val info = infoGrid(b)
-        val right = Ui.vbox(titleLabel, authorRow, gap = 2)
+        val right = Ui.vbox(titleLabel, Ui.gap(2), authorRow)
         series?.let { right.add(it) }
         right.add(Ui.gap(8))
         right.add(stars)
@@ -198,7 +190,8 @@ class BookDetailsDialog(private val app: App, private val window: MainWindow, pr
         })
         val body = Transparent(BorderLayout())
         body.add(left, BorderLayout.WEST)
-        body.add(Ui.scroll(right), BorderLayout.CENTER)
+        // The column follows the viewport's width, so long titles and descriptions wrap instead of clipping.
+        body.add(Ui.scroll(ScrollableColumn(BorderLayout()).apply { add(right, BorderLayout.NORTH) }), BorderLayout.CENTER)
         root.add(body, BorderLayout.CENTER)
         root.add(Ui.padded(actions, 14, 0, 0, 0), BorderLayout.SOUTH)
         root.revalidate()
@@ -207,7 +200,7 @@ class BookDetailsDialog(private val app: App, private val window: MainWindow, pr
 
     private fun infoGrid(b: Book): JComponent {
         val p = Transparent(GridBagLayout())
-        val c = GridBagConstraints().apply { anchor = GridBagConstraints.NORTHWEST; insets = Insets(2, 0, 2, 14) }
+        val c = GridBagConstraints().apply { anchor = GridBagConstraints.NORTHWEST; insets = Insets(2, 0, 2, 14); fill = GridBagConstraints.HORIZONTAL }
         val df = DateFormat.getDateInstance(DateFormat.MEDIUM, I18n.locale)
         val rows = listOfNotNull(
             tr("formats") to b.bookFormat.label,
@@ -227,7 +220,7 @@ class BookDetailsDialog(private val app: App, private val window: MainWindow, pr
             p.add(Ui.secondary(k, 12.5f), c)
             c.gridx = 1
             c.weightx = 1.0
-            p.add(Ui.label("<html>${Ui.escape(v)}</html>", 12.5f), c)
+            p.add(WrapText(v, 12.5f), c)
         }
         return p
     }

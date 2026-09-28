@@ -191,9 +191,16 @@ object CoverPainter {
             }
         }
         val label = title.ifBlank { tr("untitled") }
-        val longest = label.split(' ', '-').maxOfOrNull { it.length }?.coerceAtLeast(4) ?: 4
-        val size = (w / (longest * 0.62f)).coerceIn(7f, (w / 110f * 15f).coerceIn(9f, 26f))
-        val font = AppTheme.headline(size).deriveFont(mapOf(TextAttribute.WEIGHT to TextAttribute.WEIGHT_SEMIBOLD))
+        val words = label.split(' ', '-')
+        val longest = words.maxOfOrNull { it.length }?.coerceAtLeast(4) ?: 4
+        var size = (w / (longest * 0.62f)).coerceIn(7f, (w / 110f * 15f).coerceIn(9f, 26f))
+        var font = AppTheme.headline(size).deriveFont(mapOf(TextAttribute.WEIGHT to TextAttribute.WEIGHT_SEMIBOLD))
+        // Shrink until the longest word fits on a line, so small covers don't split words.
+        val longestWord = words.maxByOrNull { g.getFontMetrics(font).stringWidth(it) }.orEmpty()
+        while (size > 5f && g.getFontMetrics(font).stringWidth(longestWord) > w * 0.82f) {
+            size -= 0.5f
+            font = font.deriveFont(size)
+        }
         g.color = p.ink
         drawWrapped(g, label, font, x + w * 0.09f, y + h * 0.1f, w * 0.82f, 4)
         val small = AppTheme.ui((w / 11f).coerceIn(6f, 12f))

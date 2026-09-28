@@ -170,4 +170,16 @@ class RenderTest {
             assertTrue("page $p ends with a heading", !plain.substring(lastLineStart, end).trim().startsWith("Section"))
         }
     }
+
+    @Test
+    fun imagesThatNearlyFitShrinkIntoThePage() {
+        val png = java.io.ByteArrayOutputStream().also { ImageIO.write(BufferedImage(800, 1000, BufferedImage.TYPE_INT_RGB), "png", it) }.toByteArray()
+        val blocks = listOf(para(TestBooks.lorem(40, 1)), Block(BlockKind.IMAGE, emptyList(), image = "big.png"), para(TestBooks.lorem(40, 2)))
+        val book = ParsedBook(BookMeta("Img"), listOf(Chapter("c", "c", blocks)), emptyList(), ResourceProvider { if (it == "big.png") png else null })
+        val e = engineFor(book, w = 600, h = 800)
+        val imageStart = e.text.plainText(0).indexOf(BookText.OBJ)
+        // The image stays on the first page, after the paragraph, instead of leaving most of it blank.
+        assertTrue("image on page 0", e.endOffsetOf(PagePos(0, 0)) > imageStart)
+        render(e, PagePos(0, 0), "image_shrink")
+    }
 }

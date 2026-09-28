@@ -24,7 +24,9 @@ class FixedEngine(val source: FixedSource, val title: String, private val maxCac
     private var cacheBytes = 0L
     private val pending = HashSet<String>()
     @Volatile private var tint: Pair<Int, Int>? = null
-    @Volatile var onPageRendered: (() -> Unit)? = null
+
+    /** Called on the render thread with the page number whenever a page finishes rendering. */
+    @Volatile var onPageRendered: ((Int) -> Unit)? = null
 
     val outline: List<FixedTocEntry> by lazy { runCatching { source.outline() }.getOrDefault(emptyList()) }
 
@@ -110,24 +112,29 @@ class FixedEngine(val source: FixedSource, val title: String, private val maxCac
     private fun cached(key: String): BufferedImage? = synchronized(cache) { cache[key] }
 
     /** The rendered page if ready; otherwise starts rendering it and returns null. */
-    fun pageImage(page: Int, w: Int, h: Int, onReady: (() -> Unit)? = null): BufferedImage? {
+    fun pageImage(page: Int, w: Int, h: Int): BufferedImage? {
         val key = key(page, w, h)
         cached(key)?.let { return it }
-        schedule(page, w, h, onReady ?: onPageRendered)
+        schedule(page, w, h)
         return null
     }
 
-    private fun schedule(page: Int, w: Int, h: Int, done: (() -> Unit)?) {
+    /**
+     * Renders a page in the background. Completion is always announced, even for prefetches: a page
+     * that was first asked for as a prefetch may be on screen as a placeholder by the time it's done.
+     */
+    private fun schedule(page: Int, w: Int, h: Int) {
         if (page !in 0 until pages) return
         val key = key(page, w, h)
         synchronized(pending) { if (!pending.add(key)) return }
         executor.execute {
+            var rendered = false
             try {
-                if (cached(key) == null) render(page, w, h)?.let { put(key, it) }
+                if (cached(key) == null) render(page, w, h)?.let { put(key, it); rendered = true }
             } finally {
                 synchronized(pending) { pending.remove(key) }
             }
-            done?.invoke()
+            if (rendered) onPageRendered?.invoke(page)
         }
     }
 
@@ -142,7 +149,7 @@ class FixedEngine(val source: FixedSource, val title: String, private val maxCac
         val st = s.columns
         for (p in listOf(pos.page + st, pos.page + st + 1, pos.page - st, pos.page - st + 1, pos.page + 1)) {
             if (p !in 0 until pages || cached(key(p, w, h)) != null) continue
-            schedule(p, w, h, null)
+            schedule(p, w, h)
         }
     }
 

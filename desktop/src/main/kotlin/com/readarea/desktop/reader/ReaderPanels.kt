@@ -9,6 +9,8 @@ import com.readarea.desktop.i18n.I18n
 import com.readarea.desktop.i18n.tr
 import com.readarea.desktop.reader.engine.PageChrome
 import com.readarea.desktop.reader.engine.ReaderFonts
+import com.readarea.desktop.ui.components.FocusRing
+import com.readarea.desktop.ui.components.onActivate
 import com.readarea.desktop.ui.components.ButtonKind
 import com.readarea.desktop.ui.components.Widget
 import com.readarea.desktop.ui.components.Dialogs
@@ -151,7 +153,6 @@ class ContentsPanel(private val c: ReaderController, onClose: () -> Unit) : Side
         body.add(Ui.scroll(toc), "0")
         body.add(Ui.scroll(bookmarks), "1")
         body.add(Ui.scroll(highlights), "2")
-        tabs.maximumSize = Dimension(320, 34)
         add(Transparent(BorderLayout()).apply {
             add(tabs, BorderLayout.NORTH)
             add(Ui.padded(body, 8, 0, 0, 0), BorderLayout.CENTER)
@@ -401,15 +402,7 @@ class TextPanel(private val app: App, private val c: ReaderController, onClose: 
     }
 
     private fun toggle(title: String, on: Boolean, hint: String? = null, onChange: (Boolean) -> Unit) {
-        val row = Transparent(BorderLayout(10, 0))
-        val left = Ui.vbox(Ui.label(title, 13f))
-        if (hint != null) left.add(Ui.label("<html><div style='width:220px'>${Ui.escape(hint)}</div></html>", 11.5f) { pal.onSurfaceVariant })
-        row.add(left, BorderLayout.CENTER)
-        row.add(Switch(on).apply { addActionListener { onChange(isSelected) } }, BorderLayout.EAST)
-        row.alignmentX = LEFT_ALIGNMENT
-        row.border = EmptyBorder(4, 0, 4, 0)
-        row.maximumSize = Dimension(Int.MAX_VALUE, row.preferredSize.height + 8)
-        column.add(row)
+        column.add(Ui.settingRow(title, hint, Switch(on).apply { addActionListener { onChange(isSelected) } }, 13f, 11.5f))
     }
 
     private fun segmented(title: String, options: List<String>, selected: Int, onChange: (Int) -> Unit) {
@@ -476,20 +469,12 @@ class ThemePanel(private val c: ReaderController, onClose: () -> Unit) : SidePan
     }
 
     private fun toggle(title: String, on: Boolean, hint: String?, onChange: (Boolean) -> Unit) {
-        val row = Transparent(BorderLayout(10, 0))
-        val left = Ui.vbox(Ui.label(title, 13f))
-        if (hint != null) left.add(Ui.label("<html><div style='width:220px'>${Ui.escape(hint)}</div></html>", 11.5f) { pal.onSurfaceVariant })
-        row.add(left, BorderLayout.CENTER)
-        row.add(Switch(on).apply { addActionListener { onChange(isSelected); build() } }, BorderLayout.EAST)
-        row.alignmentX = LEFT_ALIGNMENT
-        row.border = EmptyBorder(5, 0, 5, 0)
-        row.maximumSize = Dimension(Int.MAX_VALUE, row.preferredSize.height + 10)
-        column.add(row)
+        column.add(Ui.settingRow(title, hint, Switch(on).apply { addActionListener { onChange(isSelected); build() } }, 13f, 11.5f))
     }
 
     private fun sliderRow(title: String, value: Float, max: Float, hint: String?, onChange: (Float) -> Unit) {
         column.add(Ui.label(title, 12.5f, Font.BOLD) { pal.onSurfaceVariant }.apply { alignmentX = LEFT_ALIGNMENT })
-        hint?.let { column.add(Ui.label("<html><div style='width:260px'>${Ui.escape(it)}</div></html>", 11.5f) { pal.onSurfaceVariant }.apply { alignmentX = LEFT_ALIGNMENT }) }
+        hint?.let { column.add(Ui.wrapLabel(it, size = 11.5f) { pal.onSurfaceVariant }.apply { alignmentX = LEFT_ALIGNMENT }) }
         val s = JSlider(0, 100, ((value / max) * 100).toInt().coerceIn(0, 100)).apply {
             isOpaque = false
             addChangeListener { onChange(this.value / 100f * max) }
@@ -506,6 +491,7 @@ class ThemePanel(private val c: ReaderController, onClose: () -> Unit) : SidePan
             toolTipText = if (t.id == "custom") tr("theme_custom") else tr("theme_" + t.id)
             getAccessibleContext().accessibleName = toolTipText
             addMouseListener(object : MouseAdapter() { override fun mouseClicked(e: MouseEvent) = onPick() })
+            onActivate(onPick)
         }
 
         override fun paintComponent(g0: Graphics) {
@@ -528,6 +514,7 @@ class ThemePanel(private val c: ReaderController, onClose: () -> Unit) : SidePan
                 g.color = PageChrome.color(t.accent, 255)
                 g.fill(Ellipse2D.Float(width - 18f, 8f, 9f, 9f))
             }
+            FocusRing.paint(g, this, RoundRectangle2D.Float(3f, 3f, width - 6f, height - 6f, 14f, 14f))
             g.dispose()
         }
     }

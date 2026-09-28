@@ -30,7 +30,8 @@ class ScrollView(private val controller: ReaderController) : Widget() {
     private var velocity = 0f
     private var lastDragTime = 0L
     private val timer = Timer(12) { tick() }
-    var onActivity: (() -> Unit)? = null
+    /** Reports the pointer's height as it moves, so the window can reveal its bars. */
+    var onPointer: ((Int) -> Unit)? = null
 
     init {
         isOpaque = true
@@ -38,7 +39,6 @@ class ScrollView(private val controller: ReaderController) : Widget() {
         val m = object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent) {
                 requestFocusInWindow()
-                onActivity?.invoke()
                 dragY = e.y
                 pressX = e.x
                 pressY = e.y
@@ -70,11 +70,10 @@ class ScrollView(private val controller: ReaderController) : Widget() {
             }
 
             override fun mouseMoved(e: MouseEvent) {
-                onActivity?.invoke()
+                onPointer?.invoke(e.y)
             }
 
             override fun mouseWheelMoved(e: MouseWheelEvent) {
-                onActivity?.invoke()
                 if (e.isControlDown || e.isMetaDown) {
                     val s = controller.settings.value
                     controller.updateSettings { it.copy(fontSize = (s.fontSize - e.preciseWheelRotation.toFloat()).coerceIn(10f, 48f)) }

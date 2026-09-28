@@ -6,6 +6,7 @@ import com.readarea.desktop.i18n.I18n
 import com.readarea.desktop.i18n.tr
 import com.readarea.desktop.ui.components.CoverPainter
 import com.readarea.desktop.ui.components.Widget
+import com.readarea.desktop.ui.components.ellipsize
 import com.readarea.desktop.ui.components.pal
 import com.readarea.desktop.ui.components.smooth
 import com.readarea.desktop.ui.theme.AppTheme
@@ -234,13 +235,6 @@ class BookGrid(private val onOpen: (Book) -> Unit, private val onContext: (List<
 
     companion object {
         fun formatIndex(f: Float): String = if (f == f.toInt().toFloat()) f.toInt().toString() else f.toString()
-
-        fun ellipsize(text: String, fm: java.awt.FontMetrics, max: Float): String {
-            if (fm.stringWidth(text) <= max) return text
-            var end = text.length
-            while (end > 0 && fm.stringWidth(text.substring(0, end) + "…") > max) end--
-            return text.substring(0, end).trimEnd() + "…"
-        }
 
         /** Draws up to [maxLines] wrapped lines and returns the height used. */
         fun wrap(g: Graphics2D, text: String, font: Font, x: Float, y: Float, width: Float, maxLines: Int): Float {

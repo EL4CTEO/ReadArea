@@ -78,7 +78,7 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
     private var footnotePopup: JComponent? = null
     private var endCard: JComponent? = null
     private var barsVisible = true
-    private val hideTimer = Timer(2800) { if (!controller.ui.value.menu) setBars(false) }.apply { isRepeats = false }
+    private val hideTimer: Timer = Timer(2800) { if (!controller.ui.value.menu && !pointerOnBar()) setBars(false) else if (barsVisible) restartHide() }.apply { isRepeats = false }
     private var fullscreen = false
     private var closed = false
 
@@ -100,8 +100,8 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
         contentPane = layers
         viewCards.show(views, "status")
         controller.host = this
-        pageView.onActivity = { onActivity() }
-        scrollView.onActivity = { onActivity() }
+        pageView.onPointer = { y -> onPointer(y) }
+        scrollView.onPointer = { y -> onPointer(y) }
         restoreBounds()
         installKeys()
         addWindowListener(object : WindowAdapter() {
@@ -119,9 +119,6 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
         })
         addComponentListener(object : ComponentAdapter() {
             override fun componentResized(e: ComponentEvent) = onResize()
-        })
-        layers.addMouseMotionListener(object : MouseAdapter() {
-            override fun mouseMoved(e: MouseEvent) = onActivity()
         })
         controller.scope.launch { controller.ui.collect { render(it) } }
         controller.scope.launch {
@@ -217,9 +214,27 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
         toast.layoutIn(layers.size)
     }
 
-    private fun onActivity() {
-        if (!barsVisible) setBars(true)
+    /**
+     * The bars come up when the pointer nears the top or bottom edge, where they appear, and go away a
+     * little after it leaves. Moving the mouse over the text, or dragging a page, leaves the page clear.
+     */
+    private fun onPointer(y: Int) {
+        val h = layers.height
+        if (y < EDGE_TOP || y > h - EDGE_BOTTOM) {
+            if (!barsVisible) setBars(true)
+            restartHide()
+        }
+    }
+
+    private fun restartHide() {
         hideTimer.restart()
+    }
+
+    private fun pointerOnBar(): Boolean {
+        val p = java.awt.MouseInfo.getPointerInfo()?.location ?: return false
+        return listOf(topBar, bottomBar).any { bar ->
+            bar.isShowing && java.awt.Rectangle(bar.locationOnScreen, bar.size).contains(p)
+        }
     }
 
     private fun setBars(visible: Boolean) {
@@ -431,8 +446,10 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
             val sw = 380.coerceAtMost(w - 40)
             speechBar.setBounds((w - sw) / 2, h - (if (bottomBar.isVisible) bottomH else 0) - 66, sw, 56)
             val panelTop = if (topBar.isVisible) topH else 0
-            leftPanel?.setBounds(0, panelTop, 340.coerceAtMost(w - 60), h - panelTop)
-            rightPanel?.setBounds(w - 360.coerceAtMost(w - 60), panelTop, 360.coerceAtMost(w - 60), h - panelTop)
+            // Side panels grow a little on wide windows and never cover the whole page.
+            val pw = (w * 0.3f).toInt().coerceIn(360, 420).coerceAtMost(w - 60)
+            leftPanel?.setBounds(0, panelTop, pw, h - panelTop)
+            rightPanel?.setBounds(w - pw, panelTop, pw, h - panelTop)
             selectionPopup?.let { p ->
                 val sel = controller.ui.value.selection ?: return@let
                 val ps = p.preferredSize
@@ -459,7 +476,7 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
         }
     }
 
-    /** A translucent bar across the top: back, title, and the reading tools. */
+    /** The bar across the top: back, title, and the reading tools. */
     private inner class TopBar : JPanel(BorderLayout()) {
         private val title = Ui.label("", 14f, Font.BOLD)
         private val chapter = Ui.secondary("", 12f)
@@ -507,7 +524,8 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
 
         fun update(u: ReaderUi) {
             title.text = u.title
-            chapter.text = u.chapterTitle
+            chapter.text = u.chapterTitle.takeIf { it != u.title }.orEmpty()
+            chapter.isVisible = chapter.text.isNotEmpty()
             bookmark.iconName = if (u.bookmarked) "bookmark-filled" else "bookmark"
             bookmark.active = u.bookmarked
             speak.isVisible = u.ttsAvailable
@@ -523,10 +541,10 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
 
         override fun paintComponent(g0: Graphics) {
             val g = g0.create().smooth()
-            val bg = controller.engine?.theme?.let { Color(it.background) } ?: pal.surface
-            g.color = Color(bg.red, bg.green, bg.blue, 238)
+            // Opaque, so the page's running header doesn't ghost through the bar.
+            g.color = controller.engine?.theme?.let { Color(it.background) } ?: pal.surface
             g.fillRect(0, 0, width, height)
-            g.color = pal.outlineVariant.alpha(120)
+            g.color = controller.engine?.theme?.let { Color(it.secondary).alpha(70) } ?: pal.outlineVariant.alpha(120)
             g.fillRect(0, height - 1, width, 1)
             g.dispose()
         }
@@ -574,10 +592,10 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
 
         override fun paintComponent(g0: Graphics) {
             val g = g0.create().smooth()
-            val bg = controller.engine?.theme?.let { Color(it.background) } ?: pal.surface
-            g.color = Color(bg.red, bg.green, bg.blue, 238)
+            // Opaque, so the page's running header doesn't ghost through the bar.
+            g.color = controller.engine?.theme?.let { Color(it.background) } ?: pal.surface
             g.fillRect(0, 0, width, height)
-            g.color = pal.outlineVariant.alpha(120)
+            g.color = controller.engine?.theme?.let { Color(it.secondary).alpha(70) } ?: pal.outlineVariant.alpha(120)
             g.fillRect(0, 0, width, 1)
             g.dispose()
         }
@@ -730,6 +748,12 @@ class ReaderWindow(private val app: App, private val bookId: Long, at: Pair<Int,
             (if (Os.current == Os.MAC) "⌃⌘F" else "F11") to tr("full_screen"),
             "Esc" to tr("menu"),
         ).joinToString("\n") { "${it.first}   —   ${it.second}" }
+    }
+
+    private companion object {
+        /** How close to the top and bottom edges the pointer brings up the bars. */
+        const val EDGE_TOP = 72
+        const val EDGE_BOTTOM = 90
     }
 }
 

@@ -53,11 +53,9 @@ val pal get() = AppTheme.palette
 
 /** Small layout helpers so screens read top to bottom. */
 object Ui {
-    fun vbox(vararg items: Component, gap: Int = 0, align: Float = Component.LEFT_ALIGNMENT): JPanel = Transparent().apply {
-        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+    fun vbox(vararg items: Component, gap: Int = 0, align: Float = Component.LEFT_ALIGNMENT): JPanel = VBox(align).apply {
         items.forEachIndexed { i, c ->
             if (i > 0 && gap > 0) add(Box.createVerticalStrut(gap))
-            (c as? JComponent)?.alignmentX = align
             add(c)
         }
     }
@@ -87,7 +85,22 @@ object Ui {
 
     fun headline(text: String, size: Float = 28f): JLabel = ThemedLabel(text) { pal.onSurface }.apply { font = AppTheme.headline(size) }
 
-    fun wrapLabel(text: String, width: Int, size: Float = 13f, color: (() -> Color)? = null): JLabel = label("<html><div style='width:${width}px'>${escape(text)}</div></html>", size, color = color)
+    /** A paragraph that wraps to the room it gets, at most [width] pixels wide. */
+    fun wrapLabel(text: String, width: Int = Int.MAX_VALUE, size: Float = 13f, color: (() -> Color)? = null): WrapText = WrapText(text, size, maxWidth = width, colorOf = color ?: { pal.onSurface })
+
+    /** A setting: a title with an optional explanation on the left, its control on the right. */
+    fun settingRow(title: String, hint: String?, control: JComponent, titleSize: Float = 13.5f, hintSize: Float = 12f): JPanel {
+        val left = vbox(label(title, titleSize))
+        if (hint != null) left.add(WrapText(hint, hintSize, colorOf = { pal.onSurfaceVariant }))
+        val p = object : Transparent(BorderLayout(16, 0)) {
+            override fun getMaximumSize() = Dimension(Int.MAX_VALUE, preferredSize.height)
+        }
+        p.border = EmptyBorder(6, 0, 6, 0)
+        p.add(left, BorderLayout.CENTER)
+        p.add(Transparent(java.awt.GridBagLayout()).apply { add(control) }, BorderLayout.EAST)
+        p.alignmentX = Component.LEFT_ALIGNMENT
+        return p
+    }
 
     fun escape(s: String): String = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
 
@@ -120,6 +133,71 @@ open class Widget(private val role: javax.accessibility.AccessibleRole = javax.a
     }
 }
 
+/**
+ * The keyboard focus indicator for custom-painted controls. The ring shows only when focus arrived from
+ * the keyboard (Tab), so clicking leaves no rings behind while keyboard users always see where they are.
+ */
+object FocusRing {
+    private const val KEY = "readarea.keyboardFocus"
+
+    fun install(c: JComponent) {
+        c.addFocusListener(object : java.awt.event.FocusListener {
+            override fun focusGained(e: java.awt.event.FocusEvent) {
+                c.putClientProperty(KEY, e.cause.name.startsWith("TRAVERSAL"))
+                c.repaint()
+            }
+
+            override fun focusLost(e: java.awt.event.FocusEvent) {
+                c.putClientProperty(KEY, false)
+                c.repaint()
+            }
+        })
+        c.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(e: MouseEvent) {
+                c.putClientProperty(KEY, false)
+                c.repaint()
+            }
+        })
+    }
+
+    fun visible(c: JComponent): Boolean = c.isFocusOwner && c.getClientProperty(KEY) == true
+
+    fun paint(g: Graphics2D, c: JComponent, shape: java.awt.Shape) {
+        if (!visible(c)) return
+        val saved = g.stroke
+        g.color = pal.accent
+        g.stroke = BasicStroke(2f)
+        g.draw(shape)
+        g.stroke = saved
+    }
+}
+
+/** Makes a custom component focusable and runs [action] on Space or Enter, like a button. */
+fun JComponent.onActivate(action: () -> Unit) {
+    isFocusable = true
+    FocusRing.install(this)
+    getInputMap(JComponent.WHEN_FOCUSED).put(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_SPACE, 0), "activate")
+    getInputMap(JComponent.WHEN_FOCUSED).put(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0), "activate")
+    actionMap.put("activate", object : javax.swing.AbstractAction() {
+        override fun actionPerformed(e: java.awt.event.ActionEvent) = action()
+    })
+}
+
+/**
+ * A vertical stack. BoxLayout offsets children whose alignments differ, so every child added, now or
+ * later, takes the stack's alignment.
+ */
+open class VBox(private val align: Float = Component.LEFT_ALIGNMENT) : Transparent(null) {
+    init {
+        layout = BoxLayout(this, BoxLayout.Y_AXIS)
+    }
+
+    override fun addImpl(comp: Component, constraints: Any?, index: Int) {
+        (comp as? JComponent)?.alignmentX = align
+        super.addImpl(comp, constraints, index)
+    }
+}
+
 /** A panel that paints nothing, so the parent's background shows through. */
 open class Transparent(layout: java.awt.LayoutManager? = FlowLayout()) : JPanel(layout) {
     init {
@@ -133,6 +211,115 @@ class ThemedLabel(text: String, private val colorOf: () -> Color) : JLabel(text)
         foreground = colorOf()
         g.smooth()
         super.paintComponent(g)
+    }
+}
+
+/**
+ * A paragraph of text that wraps to the width its container gives it; its preferred height follows that
+ * width, so it never clips however narrow the window or long the translation. Draws with the same text
+ * layouts it measures with.
+ */
+class WrapText(
+    text: String,
+    size: Float = 13f,
+    style: Int = Font.PLAIN,
+    private val maxWidth: Int = Int.MAX_VALUE,
+    private val center: Boolean = false,
+    private val colorOf: () -> Color = { pal.onSurface },
+) : Widget(javax.accessibility.AccessibleRole.LABEL) {
+    var text: String = text
+        set(v) {
+            if (v == field) return
+            field = v
+            getAccessibleContext().accessibleName = v
+            laidOutFor = -1
+            revalidate()
+            repaint()
+        }
+    private var laidOutFor = -1
+    private var lines: List<java.awt.font.TextLayout> = emptyList()
+    private var textHeight = 0
+
+    init {
+        font = AppTheme.ui(size, style)
+        getAccessibleContext().accessibleName = text
+    }
+
+    override fun setFont(f: Font?) {
+        super.setFont(f)
+        laidOutFor = -1
+    }
+
+    private fun lineWidth(w: Int): Float = (minOf(w, maxWidth) - insets.left - insets.right).coerceAtLeast(40).toFloat()
+
+    private fun layout(w: Int): Int {
+        if (w == laidOutFor) return textHeight
+        val frc = getFontMetrics(font).fontRenderContext
+        val wrap = lineWidth(w)
+        val out = ArrayList<java.awt.font.TextLayout>()
+        for (para in text.split('\n')) {
+            if (para.isEmpty()) {
+                out.add(java.awt.font.TextLayout(" ", font, frc))
+                continue
+            }
+            val attr = java.text.AttributedString(para, mapOf(java.awt.font.TextAttribute.FONT to font))
+            val lbm = java.awt.font.LineBreakMeasurer(attr.iterator, frc)
+            while (lbm.position < para.length) out.add(lbm.nextLayout(wrap))
+        }
+        lines = out
+        textHeight = out.sumOf { (it.ascent + it.descent + it.leading).toDouble() }.let { kotlin.math.ceil(it).toInt() }
+        laidOutFor = w
+        return textHeight
+    }
+
+    private fun natural(): Int {
+        val fm = getFontMetrics(font)
+        return text.split('\n').maxOf { fm.stringWidth(it) } + 2
+    }
+
+    override fun getPreferredSize(): Dimension {
+        if (isPreferredSizeSet) return super.getPreferredSize()
+        val ins = insets
+        val w = if (width > 0) width else minOf(natural() + ins.left + ins.right, maxWidth, 360)
+        return Dimension(minOf(natural() + ins.left + ins.right, w, maxWidth), layout(w) + ins.top + ins.bottom)
+    }
+
+    override fun getMinimumSize(): Dimension = Dimension(60, preferredSize.height)
+
+    override fun getMaximumSize(): Dimension = Dimension(if (center) Int.MAX_VALUE else maxWidth, preferredSize.height)
+
+    override fun setBounds(x: Int, y: Int, w: Int, h: Int) {
+        val changed = w != width
+        super.setBounds(x, y, w, h)
+        // A new width can change the number of lines; ask the container for a matching height.
+        if (changed && w > 0) {
+            val want = layout(w) + insets.top + insets.bottom
+            if (want != h) javax.swing.SwingUtilities.invokeLater { revalidate() }
+        }
+    }
+
+    override fun paintComponent(g0: Graphics) {
+        val g = g0.create() as Graphics2D
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON)
+        g.color = colorOf()
+        layout(width)
+        val ins = insets
+        val avail = lineWidth(width)
+        val boxLeft = ins.left + if (center) (width - ins.left - ins.right - avail) / 2f else 0f
+        var y = ins.top.toFloat()
+        val ltr = componentOrientation.isLeftToRight
+        for (l in lines) {
+            y += l.ascent
+            val adv = l.visibleAdvance
+            val x = when {
+                center -> boxLeft + (avail - adv) / 2f
+                ltr == l.isLeftToRight -> if (ltr) boxLeft else boxLeft + avail - adv
+                else -> if (l.isLeftToRight) boxLeft else boxLeft + avail - adv
+            }
+            l.draw(g, x, y)
+            y += l.descent + l.leading
+        }
+        g.dispose()
     }
 }
 
@@ -172,6 +359,7 @@ class PillButton(text: String, icon: String? = null, private val kind: ButtonKin
         border = EmptyBorder(if (compact) 5 else 9, if (compact) 12 else 18, if (compact) 5 else 9, if (compact) 14 else 20)
         iconTextGap = 8
         if (icon != null) this.icon = VectorIcon(icon, if (compact) 16 else 18) { fg() }
+        FocusRing.install(this)
         addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent) { hover = true; repaint() }
             override fun mouseExited(e: MouseEvent) { hover = false; pressed = false; repaint() }
@@ -217,6 +405,7 @@ class PillButton(text: String, icon: String? = null, private val kind: ButtonKin
                 g2.draw(shape)
             }
         }
+        FocusRing.paint(g2, this, RoundRectangle2D.Float(1f, 1f, width - 2f, height - 2f, height - 2f, height - 2f))
         foreground = if (isEnabled) fg() else fg().alpha(120)
         g2.dispose()
         super.paintComponent(g.smooth())
@@ -249,6 +438,7 @@ class IconButton(icon: String, tooltip: String, size: Int = 20, private val tint
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         val pad = (size * 0.45f).toInt()
         border = EmptyBorder(pad, pad, pad, pad)
+        FocusRing.install(this)
         addMouseListener(object : MouseAdapter() {
             override fun mouseEntered(e: MouseEvent) { hover = true; repaint() }
             override fun mouseExited(e: MouseEvent) { hover = false; repaint() }
@@ -263,6 +453,7 @@ class IconButton(icon: String, tooltip: String, size: Int = 20, private val tint
             g2.color = if (active) pal.accent.alpha(34) else pal.onSurface.alpha(16)
             g2.fill(Ellipse2D.Float(0f, 0f, width.toFloat(), height.toFloat()))
         }
+        FocusRing.paint(g2, this, Ellipse2D.Float(1f, 1f, width - 2f, height - 2f))
         g2.dispose()
         super.paintComponent(g)
     }
@@ -279,6 +470,7 @@ class Chip(text: String, selected: Boolean = false, icon: String? = null) : JTog
         cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
         font = AppTheme.ui(12.5f, Font.BOLD)
         border = EmptyBorder(6, 13, 6, 13)
+        FocusRing.install(this)
         if (icon != null) {
             this.icon = VectorIcon(icon, 15) { if (isSelected) pal.onAccentContainer else pal.onSurfaceVariant }
             iconTextGap = 6
@@ -303,6 +495,7 @@ class Chip(text: String, selected: Boolean = false, icon: String? = null) : JTog
             g2.color = pal.outlineVariant
             g2.draw(shape)
         }
+        FocusRing.paint(g2, this, RoundRectangle2D.Float(1f, 1f, width - 2f, height - 2f, 12f, 12f))
         foreground = if (isSelected) pal.onAccentContainer else pal.onSurfaceVariant
         g2.dispose()
         super.paintComponent(g.smooth())
@@ -320,6 +513,7 @@ class Switch(on: Boolean = false) : JToggleButton() {
         preferredSize = Dimension(42, 24)
         minimumSize = preferredSize
         maximumSize = preferredSize
+        FocusRing.install(this)
     }
 
     override fun paintComponent(g: Graphics) {
@@ -337,6 +531,7 @@ class Switch(on: Boolean = false) : JToggleButton() {
         val cx = if (isSelected) 1f + w - h / 2 else 1f + h / 2
         g2.color = if (isSelected) pal.onAccent else pal.outline
         g2.fill(Ellipse2D.Float(cx - d / 2, y + h / 2 - d / 2, d, d))
+        FocusRing.paint(g2, this, RoundRectangle2D.Float(1f, y, w, h, h, h))
         g2.dispose()
     }
 }
@@ -387,10 +582,48 @@ class Segmented(options: List<String>, selected: Int, private val onChange: (Int
         addMouseListener(m)
         addMouseMotionListener(m)
         isFocusable = true
+        FocusRing.install(this)
+        // Arrow keys move the selection, as in a radio group.
+        for ((key, step) in listOf(java.awt.event.KeyEvent.VK_LEFT to -1, java.awt.event.KeyEvent.VK_RIGHT to 1)) {
+            val name = "move$step"
+            getInputMap(WHEN_FOCUSED).put(javax.swing.KeyStroke.getKeyStroke(key, 0), name)
+            actionMap.put(name, object : javax.swing.AbstractAction() {
+                override fun actionPerformed(e: java.awt.event.ActionEvent) {
+                    val dir = if (componentOrientation.isLeftToRight) step else -step
+                    val next = (this@Segmented.selected + dir).coerceIn(0, (options.size - 1).coerceAtLeast(0))
+                    if (next != this@Segmented.selected) {
+                        this@Segmented.selected = next
+                        onChange(next)
+                    }
+                }
+            })
+        }
         getAccessibleContext().accessibleName = options.joinToString(" / ")
     }
 
-    private fun index(x: Int): Int = if (options.isEmpty()) -1 else (x * options.size / width.coerceAtLeast(1)).coerceIn(0, options.size - 1)
+    /**
+     * Segment edges: equal widths when every label fits that way, otherwise widths in proportion to the
+     * labels so a long label borrows room from short ones.
+     */
+    private fun edges(): FloatArray {
+        val n = options.size
+        val total = width.toFloat()
+        val fm = getFontMetrics(font)
+        val natural = FloatArray(n) { fm.stringWidth(options[it]) + 20f }
+        val equal = total / n.coerceAtLeast(1)
+        val shares = if (natural.all { it <= equal }) FloatArray(n) { 1f } else natural
+        val sum = shares.sum().coerceAtLeast(1f)
+        val out = FloatArray(n + 1)
+        for (i in 0 until n) out[i + 1] = out[i] + total * shares[i] / sum
+        return out
+    }
+
+    private fun index(x: Int): Int {
+        if (options.isEmpty()) return -1
+        val e = edges()
+        for (i in options.indices) if (x < e[i + 1]) return i
+        return options.size - 1
+    }
 
     override fun getPreferredSize(): Dimension {
         val fm = getFontMetrics(font)
@@ -405,21 +638,38 @@ class Segmented(options: List<String>, selected: Int, private val onChange: (Int
         val h = height.toFloat() - 2
         g2.color = pal.outlineVariant
         g2.draw(RoundRectangle2D.Float(0.5f, 0.5f, width - 1f, h, h, h))
-        val cw = width.toFloat() / options.size
+        val e = edges()
         val fm = g2.getFontMetrics(font)
         g2.font = font
-        options.forEachIndexed { i, text ->
-            val x = i * cw
+        options.forEachIndexed { i, label ->
+            val x = e[i]
+            val cw = e[i + 1] - e[i]
             if (i == selected || i == hover) {
                 g2.color = if (i == selected) pal.accentContainer else pal.onSurface.alpha(12)
                 g2.fill(RoundRectangle2D.Float(x + 2f, 2.5f, cw - 4f, h - 4f, h - 4f, h - 4f))
             }
+            if (i == selected) FocusRing.paint(g2, this, RoundRectangle2D.Float(x + 2f, 2.5f, cw - 4f, h - 4f, h - 4f, h - 4f))
             g2.color = if (i == selected) pal.onAccentContainer else pal.onSurfaceVariant
+            val text = ellipsize(label, fm, cw - 10f)
             val tw = fm.stringWidth(text)
             g2.drawString(text, x + (cw - tw) / 2f, (h + fm.ascent - fm.descent) / 2f + 1)
         }
         g2.dispose()
     }
+}
+
+/** Shortens [text] with an ellipsis so it fits in [max] pixels. */
+fun ellipsize(text: String, fm: java.awt.FontMetrics, max: Float): String {
+    if (fm.stringWidth(text) <= max) return text
+    var lo = 0
+    var hi = text.length
+    while (lo < hi) {
+        val mid = (lo + hi + 1) / 2
+        if (fm.stringWidth(text.substring(0, mid) + "…") <= max) lo = mid else hi = mid - 1
+    }
+    // Never split a surrogate pair.
+    if (lo > 0 && Character.isHighSurrogate(text[lo - 1])) lo--
+    return text.substring(0, lo).trimEnd() + "…"
 }
 
 /** A thin rounded progress bar. */
@@ -459,7 +709,7 @@ fun searchField(placeholder: String, onChange: (String) -> Unit): JTextField = J
 fun emptyState(icon: String, title: String, body: String, vararg actions: JComponent): JPanel {
     val iconLabel = JLabel(VectorIcon(icon, 44) { pal.accent.alpha(200) })
     val t = Ui.headline(title, 22f).apply { horizontalAlignment = SwingConstants.CENTER }
-    val b = Ui.label("<html><div style='width:360px;text-align:center'>${Ui.escape(body)}</div></html>", 13.5f) { pal.onSurfaceVariant }.apply { horizontalAlignment = SwingConstants.CENTER }
+    val b = WrapText(body, 13.5f, maxWidth = 380, center = true) { pal.onSurfaceVariant }
     val buttons = Ui.flow(*actions, gap = 10, align = FlowLayout.CENTER)
     val col = Ui.vbox(iconLabel, t, b, buttons, gap = 12, align = Component.CENTER_ALIGNMENT)
     return Transparent(java.awt.GridBagLayout()).apply { add(col) }

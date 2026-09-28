@@ -8,6 +8,7 @@ import com.readarea.desktop.i18n.tr
 import com.readarea.desktop.ui.MainWindow
 import com.readarea.desktop.ui.Screen
 import com.readarea.desktop.ui.components.ButtonKind
+import com.readarea.desktop.ui.components.ellipsize
 import com.readarea.desktop.ui.components.Widget
 import com.readarea.desktop.ui.components.CoverPainter
 import com.readarea.desktop.ui.components.Dialogs
@@ -209,7 +210,7 @@ class ShelvesScreen(private val app: App, private val window: MainWindow) : Scre
             g.font = AppTheme.ui(14f, Font.BOLD)
             g.color = pal.onSurface
             val fm = g.fontMetrics
-            val name = BookGrid.ellipsize(s.shelf.name, fm, width - 24f)
+            val name = ellipsize(s.shelf.name, fm, width - 24f)
             g.drawString(name, (width - fm.stringWidth(name)) / 2f, height - 38f)
             g.font = AppTheme.ui(12f)
             g.color = pal.onSurfaceVariant

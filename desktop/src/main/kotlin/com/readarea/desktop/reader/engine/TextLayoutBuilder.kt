@@ -457,13 +457,21 @@ class TextLayoutBuilder(
             FloatArray(arr.size) { arr[it].top },
             FloatArray(arr.size) { arr[it].bottom },
             pageStarts,
-            y,
+            y - (lines.last().bottom - arr.last().bottom),
         )
         return ChapterLayout(metrics, arr, links, width)
     }
 
     private fun Line.copyFlags(firstInBlock: Boolean, lastInBlock: Boolean) =
         Line(kind, start, end, x, top, baseline, bottom, layout, hyphen, heading, block, firstInBlock, lastInBlock, image, imageW, imageH, quoteX, hyphenFont)
+
+    private fun Line.shifted(dy: Float) =
+        Line(kind, start, end, x, top + dy, baseline + dy, bottom + dy, layout, hyphen, heading, block, firstInBlock, lastInBlock, image, imageW, imageH, quoteX, hyphenFont)
+
+    private fun Line.withImageHeight(h: Float): Line {
+        val w = imageW * h / imageH
+        return Line(kind, start, end, x + (imageW - w) / 2f, top, top + h, top + h, layout, hyphen, heading, block, firstInBlock, lastInBlock, image, w, h, quoteX, hyphenFont)
+    }
 
     private fun hasSpace(text: String, a: Int, b: Int): Boolean {
         for (i in a until minOf(b, text.length) - 1) if (text[i] == ' ' || text[i] == '　') return true
@@ -588,6 +596,15 @@ class TextLayoutBuilder(
         while (i < lines.size) {
             val l = lines[i]
             if (l.bottom - pageTop > height && i > starts.last()) {
+                // An image that nearly fits shrinks into the room left instead of leaving a gap.
+                val room = pageTop + height - l.top
+                if (l.kind == Line.IMAGE && l.imageH > 0f && room >= maxOf(l.imageH * 0.6f, height * 0.3f)) {
+                    val dy = room - l.imageH
+                    lines[i] = l.withImageHeight(room)
+                    for (j in i + 1 until lines.size) lines[j] = lines[j].shifted(dy)
+                    i++
+                    continue
+                }
                 var brk = i
                 val prev = i - 1
                 if (prev > starts.last() && lines[prev].heading && !l.heading) brk = prev

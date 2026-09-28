@@ -290,6 +290,21 @@ line</pre>
     }
 
     @Test
+    fun docxWithoutStylesPartStillFindsBuiltInHeadings() {
+        val doc = """<w:document xmlns:w="w"><w:body>
+<w:p><w:pPr><w:pStyle w:val="Title"/></w:pPr><w:r><w:t>Report</w:t></w:r></w:p>
+<w:p><w:r><w:t>Body one</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Heading2"/></w:pPr><w:r><w:t>Details</w:t></w:r></w:p>
+<w:p><w:pPr><w:pStyle w:val="Normal"/></w:pPr><w:r><w:t>Body two</w:t></w:r></w:p>
+</w:body></w:document>"""
+        val file = TestBooks.tempFile(TestBooks.zip(mapOf("word/document.xml" to doc.toByteArray())), "docx")
+        val book = BookPostProcessor.process(DocxParser(FileZipAccess(file), "f").parse(), true)
+        val blocks = book.chapters.flatMap { it.blocks }
+        assertEquals(listOf("Report", "Details"), blocks.filter { it.kind == BlockKind.HEADING }.map { it.text })
+        assertEquals(BlockKind.PARAGRAPH, blocks.first { it.text == "Body two" }.kind)
+    }
+
+    @Test
     fun odtParsesStylesAndLists() {
         val content = """<office:document-content xmlns:office="o" xmlns:style="s" xmlns:text="t" xmlns:fo="f">
 <office:automatic-styles>

@@ -111,13 +111,13 @@ class DesktopUiQa {
             return r as T
         }
 
-        fun waitUntil(ms: Long, cond: () -> Boolean) {
+        fun waitUntil(ms: Long, what: String = "condition", cond: () -> Boolean) {
             val end = System.currentTimeMillis() + ms
             while (System.currentTimeMillis() < end) {
                 if (edt(cond)) return
                 Thread.sleep(100)
             }
-            throw AssertionError("Timed out waiting")
+            throw AssertionError("Timed out waiting for $what")
         }
 
         fun shot(window: Window, name: String): BufferedImage {
@@ -197,11 +197,14 @@ class DesktopUiQa {
         Thread.sleep(500)
         shot(w, "reader_selection")
         onEdt { w.controller.clearSelection() }
-        // Catch a page curl half way.
+        // Drag the bottom-right corner half way across, as a reader would, and hold it there.
         val view = edt { findPageView(w) }
-        onEdt { view.flip(true) }
-        Thread.sleep(170)
-        shot(w, "reader_curl")
+        dragCurl(view, w, "reader_curl")
+        // The same in a two-page spread, where the right sheet turns over the spine.
+        onEdt { w.setSize(1240, 860) }
+        Thread.sleep(900)
+        dragCurl(view, w, "reader_curl_spread")
+        onEdt { w.setSize(820, 900) }
         Thread.sleep(700)
         onEdt { w.controller.toggleMenu(true) }
         Thread.sleep(300)
@@ -235,6 +238,80 @@ class DesktopUiQa {
     }
 
     @Test
+    fun d2_readerFunctions() {
+        val b = book("The Lighthouse Keeper")
+        onEdt { app.openBook(b.id) }
+        waitUntil(20_000) { runCatching { reader(b.id).controller.ui.value.laidOut }.getOrDefault(false) }
+        val w = reader(b.id)
+        val c = w.controller
+        onEdt { w.setSize(820, 900) }
+        Thread.sleep(800)
+
+        // Keyboard page turns move forward and back by one page.
+        val start = edt { c.pos }
+        fun key(code: Int, mods: Int = 0) = onEdt {
+            val focus = java.awt.KeyboardFocusManager.getCurrentKeyboardFocusManager().focusOwner ?: w.rootPane
+            javax.swing.SwingUtilities.processKeyBindings(java.awt.event.KeyEvent(focus, java.awt.event.KeyEvent.KEY_PRESSED, System.currentTimeMillis(), mods, code, java.awt.event.KeyEvent.CHAR_UNDEFINED))
+        }
+        key(java.awt.event.KeyEvent.VK_RIGHT)
+        waitUntil(3_000, "a page turn") { c.pos != start }
+        val next = edt { c.pos }
+        assertTrue("forward from $start went to $next", next.chapter > start.chapter || next.page == start.page + 1)
+        key(java.awt.event.KeyEvent.VK_LEFT)
+        waitUntil(3_000, "turning back") { c.pos == start }
+
+        // Bookmarks toggle on and off, and land in the library.
+        val marks = runBlocking { library.read { bookmarks(b.id) } }.size
+        val wasMarked = edt { c.ui.value.bookmarked }
+        onEdt { c.toggleBookmark() }
+        waitUntil(3_000, "the bookmark to toggle") { runBlocking { library.read { bookmarks(b.id) } }.size == marks + (if (wasMarked) -1 else 1) }
+        waitUntil(3_000, "the bookmark icon") { c.ui.value.bookmarked != wasMarked }
+        onEdt { c.toggleBookmark() }
+        waitUntil(3_000, "the bookmark to toggle back") { runBlocking { library.read { bookmarks(b.id) } }.size == marks }
+
+        // A highlight from a word selection is saved with its text.
+        val hls = runBlocking { library.read { highlights(b.id) } }.size
+        // Try a few points down the page until one lands on a word rather than a gap between paragraphs.
+        for (y in listOf(300f, 330f, 360f, 200f, 420f)) {
+            onEdt { c.selectWord(300f, y) }
+            if (edt { c.ui.value.selection != null }) break
+        }
+        waitUntil(2_000, "a selection") { c.ui.value.selection != null }
+        val word = edt { c.ui.value.selection!!.text }
+        onEdt { c.highlightSelection(2) }
+        waitUntil(3_000, "the highlight") { runBlocking { library.read { highlights(b.id) } }.size == hls + 1 }
+        assertTrue(runBlocking { library.read { highlights(b.id) } }.any { it.text == word && it.color == 2 })
+
+        // Search finds hits, and opening one goes to its page.
+        onEdt { c.search("candle") }
+        waitUntil(5_000, "search results") { !c.ui.value.searching && c.ui.value.searchResults.isNotEmpty() }
+        val hit = edt { c.ui.value.searchResults.last() }
+        onEdt { c.openSearchHit(hit) }
+        waitUntil(3_000, "the search hit") { c.pos.chapter == hit.chapter }
+        val (s0, e0) = edt { w.controller.engine!!.let { it.offsetOf(c.pos) to it.endOffsetOf(c.pos) } }
+        assertTrue("hit ${hit.start} on page $s0..$e0", hit.start in s0 until e0)
+
+        // Font size is clamped however many times it's increased.
+        onEdt { repeat(60) { c.updateSettings { it.copy(fontSize = it.fontSize + 1) } } }
+        assertTrue(edt { c.settings.value.fontSize } <= 48f)
+        onEdt { c.updateSettings { it.copy(fontSize = com.readarea.desktop.data.ReaderSettings().fontSize) } }
+        Thread.sleep(600)
+
+        // Closing saves the position, and reopening returns to it.
+        val saved = edt { c.pos to c.engine!!.offsetOf(c.pos) }
+        onEdt { w.saveAndClose() }
+        Thread.sleep(500)
+        onEdt { app.openBook(b.id) }
+        waitUntil(20_000) { runCatching { reader(b.id).controller.ui.value.laidOut }.getOrDefault(false) }
+        val w2 = reader(b.id)
+        onEdt { w2.setSize(820, 900) }
+        Thread.sleep(800)
+        val reopened = edt { w2.controller.pos to w2.controller.engine!!.let { e -> e.offsetOf(w2.controller.pos) to e.endOffsetOf(w2.controller.pos) } }
+        assertTrue("saved ${saved.first} reopened ${reopened.first}", reopened.first.chapter == saved.first.chapter && saved.second in reopened.second.first until reopened.second.second)
+        onEdt { w2.saveAndClose() }
+    }
+
+    @Test
     fun e_darkApp() {
         onEdt { app.settings.updateApp { it.copy(themeMode = "dark", accent = 1) } }
         Thread.sleep(1200)
@@ -252,6 +329,27 @@ class DesktopUiQa {
         val list = synchronized(errors) { errors.toList() }
         list.forEach { it.printStackTrace() }
         assertTrue("UI thread errors: ${list.map { it.toString() }}", list.isEmpty())
+    }
+
+    private fun dragCurl(view: PageView, w: Window, name: String) {
+        val (vw, vh) = edt { view.width to view.height }
+        fun send(id: Int, x: Int, y: Int) = onEdt {
+            val mods = java.awt.event.InputEvent.BUTTON1_DOWN_MASK
+            view.dispatchEvent(java.awt.event.MouseEvent(view, id, System.currentTimeMillis(), mods, x, y, 1, false, java.awt.event.MouseEvent.BUTTON1))
+        }
+        send(java.awt.event.MouseEvent.MOUSE_PRESSED, vw - 6, vh - 30)
+        var x = vw - 6
+        var y = vh - 30
+        repeat(12) {
+            x -= vw / 28
+            y -= vh / 40
+            send(java.awt.event.MouseEvent.MOUSE_DRAGGED, x, y)
+            Thread.sleep(16)
+        }
+        Thread.sleep(150)
+        shot(w, name)
+        send(java.awt.event.MouseEvent.MOUSE_RELEASED, x, y)
+        Thread.sleep(900)
     }
 
     private fun findPageView(c: Component): PageView {

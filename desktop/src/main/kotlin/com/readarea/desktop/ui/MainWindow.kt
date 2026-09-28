@@ -9,6 +9,8 @@ import com.readarea.desktop.platform.Os
 import com.readarea.desktop.ui.components.Toast
 import com.readarea.desktop.ui.components.addOnLayer
 import com.readarea.desktop.ui.components.Widget
+import com.readarea.desktop.ui.components.FocusRing
+import com.readarea.desktop.ui.components.onActivate
 import com.readarea.desktop.ui.components.Ui
 import com.readarea.desktop.ui.components.pal
 import com.readarea.desktop.ui.components.smooth
@@ -299,7 +301,6 @@ class MainWindow(val app: App) : JFrame("ReadArea") {
             maximumSize = Dimension(Int.MAX_VALUE, 40)
             preferredSize = Dimension(200, 40)
             cursor = Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)
-            isFocusable = true
             toolTipText = null
             getAccessibleContext().accessibleName = text
             addMouseListener(object : MouseAdapter() {
@@ -307,17 +308,16 @@ class MainWindow(val app: App) : JFrame("ReadArea") {
                 override fun mouseEntered(e: MouseEvent) { hover = true; repaint() }
                 override fun mouseExited(e: MouseEvent) { hover = false; repaint() }
             })
-            getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_SPACE, 0), "go")
-            getInputMap(WHEN_FOCUSED).put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, 0), "go")
-            actionMap.put("go", object : AbstractAction() { override fun actionPerformed(e: java.awt.event.ActionEvent) = navigate(id) })
+            onActivate { navigate(id) }
         }
 
         override fun paintComponent(g0: Graphics) {
             val g = g0.create().smooth()
-            if (selected || hover || isFocusOwner) {
+            if (selected || hover) {
                 g.color = if (selected) pal.accentContainer else pal.onSurface.alpha(14)
                 g.fill(RoundRectangle2D.Float(0f, 2f, width.toFloat(), height - 4f, height - 4f, height - 4f))
             }
+            FocusRing.paint(g, this, RoundRectangle2D.Float(1f, 3f, width - 2f, height - 6f, height - 6f, height - 6f))
             ic.paintIcon(this, g, 14, (height - 20) / 2)
             g.font = AppTheme.ui(13.5f, if (selected) Font.BOLD else Font.PLAIN)
             g.color = if (selected) pal.onAccentContainer else pal.onSurface

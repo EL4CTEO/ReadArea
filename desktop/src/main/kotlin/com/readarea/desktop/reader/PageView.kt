@@ -60,7 +60,8 @@ class PageView(private val controller: ReaderController) : Widget() {
 
     private enum class Drag { NONE, PENDING_CURL, CURL, PENDING_SELECT, SELECT }
 
-    var onActivity: (() -> Unit)? = null
+    /** Reports the pointer's height over the page as it moves, so the window can reveal its bars. */
+    var onPointer: ((Int) -> Unit)? = null
 
     init {
         isOpaque = true
@@ -309,7 +310,6 @@ class PageView(private val controller: ReaderController) : Widget() {
 
     private fun press(e: MouseEvent) {
         requestFocusInWindow()
-        onActivity?.invoke()
         if (e.button != MouseEvent.BUTTON1) return
         pressX = e.x
         pressY = e.y
@@ -401,7 +401,7 @@ class PageView(private val controller: ReaderController) : Widget() {
     }
 
     private fun hover(e: MouseEvent) {
-        onActivity?.invoke()
+        onPointer?.invoke(e.y)
         val link = controller.linkUnder(e.x.toFloat(), e.y.toFloat())
         cursor = when {
             link != null -> Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)

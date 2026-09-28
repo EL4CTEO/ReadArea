@@ -131,7 +131,12 @@ class ReaderController(private val app: App, val bookId: Long, private val initi
     private var book: Book? = null
     private var viewport: Viewport? = null
     @Volatile var systemDark = app.systemDark
-    private var laidOutSettings: ReaderSettings? = null
+
+    /**
+     * The settings of the newest layout, finished or still running. New settings are compared with these,
+     * not with the last finished layout, so a change made while a layout runs is never mistaken for none.
+     */
+    private var requestedSettings: ReaderSettings? = null
     private val layoutDispatcher = Dispatchers.Default.limitedParallelism(1)
     private var layoutJob: Job? = null
     private var saveJob: Job? = null
@@ -243,7 +248,13 @@ class ReaderController(private val app: App, val bookId: Long, private val initi
     private fun onEngine(b: Book, e: PageEngine) {
         engine = e
         text = (e as? TextEngine)?.text
-        if (e is FixedEngine) e.onPageRendered = { javax.swing.SwingUtilities.invokeLater { host?.refresh() } }
+        if (e is FixedEngine) e.onPageRendered = { page ->
+            javax.swing.SwingUtilities.invokeLater {
+                // Pages near the current one may be on screen, mid-turn, or showing a placeholder.
+                val near = 2 * (engine?.setup?.columns ?: 1) + 1
+                if (scrollMode || kotlin.math.abs(page - pos.page) <= near) host?.refresh()
+            }
+        }
         pendingAnchor = initialAnchor?.let { it.first.coerceIn(0, e.chapterCount - 1) to it.second } ?: (b.chapter.coerceIn(0, e.chapterCount - 1) to b.offset)
         val meta = (e as? TextEngine)?.book?.meta
         val bookRtl = meta?.rtl ?: false
@@ -290,14 +301,18 @@ class ReaderController(private val app: App, val bookId: Long, private val initi
     }
 
     private fun onSettings(s: ReaderSettings) {
-        val prev = laidOutSettings ?: return
+        val prev = requestedSettings ?: return
         _ui.update { it.copy(rtl = rtlFor(s), vertical = verticalFor(s)) }
         val v = viewport ?: return
+        val e = engine ?: return
         val setupChanged = prev.layoutKey() != s.layoutKey() || isScroll(prev) != isScroll(s) || verticalFor(prev) != verticalFor(s) || columnsFor(v, prev) != columnsFor(v, s)
         if (setupChanged) relayout() else {
-            engine?.configure(buildSetup(v, s), currentTheme())
-            laidOutSettings = s
-            host?.refresh()
+            requestedSettings = s
+            // Engines are only ever configured on the layout thread, in order with layouts.
+            scope.launch(layoutDispatcher) {
+                e.configure(buildSetup(v, s), currentTheme())
+                withContext(Dispatchers.Swing) { host?.refresh() }
+            }
         }
     }
 
@@ -332,6 +347,7 @@ class ReaderController(private val app: App, val bookId: Long, private val initi
         val s = settings.value
         val a = anchor()
         pendingAnchor = a
+        requestedSettings = s
         layoutBusy = true
         layoutJob?.cancel()
         layoutJob = scope.launch(layoutDispatcher) {
@@ -349,7 +365,6 @@ class ReaderController(private val app: App, val bookId: Long, private val initi
             e.ensure(a.first + 1)
             e.ensure(a.first - 1)
             withContext(Dispatchers.Swing) {
-                laidOutSettings = s
                 pendingAnchor = null
                 readingAnchor = a
                 pos = PagePos(a.first, page)
@@ -398,7 +413,7 @@ class ReaderController(private val app: App, val bookId: Long, private val initi
             else -> I18n.format("page_of_chapter", pos.page + 1, e.pageCount(pos.chapter))
         }
         val title = when {
-            e is FixedEngine -> e.outline.lastOrNull { it.page <= pos.page }?.title ?: book?.title.orEmpty()
+            e is FixedEngine -> e.outline.lastOrNull { it.page <= pos.page }?.title.orEmpty()
             else -> text?.sectionTitleAt(pos.chapter, e.endOffsetOf(pos)) ?: e.chapterTitle(pos.chapter)
         }
         (e as? TextEngine)?.pinned = (pos.chapter - 1)..(pos.chapter + 1)
