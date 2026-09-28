@@ -115,4 +115,23 @@ class WindowedLayoutTest {
             println("$name: ${(System.nanoTime() - start) / 1_000_000} ms")
         }
     }
+
+    @Test
+    fun denseRubyLaysOutInLinearTimeInVerticalText() {
+        // Japanese books often annotate every kanji; each annotation used to look at every unit of the paragraph.
+        val block = Block(BlockKind.PARAGRAPH, listOf(Run("漢".repeat(100_000))), ruby = List(100_000) { Ruby(it, it + 1, "かん") })
+        val book = com.readarea.core.format.ParsedBook(com.readarea.core.format.BookMeta("t", language = "ja", vertical = true), listOf(Chapter("c", "c", listOf(block))), emptyList(), ResourceProvider { null })
+        val engine = TextEngine(book, com.readarea.core.text.BookText(book), null, 32L shl 20)
+        val settings = ReaderSettings(writingMode = "vertical")
+        engine.configure(PageSetup(900, 1100, settings, vertical = true, scale = 2f), com.readarea.core.theme.ReadingThemes.resolve(settings.theme, settings.nightTheme, false, false, settings.customBg, settings.customFg, settings.texture))
+        var error: Throwable? = null
+        val t = Thread { try { engine.ensure(0) } catch (e: Throwable) { error = e } }
+        t.isDaemon = true
+        t.start()
+        t.join(20_000)
+        assertTrue("vertical ruby must lay out within 20 s", !t.isAlive)
+        error?.let { throw it }
+        assertTrue(engine.pageCount(0) > 50)
+        engine.close()
+    }
 }

@@ -150,7 +150,7 @@ class VerticalPages(
 ) : ChapterView {
     private val fonts = VFonts(baseFont, letterSpacing)
     override val pageCount: Int get() = pageStarts.size
-    private val rubyByPage: Array<List<VRuby>> = Array(pageStarts.size) { p -> rubies.filter { colPage[it.col] == p } }
+    private val rubyByPage: Array<List<VRuby>> = rubies.groupBy { colPage[it.col] }.let { byPage -> Array(pageStarts.size) { p -> byPage[p].orEmpty() } }
 
     override fun startOffset(page: Int): Int = pageStarts[page.coerceIn(0, pageStarts.size - 1)]
     override fun endOffset(page: Int): Int = if (page + 1 < pageStarts.size) pageStarts[page + 1] else text.length
@@ -697,7 +697,20 @@ class VerticalBuilder(setup: PageSetup, baseFont: Font, private val images: Imag
             while (re > rs && t[re - 1].isWhitespace()) re--
             while (rs < re && t[rs].isWhitespace()) rs++
             if (re <= rs) continue
-            val members = (0 until units).filter { u -> uStart.a[u] >= rs && uEnd.a[u] <= re && group[u] < 0 && uKind.a[u] != Vertical.BREAK }
+            // Units run in order through the text, so the base's are found from the first one at its start
+            // instead of by looking at every unit for every annotation (quadratic in dense ruby).
+            var lo = 0
+            var hi = units
+            while (lo < hi) {
+                val mid = (lo + hi) ushr 1
+                if (uStart.a[mid] < rs) lo = mid + 1 else hi = mid
+            }
+            val members = ArrayList<Int>()
+            var u = lo
+            while (u < units && uStart.a[u] <= re) {
+                if (uEnd.a[u] <= re && group[u] < 0 && uKind.a[u] != Vertical.BREAK) members.add(u)
+                u++
+            }
             if (members.isEmpty()) continue
             val gid = rubyText.size
             rubyText.add(r.text)
