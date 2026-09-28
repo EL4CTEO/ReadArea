@@ -221,7 +221,13 @@ class Library(private val db: Database, private val settings: SettingsStore, pri
     suspend fun loadMetadata(book: Book) {
         val file = File(book.path)
         val updated = withContext(Dispatchers.IO) {
-            runCatching { readDetails(book, file) }.getOrElse { book.copy(metaLoaded = true) }
+            // A file that sends a parser into a loop must not hold up every book after it: past the time
+            // limit the scan moves on. (A Java thread can't be killed; the stuck one is left to finish.)
+            val task = metaExecutor.submit<Book> { readDetails(book, file) }
+            runCatching { task.get(META_TIMEOUT_MS, java.util.concurrent.TimeUnit.MILLISECONDS) }.getOrElse {
+                task.cancel(true)
+                book.copy(metaLoaded = true)
+            }
         }
         write {
             val current = book(book.id) ?: return@write
@@ -248,8 +254,9 @@ class Library(private val db: Database, private val settings: SettingsStore, pri
                 BookFormat.PDF -> PdfSource.open(file).use { src ->
                     pages = src.pageCount
                     val (t, a) = src.documentInfo()
-                    t?.let { title = it }
-                    a?.let { author = it }
+                    val info = com.readarea.core.format.BookMeta(title = t.orEmpty(), author = a.orEmpty()).sanitized()
+                    info.title.takeIf { it.isNotEmpty() }?.let { title = it }
+                    info.author.takeIf { it.isNotEmpty() }?.let { author = it }
                     val aspect = src.pageAspect(0).coerceIn(0.4f, 1.6f)
                     cover = src.render(0, COVER_W, (COVER_W / aspect).toInt())
                 }
@@ -361,6 +368,8 @@ class Library(private val db: Database, private val settings: SettingsStore, pri
     companion object {
         const val COVER_W = 400
         const val COVER_H = 600
+        private const val META_TIMEOUT_MS = 20_000L
+        private val metaExecutor = java.util.concurrent.Executors.newCachedThreadPool { r -> Thread(r, "book-details").apply { isDaemon = true } }
         private const val MAX_DEPTH = 16
         private const val MAX_FILES = 200_000
         private const val MAX_IMPORT = 5_000

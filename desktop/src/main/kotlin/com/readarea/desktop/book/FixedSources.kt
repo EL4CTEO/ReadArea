@@ -167,8 +167,13 @@ class PdfSource private constructor(private val doc: PDDocument) : FixedSource {
             } catch (e: java.io.IOException) {
                 if (e is java.io.FileNotFoundException) throw e
                 throw BookParseException(ParseError.INVALID, "Not a valid PDF")
+            } catch (e: RuntimeException) {
+                // Malformed files can trip PDFBox's own checks in ways it doesn't declare.
+                throw BookParseException(ParseError.INVALID, "Not a valid PDF", e)
+            } catch (e: StackOverflowError) {
+                throw BookParseException(ParseError.INVALID, "Not a valid PDF", e)
             }
-            if (doc.numberOfPages <= 0) {
+            if (runCatching { doc.numberOfPages }.getOrDefault(0) <= 0) {
                 doc.close()
                 throw BookParseException(ParseError.EMPTY, "This PDF has no pages")
             }
