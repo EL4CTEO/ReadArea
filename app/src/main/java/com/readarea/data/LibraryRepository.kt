@@ -80,8 +80,15 @@ class LibraryRepository(
         scope.launch {
             settings.updateApp { s -> s.copy(folders = s.folders - tree) }
             runCatching { context.contentResolver.releasePersistableUriPermission(tree.toUri(), Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            if (removeBooks) db.books().deleteFolder(tree)
+            if (removeBooks) removeFolderBooks(tree)
         }
+    }
+
+    /** Deletes the books of one library folder along with their cover images, which nothing else would ever clean up. */
+    private suspend fun removeFolderBooks(folder: String) {
+        val covers = db.books().all().filter { it.folderUri == folder }.mapNotNull { it.coverPath }
+        db.books().deleteFolder(folder)
+        covers.forEach { path -> File(path).takeIf { SafeFiles.inside(coverDir, it) }?.delete() }
     }
 
     fun rescan() {
@@ -91,7 +98,7 @@ class LibraryRepository(
     fun setDeviceScan(enabled: Boolean, removeBooks: Boolean = false) {
         scope.launch {
             settings.updateApp { it.copy(deviceScan = enabled, askedDeviceScan = true, deviceScanOff = !enabled) }
-            if (enabled) scanAll() else if (removeBooks) db.books().deleteFolder(DeviceStorage.DEVICE)
+            if (enabled) scanAll() else if (removeBooks) removeFolderBooks(DeviceStorage.DEVICE)
         }
     }
 
@@ -388,7 +395,7 @@ class LibraryRepository(
                     is ReflowableBook -> {
                         if (format == BookFormat.CBZ) pages = 0
                         opened.book.coverBytes()?.let { bytes ->
-                            ImageUtil.decodeSampled(bytes, 360, 540)?.let { bmp -> coverPath = saveCover(book.id, bmp) }
+                            ImageUtil.decodeSampled(bytes, 360, 540)?.let { bmp -> coverPath = saveCover(book.id, bmp, book.coverPath) }
                         }
                     }
                     is FixedBook -> {
@@ -398,7 +405,7 @@ class LibraryRepository(
                             val w = 360
                             val bmp = Bitmap.createBitmap(w, (w / aspect).toInt(), Bitmap.Config.ARGB_8888)
                             opened.source.render(0, bmp, null)
-                            coverPath = saveCover(book.id, bmp)
+                            coverPath = saveCover(book.id, bmp, book.coverPath)
                         }
                     }
                 }
@@ -433,9 +440,11 @@ class LibraryRepository(
         )
     }
 
-    private fun saveCover(id: Long, bmp: Bitmap): String? {
+    private fun saveCover(id: Long, bmp: Bitmap, previous: String?): String? {
+        // Replace the book's old cover by its recorded path; listing the folder for every book would make scanning
+        // a large library quadratic.
+        previous?.let { File(it) }?.takeIf { SafeFiles.inside(coverDir, it) }?.delete()
         val file = File(coverDir, "cover_${id}_${System.currentTimeMillis() % 100000}.jpg")
-        coverDir.listFiles()?.filter { it.name.startsWith("cover_${id}_") }?.forEach { it.delete() }
         return runCatching {
             file.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 88, it) }
             bmp.recycle()

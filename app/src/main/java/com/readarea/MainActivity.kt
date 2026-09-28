@@ -33,7 +33,8 @@ class MainActivity : ComponentActivity() {
         splash.setKeepOnScreenCondition { vm.allBooks.value == null || !decided }
         if (!decided) {
             lifecycleScope.launch {
-                vm.resumeTarget()?.let { id -> startActivity(ReaderActivity.intent(this@MainActivity, id)) }
+                // If it can't be worked out, start on the library: the splash must never wait on this forever.
+                runCatching { vm.resumeTarget() }.getOrNull()?.let { id -> startActivity(ReaderActivity.intent(this@MainActivity, id)) }
                 decided = true
             }
         }

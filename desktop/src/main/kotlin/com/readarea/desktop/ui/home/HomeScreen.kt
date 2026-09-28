@@ -55,6 +55,18 @@ import javax.swing.JPanel
 import javax.swing.KeyStroke
 import com.readarea.desktop.ui.components.LeadingBorder
 
+/**
+ * The book "Continue reading" offers: the one opened last, unless it's finished. Opening a book is enough, without
+ * turning a page first, so the card follows the reader from one book to the next (the same rule as on Android).
+ */
+internal fun continueReadingBook(books: List<Book>): Book? =
+    books.filter { it.lastOpenedAt > 0 && it.status != BookStatus.FINISHED }.maxByOrNull { it.lastOpenedAt }
+
+/** The other books under way, most recently opened first, for the "Also reading" row. */
+internal fun alsoReading(books: List<Book>, current: Book?): List<Book> =
+    books.filter { it.id != current?.id && (it.status == BookStatus.READING || (it.progress > 0.005f && it.status != BookStatus.FINISHED)) }
+        .sortedByDescending { it.lastOpenedAt }
+
 @OptIn(FlowPreview::class)
 class HomeScreen(private val app: App, private val window: MainWindow) : Screen {
     private val cards = CardLayout()
@@ -101,8 +113,7 @@ class HomeScreen(private val app: App, private val window: MainWindow) : Screen 
         val today = ReadingStats.today()
         val todayMs = days.firstOrNull { it.day == today }?.ms ?: 0L
         val streak = ReadingStats.streaks(days, today).current
-        val reading = books.filter { it.status == BookStatus.READING || (it.progress > 0.005f && it.status != BookStatus.FINISHED) }.sortedByDescending { it.lastOpenedAt }
-        val hero = reading.firstOrNull()
+        val hero = continueReadingBook(books)
         column.removeAll()
 
         val greeting = when (LocalTime.now().hour) {
@@ -122,7 +133,7 @@ class HomeScreen(private val app: App, private val window: MainWindow) : Screen 
         top.maximumSize = Dimension(Int.MAX_VALUE, 290)
         column.add(top)
 
-        val also = reading.drop(1).take(12)
+        val also = alsoReading(books, hero).take(12)
         if (also.isNotEmpty()) {
             column.add(Ui.gap(26))
             column.add(sectionHeader(tr("home_also_reading")).apply { alignmentX = JComponent.LEFT_ALIGNMENT })
@@ -225,9 +236,9 @@ class HomeScreen(private val app: App, private val window: MainWindow) : Screen 
         return card
     }
 
-    /** A row of covers with titles; click to open, right-click for details. */
     /**
-     * A row of covers. Only covers that fit whole are shown; the rest are a click away in the library.
+     * A row of covers with titles; click to open, right-click for details. Only covers that fit whole are shown;
+     * the rest are a click away in the library.
      * Arrow keys move between covers, Enter opens one and the context-menu key shows its details.
      */
     private inner class CoverRow(private val books: List<Book>) : Widget(javax.accessibility.AccessibleRole.LIST) {

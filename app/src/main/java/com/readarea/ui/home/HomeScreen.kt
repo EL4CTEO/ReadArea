@@ -127,8 +127,10 @@ fun HomeScreen(vm: LibraryViewModel, actions: AppActions) {
         val want = list.filter { it.status == BookStatus.WANT }
         val finished = list.filter { it.status == BookStatus.FINISHED }.sortedByDescending { it.finishedAt }
         LazyColumn(contentPadding = PaddingValues(top = padding.calculateTopPadding(), bottom = 24.dp + padding.calculateBottomPadding())) {
-            if (scan.running) item { LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) }
-            item {
+            // Keyed, so a row keeps its own scroll position when another appears above it: the scan bar comes and goes,
+            // and "Also reading" shows up once a second book is started.
+            if (scan.running) item(key = "scan") { LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) }
+            item(key = "top") {
                 BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
                     if (maxWidth >= 640.dp) {
                         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -144,18 +146,18 @@ fun HomeScreen(vm: LibraryViewModel, actions: AppActions) {
                 }
             }
             if (reading.isNotEmpty()) {
-                item { SectionHeader(stringResource(R.string.home_also_reading)) }
-                item { BookRow(reading, actions) }
+                item(key = "reading-title") { SectionHeader(stringResource(R.string.home_also_reading)) }
+                item(key = "reading") { BookRow(reading, actions) }
             }
-            item { SectionHeader(stringResource(R.string.home_recently_added), stringResource(R.string.see_all)) { actions.navigate(LibraryKey) } }
-            item { BookRow(recent, actions) }
+            item(key = "recent-title") { SectionHeader(stringResource(R.string.home_recently_added), stringResource(R.string.see_all)) { actions.navigate(LibraryKey) } }
+            item(key = "recent") { BookRow(recent, actions) }
             if (want.isNotEmpty()) {
-                item { SectionHeader(stringResource(R.string.status_want)) }
-                item { BookRow(want, actions) }
+                item(key = "want-title") { SectionHeader(stringResource(R.string.status_want)) }
+                item(key = "want") { BookRow(want, actions) }
             }
             if (finished.isNotEmpty()) {
-                item { SectionHeader(stringResource(R.string.status_finished)) }
-                item { BookRow(finished.take(20), actions) }
+                item(key = "finished-title") { SectionHeader(stringResource(R.string.status_finished)) }
+                item(key = "finished") { BookRow(finished.take(20), actions) }
             }
         }
     }

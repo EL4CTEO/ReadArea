@@ -16,6 +16,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import com.readarea.MainActivity
@@ -122,6 +123,20 @@ class LibraryBehaviourTest {
         settle()
     }
 
+    /** On a phone the selection bar keeps two actions in view; the others are items in its ⋮ menu. */
+    private fun fromMenu(item: String) {
+        clickIcon("More")
+        click(item)
+    }
+
+    /** Whether the text is laid out whole on one line, rather than wrapped over several or cut short. */
+    private fun fitsOnOneLine(t: String): Boolean {
+        val layouts = mutableListOf<TextLayoutResult>()
+        compose.onAllNodesWithText(t, useUnmergedTree = true)[0].fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action?.invoke(layouts)
+        val layout = layouts.first()
+        return layout.lineCount == 1 && !layout.isLineEllipsized(0)
+    }
+
     private fun type(text: String, index: Int = 0) {
         compose.onAllNodes(hasSetTextAction())[index].performSemanticsAction(SemanticsActions.SetText) { it(AnnotatedString(text)) }
         settle()
@@ -161,17 +176,17 @@ class LibraryBehaviourTest {
             longPress("The Harbour Light")
             assertTrue("long-press selects", has("1 selected"))
             assertNull("long-press must not open the book", startedReader(sc))
-            clickIcon("Remove")
+            fromMenu("Remove")
             assertTrue(has("Remove book?"))
             click("Cancel")
             assertNotNull(book("harbour"))
-            clickIcon("Remove")
+            fromMenu("Remove")
             click("Remove")
             waitUntil("removed") { book("harbour") == null }
             assertTrue("the file is kept", harbour.exists())
             waitUntil("gone from list") { !has("The Harbour Light") }
             longPress("Storm Season")
-            clickIcon("Remove")
+            fromMenu("Remove")
             click("Also delete the file from the device")
             click("Remove")
             waitUntil("removed with file") { book("storm") == null }
@@ -204,13 +219,38 @@ class LibraryBehaviourTest {
             compose.onAllNodesWithText("Gulls at Noon", useUnmergedTree = true)[0].performClick()
             settle()
             assertTrue(has("2 selected"))
-            clickIcon("Favorite")
+            fromMenu("Favorite")
             waitUntil("favorites saved") { book("harbour")!!.favorite && book("gulls")!!.favorite }
             assertFalse(book("storm")!!.favorite)
-            clickIcon("Mark as")
-            click("Mark as finished")
+            fromMenu("Mark as finished")
             waitUntil("status saved") { book("harbour")!!.status == BookStatus.FINISHED && book("gulls")!!.status == BookStatus.FINISHED }
             assertFalse("selection clears after marking", has("2 selected"))
+        }
+    }
+
+    @Test
+    fun theSelectionBarKeepsTheCountReadableOnAPhone() {
+        library { _ ->
+            longPress("The Harbour Light")
+            assertTrue(has("1 selected"))
+            // The count once shared the bar with six icon buttons and wrapped letter by letter.
+            assertTrue("the count sits whole on one line", fitsOnOneLine("1 selected"))
+            // What the narrow bar moved off it is one tap away.
+            clickIcon("More")
+            listOf("Details", "Favorite", "Mark as want to read", "Mark as reading", "Mark as finished", "Reset progress", "Remove").forEach {
+                assertTrue("$it is in the menu", has(it))
+            }
+        }
+    }
+
+    @Test
+    fun aFilterDropsTheBooksItHidesFromTheSelection() {
+        library { _ ->
+            longPress("The Harbour Light")
+            assertTrue(has("1 selected"))
+            // No book is being read, so the selected one leaves the list: it must not stay selected out of sight.
+            click("Reading")
+            waitUntil("the selection follows the list") { !has("1 selected") }
         }
     }
 

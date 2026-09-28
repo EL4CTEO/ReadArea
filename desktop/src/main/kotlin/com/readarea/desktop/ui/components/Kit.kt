@@ -34,6 +34,7 @@ import javax.swing.JTextField
 import javax.swing.JToggleButton
 import javax.swing.ScrollPaneConstants
 import javax.swing.SwingConstants
+import javax.swing.SwingUtilities
 
 /**
  * Antialiased shapes and smooth image scaling. Text hints are left to the look and feel, which follows
@@ -91,12 +92,8 @@ object Ui {
     fun settingRow(title: String, hint: String?, control: JComponent, titleSize: Float = 13.5f, hintSize: Float = 12f): JPanel {
         val left = vbox(label(title, titleSize))
         if (hint != null) left.add(WrapText(hint, hintSize, colorOf = { pal.onSurfaceVariant }))
-        val p = object : Transparent(BorderLayout(16, 0)) {
-            override fun getMaximumSize() = Dimension(Int.MAX_VALUE, preferredSize.height)
-        }
+        val p = SettingRow(left, control)
         p.border = LeadingBorder(6, 0, 6, 0)
-        p.add(left, BorderLayout.CENTER)
-        p.add(Transparent(java.awt.GridBagLayout()).apply { add(control) }, BorderLayout.LINE_END)
         p.alignmentX = Component.LEFT_ALIGNMENT
         return p
     }
@@ -116,6 +113,63 @@ object Ui {
     fun padded(c: Component, top: Int, left: Int, bottom: Int, right: Int): JPanel = Transparent(BorderLayout()).apply {
         border = LeadingBorder(top, left, bottom, right)
         add(c)
+    }
+}
+
+/**
+ * One setting: its title and hint at the leading edge, its control at the trailing one. A control too wide to leave
+ * the title a readable width, as in a narrow window, goes under the title instead of squeezing it away.
+ */
+internal class SettingRow(private val left: Component, private val control: Component) : Transparent(null) {
+    /** Whether the last preferred height was worked out for stacked parts; it depends on the width given. */
+    private var assumedStacked = false
+
+    init {
+        add(left)
+        add(control)
+    }
+
+    private fun stackedAt(room: Int): Boolean = room > 0 && control.preferredSize.width + GAP + MIN_TITLE > room
+
+    override fun getPreferredSize(): Dimension {
+        val l = left.preferredSize
+        val c = control.preferredSize
+        val stacked = stackedAt(width - insets.left - insets.right)
+        assumedStacked = stacked
+        val h = if (stacked) l.height + STACK_GAP + c.height else maxOf(l.height, c.height)
+        return Dimension(l.width + GAP + c.width + insets.left + insets.right, h + insets.top + insets.bottom)
+    }
+
+    override fun getMinimumSize(): Dimension = Dimension(maxOf(MIN_TITLE, control.preferredSize.width) + insets.left + insets.right, preferredSize.height)
+
+    override fun getMaximumSize(): Dimension = Dimension(Int.MAX_VALUE, preferredSize.height)
+
+    override fun doLayout() {
+        val ins = insets
+        val w = width - ins.left - ins.right
+        val ltr = componentOrientation.isLeftToRight
+        val c = control.preferredSize
+        val stacked = stackedAt(w)
+        // Positions run from the leading edge, so a right-to-left window is the mirror image.
+        fun put(comp: Component, x: Int, y: Int, cw: Int, ch: Int) = comp.setBounds(if (ltr) ins.left + x else width - ins.right - x - cw, ins.top + y, cw, ch)
+        if (stacked) {
+            val lh = left.preferredSize.height
+            put(left, 0, 0, w, lh)
+            put(control, 0, lh + STACK_GAP, minOf(c.width, w), c.height)
+        } else {
+            val rowHeight = height - ins.top - ins.bottom
+            val cw = minOf(c.width, w)
+            put(control, w - cw, (rowHeight - c.height) / 2, cw, c.height)
+            put(left, 0, 0, (w - cw - GAP).coerceAtLeast(0), rowHeight)
+        }
+        // The height changes with the mode: ask the parent to lay this out again with the right one.
+        if (stacked != assumedStacked) SwingUtilities.invokeLater { revalidate() }
+    }
+
+    private companion object {
+        const val GAP = 16
+        const val STACK_GAP = 8
+        const val MIN_TITLE = 150
     }
 }
 
