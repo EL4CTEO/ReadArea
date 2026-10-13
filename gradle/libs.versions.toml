@@ -22,7 +22,7 @@ androidxTestCore = "1.7.0"
 flatlaf = "3.7.2"
 pdfbox = "3.0.8"
 sqliteJdbc = "3.53.4.0"
-twelvemonkeys = "3.15.2"
+twelvemonkeys = "3.15.3"
 
 [libraries]
 android-gradlePlugin = { group = "com.android.tools.build", name = "gradle", version.ref = "agp" }
